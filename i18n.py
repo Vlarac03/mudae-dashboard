@@ -39,7 +39,6 @@ ES = {
     "Cada reacció gasta 40 % de poder (20 % amb personatges de 10+ claus)": "Cada reacción gasta un 40 % de poder (20 % con personajes de 10+ llaves)",
     "Cal el teu nom d'usuari de Mudae.": "Hace falta tu nombre de usuario de Mudae.",
     "Canvi": "Cambio",
-    "Cap avís: res de nou des de l’última actualització.": "Ningún aviso: nada nuevo desde la última actualización.",
     "Cap dels teus personatges és d'aquestes sèries.": "Ninguno de tus personajes es de estas series.",
     "Col·leccions": "Colecciones",
     "Col·lecció": "Colección",
@@ -289,6 +288,11 @@ ES = {
     "{title} · com vas de col·lecció": "{title} · cómo vas de colección",
     "«{name}» no és al teu harem. Revisa com està escrit.": "«{name}» no está en tu harem. Revisa cómo está escrito.",
     "és de": "es de",
+    "Avui": "Hoy",
+    "Eines": "Herramientas",
+    "Hola, {name}": "Hola, {name}",
+    "Hola": "Hola",
+    "Seccions": "Secciones",
 }
 
 EN = {
@@ -326,7 +330,6 @@ EN = {
     "Cada reacció gasta 40 % de poder (20 % amb personatges de 10+ claus)": "Each reaction uses 40% power (20% on characters with 10+ keys)",
     "Cal el teu nom d'usuari de Mudae.": "Your Mudae username is required.",
     "Canvi": "Change",
-    "Cap avís: res de nou des de l’última actualització.": "No alerts: nothing new since the last update.",
     "Cap dels teus personatges és d'aquestes sèries.": "None of your characters are from these series.",
     "Col·leccions": "Collections",
     "Col·lecció": "Collection",
@@ -576,6 +579,11 @@ EN = {
     "{title} · com vas de col·lecció": "{title} · collection progress",
     "«{name}» no és al teu harem. Revisa com està escrit.": "«{name}» isn't in your harem. Check the spelling.",
     "és de": "is from",
+    "Avui": "Today",
+    "Eines": "Tools",
+    "Hola, {name}": "Hi, {name}",
+    "Hola": "Hi",
+    "Seccions": "Sections",
 }
 
 STRINGS = {"es": ES, "en": EN}

@@ -9,6 +9,7 @@ Pots enganxar-ho tal qual de Discord: les capçaleres i la numeració s'ignoren.
 El que escrius a mà a l'Excel (cel·les grogues) es conserva.
 """
 import csv
+import base64
 import datetime as dt
 import html
 import json
@@ -530,182 +531,220 @@ draw();
 
 
 STYLE = """
-/* Tauler de col·leccionista: neutres freds amb un toc lila de kakera; el color només marca estat (teu / d'algú altre / lliure) */
+/* El mateix aspecte que el dashboard del homelab: fosc grafit, targetes de vidre i un sol accent blau.
+   El color només marca estat: blau = teu, taronja = d'algú altre, puntejat = lliure, verd/vermell = avisos */
 :root {
-  --bg:#f6f5f9; --surface:#ffffff; --sunk:#efedf4; --line:#e3e0ea;
-  --ink:#1d1b24; --ink-2:#55516a; --muted:#8a869b;
-  --accent:#6b5fc7; --accent-soft:#ebe8fa; --accent-ink:#4a3fa3; --on-accent:#ffffff;
-  --warm:#c9895a; --warm-soft:#f6ebe2; --warm-ink:#875330;
-  --good:#3f8f5f; --good-soft:#e4f1e9; --bad:#b9504c; --bad-soft:#f8e5e4;
-  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --f-body:"Figtree", "Segoe UI", system-ui, sans-serif;
-  --f-mono:"JetBrains Mono", Consolas, ui-monospace, monospace;
+  --bg:#141417; --bg-grad:linear-gradient(160deg,#1b1b1f 0%,#141417 50%,#111114 100%);
+  --glow1:rgba(88,166,255,.08); --glow2:rgba(255,255,255,.035);
+  --glass:rgba(255,255,255,.05); --glass-b:rgba(255,255,255,.09); --line:rgba(255,255,255,.08);
+  --surface:#1c1c20; --sunk:rgba(255,255,255,.06);
+  --ink:#f4f4f5; --ink-2:#c8c8d0; --muted:#a1a1ab;
+  --accent:#58a6ff; --acc-rgb:88,166,255; --accent-soft:rgba(88,166,255,.13); --accent-ink:#a5d0ff;
+  --acc-fort:#2563eb; --acc-fort2:#1d4ed8; --on-accent:#ffffff;
+  --warm:#f7a84a; --warm-soft:rgba(247,168,74,.13); --warm-ink:#fbc98a;
+  --good:#3ecf8e; --good-soft:rgba(62,207,142,.13); --bad:#ff9aa6; --bad-soft:rgba(255,154,166,.13);
+  --sh:0 4px 28px rgba(0,0,0,.3);
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg:#131218; --surface:#1b1a22; --sunk:#24222d; --line:#2f2d3a;
-  --ink:#ecebf2; --ink-2:#b5b2c4; --muted:#7f7b90;
-  --accent:#a497f0; --accent-soft:#2a2645; --accent-ink:#cdc5ff; --on-accent:#16141d;
-  --warm:#d6a07b; --warm-soft:#382b22; --warm-ink:#efc6a8;
-  --good:#7cc497; --good-soft:#1e3127; --bad:#e58a86; --bad-soft:#3b2423; color-scheme:dark; } }
-:root[data-theme="dark"] {
-  --bg:#131218; --surface:#1b1a22; --sunk:#24222d; --line:#2f2d3a;
-  --ink:#ecebf2; --ink-2:#b5b2c4; --muted:#7f7b90;
-  --accent:#a497f0; --accent-soft:#2a2645; --accent-ink:#cdc5ff; --on-accent:#16141d;
-  --warm:#d6a07b; --warm-soft:#382b22; --warm-ink:#efc6a8;
-  --good:#7cc497; --good-soft:#1e3127; --bad:#e58a86; --bad-soft:#3b2423; color-scheme:dark; }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
-body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 var(--f-body); }
-main { max-width:1120px; margin:0 auto; padding-block:28px 56px;
-  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px));
-  display:grid; gap:16px; }
-h1, h2 { font-family:var(--f-display); text-wrap:balance; margin:0; }
-h1 { font-size:28px; font-weight:700; letter-spacing:-.01em; }
-h2 { font-size:18px; font-weight:600; }
+html { background:var(--bg); -webkit-tap-highlight-color:transparent; }
+body { margin:0; min-height:100vh; color:var(--ink); font:14.5px/1.5 var(--sans); background:var(--bg-grad) fixed;
+  overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+/* fons: dues llums suaus i una trama de punts que s'esvaeix cap avall */
+body::before { content:''; position:fixed; top:-140px; left:-100px; width:520px; height:520px; pointer-events:none;
+  background:radial-gradient(circle,var(--glow1) 0%,transparent 68%); }
+body::after { content:''; position:fixed; bottom:-160px; right:-120px; width:600px; height:600px; pointer-events:none;
+  background:radial-gradient(circle,var(--glow2) 0%,transparent 68%); }
+main { position:relative; max-width:1120px; margin:0 auto; padding-block:24px 40px;
+  padding-left:max(20px, env(safe-area-inset-left, 0px)); padding-right:max(20px, env(safe-area-inset-right, 0px));
+  display:grid; gap:14px; }
+main::before { content:''; position:fixed; inset:0; pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px); background-size:24px 24px;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 65%); mask-image:linear-gradient(180deg,#000,transparent 65%); }
+h1, h2 { text-wrap:balance; margin:0; }
+h2 { font-size:15px; font-weight:650; letter-spacing:-.2px; }
 a { color:var(--accent-ink); }
-:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+button { font:inherit; color:inherit; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
 .muted { color:var(--muted); }
-.eyebrow { font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
-code { font:12.5px var(--f-mono); background:var(--sunk); color:var(--ink-2); padding:1px 6px; border-radius:5px; white-space:nowrap; }
-.panel { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px; min-width:0; display:grid; gap:14px; align-content:start; }
+code { font:12.5px var(--mono); background:var(--sunk); color:var(--ink-2); padding:1px 6px; border-radius:5px; white-space:nowrap; }
+.glass, .panel { background:var(--glass); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+  border:1px solid var(--glass-b); border-radius:18px; box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.08); }
+.panel { padding:20px 22px; min-width:0; display:grid; gap:14px; align-content:start; }
 .panel-head { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px; }
+.fu { animation:fu .45s ease both; }
+@keyframes fu { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 
-/* capçalera i franja de xifres */
-.top { display:grid; gap:14px; }
-.title { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px; }
-.tools { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; font-size:13px; }
-button.ghost { font:500 13px var(--f-body); padding:5px 11px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); cursor:pointer; }
-button.ghost:hover { border-color:var(--accent); color:var(--accent-ink); }
-button.ghost:disabled { opacity:.4; cursor:default; }
-.stats { display:flex; flex-wrap:wrap; gap:0; border-block:1px solid var(--line); }
-.stat { padding:12px 22px 12px 0; margin-right:22px; border-right:1px solid var(--line); display:grid; gap:2px; }
-.stat:last-child { border-right:0; }
-.stat b { font:600 22px var(--f-display); font-variant-numeric:tabular-nums; }
-.stat span { font-size:13px; color:var(--ink-2); }
+/* capçalera */
+.hdr { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; position:relative; z-index:5; }
+.hdr-l { display:flex; align-items:center; gap:13px; min-width:0; }
+.logo { width:42px; height:42px; border-radius:11px; flex-shrink:0; display:block; box-shadow:0 4px 16px rgba(var(--acc-rgb),.3); }
+.logo.round { border-radius:50%; object-fit:cover; }
+.logo-name { font-size:17px; font-weight:650; letter-spacing:-.3px; margin:0; }
+.logo-sub { font-size:12.5px; color:var(--muted); }
+.hdr-r { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pill { display:flex; align-items:center; gap:7px; padding:7px 13px; border-radius:50px; font-size:12px; color:var(--ink-2);
+  background:var(--glass); border:1px solid var(--glass-b); }
+button.pill { cursor:pointer; transition:color .2s, border-color .2s; }
+button.pill:hover:not(:disabled) { color:var(--ink); border-color:rgba(255,255,255,.2); }
+button.pill:disabled { opacity:.45; cursor:default; }
+.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; background:var(--muted); }
+.dot.ok { background:var(--good); } .dot.err { background:var(--bad); }
+#toolMsg:empty { display:none; }
 
-/* ara: llista + $oc */
-.now-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:16px; align-items:start; }
-.clock { margin:0; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+/* resum: salutació, rellotge i avisos; a la dreta, les xifres */
+.resum { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:22px; align-items:center; padding:26px 28px 24px; }
+.hola { font-size:30px; font-weight:650; letter-spacing:-.8px; line-height:1.1; }
+.clock { margin:8px 0 0; color:var(--ink-2); font-variant-numeric:tabular-nums; max-width:62ch; }
 .clock b { color:var(--ink); }
-.claim-now { display:inline-block; margin-top:6px; padding:3px 10px; border-radius:999px; background:var(--good-soft); color:var(--good); font-size:13px; font-weight:600; }
+.claim-now { display:inline-block; margin-top:8px; padding:3px 11px; border-radius:999px; background:var(--good-soft); color:var(--good); font-size:13px; font-weight:650; }
+.alerts { list-style:none; padding:16px 0 0; margin:16px 0 0; border-top:1px solid var(--line); display:grid; gap:6px; max-height:260px; overflow:auto; }
+.alerts li { display:flex; gap:10px; align-items:baseline; padding:8px 12px; border-radius:10px; background:rgba(255,255,255,.04); border:1px solid var(--line); font-size:13.5px; }
+.fets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-content:center; }
+.fet { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid var(--line); min-width:0; }
+.fet-l { font-size:11.5px; color:var(--ink-2); }
+.fet-v { font-size:24px; font-weight:650; letter-spacing:-.6px; margin-top:2px; font-variant-numeric:tabular-nums; }
+.fet-s { font-size:12px; color:var(--muted); }
+.tag { font-size:11px; font-weight:650; padding:2px 9px; border-radius:20px; white-space:nowrap; flex:none; background:rgba(255,255,255,.08); color:var(--ink-2); }
+.tag.good { background:var(--good-soft); color:var(--good); }
+.tag.bad { background:var(--bad-soft); color:var(--bad); }
+.tag.accent { background:var(--accent-soft); color:var(--accent); }
+
+/* pestanyes: una vista cada vegada */
+.nav { position:sticky; top:10px; z-index:4; display:flex; gap:4px; padding:5px; border-radius:50px; width:fit-content; max-width:100%; overflow-x:auto;
+  background:rgba(28,28,32,.75); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); border:1px solid var(--glass-b); box-shadow:var(--sh); }
+.nav button { padding:8px 16px; border-radius:50px; border:0; background:transparent; color:var(--muted); font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap;
+  transition:background .2s, color .2s; }
+.nav button:hover { color:var(--ink-2); background:rgba(255,255,255,.06); }
+.nav button[aria-selected="true"] { background:rgba(var(--acc-rgb),.14); color:var(--accent); }
+.nav .n { font-size:11px; margin-left:6px; padding:1px 7px; border-radius:20px; background:var(--bad-soft); color:var(--bad); }
+.view { display:grid; gap:14px; animation:fu .3s ease both; }
+.g2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:14px; align-items:start; }
+
+/* avui: llista + $oc */
 .grp { display:grid; }
-.grp h3 { margin:6px 0 2px; font:600 12px var(--f-body); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.grp h3, .og h3 { margin:10px 0 2px; font-size:11.5px; font-weight:650; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
 .grp.now h3 { color:var(--good); }
-.task { display:flex; gap:12px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+.task { display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer; }
 .task:last-child { border-bottom:0; }
 .task input { width:17px; height:17px; margin-top:3px; accent-color:var(--accent); flex:none; }
 .task > span { min-width:0; }
 .task:has(input:checked) > span > :not(.when) { opacity:.45; text-decoration:line-through; }
-.task .desc { display:block; color:var(--muted); font-size:13.5px; }
-.task .when { display:block; font-size:12.5px; font-weight:600; color:var(--good); }
+.task .desc { display:block; color:var(--muted); font-size:13px; }
+.task .when { display:block; font-size:12.5px; font-weight:650; color:var(--good); }
 .bullet { width:17px; text-align:center; color:var(--muted); flex:none; }
-details summary { cursor:pointer; color:var(--ink-2); font-size:14px; }
+details summary { cursor:pointer; color:var(--ink-2); font-size:13.5px; margin-top:6px; }
 details[open] summary { margin-bottom:6px; }
 .ocbox iframe { width:100%; height:880px; border:0; display:block; }
 
-/* avisos */
-.alerts { list-style:none; padding:0; margin:0; display:grid; }
-.alerts li { display:flex; gap:10px; align-items:baseline; padding:8px 0; border-bottom:1px solid var(--line); }
-.alerts li:last-child { border-bottom:0; }
-.tag { font-size:12px; font-weight:600; padding:2px 8px; border-radius:6px; background:var(--sunk); color:var(--ink-2); white-space:nowrap; flex:none; }
-.tag.good { background:var(--good-soft); color:var(--good); }
-.tag.bad { background:var(--bad-soft); color:var(--bad); }
-.tag.accent { background:var(--accent-soft); color:var(--accent-ink); }
-
 /* col·leccions: barres + àlbum */
-.legend { display:flex; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:var(--ink-2); align-items:center; }
+.legend { display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--ink-2); align-items:center; }
 .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
 .bars { display:grid; gap:2px; }
-.row { display:grid; grid-template-columns:180px 1fr 110px; gap:14px; align-items:center; padding:6px 8px; margin:0 -8px; border-radius:8px; cursor:pointer; }
-.row:hover, .row.on { background:var(--sunk); }
+.row { display:grid; grid-template-columns:180px 1fr 110px; gap:14px; align-items:center; padding:7px 10px; margin:0 -10px; border-radius:10px; cursor:pointer; transition:background .2s; }
+.row:hover { background:rgba(255,255,255,.05); }
+.row.on { background:rgba(var(--acc-rgb),.10); }
 .lbl { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.val { text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-2); font-size:14px; }
+.val { text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-2); font-size:13.5px; }
 .val b { color:var(--ink); }
-.track { display:flex; gap:2px; height:8px; background:var(--sunk); border-radius:99px; overflow:hidden; }
+.track { display:flex; gap:2px; height:6px; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden; }
 .seg.mine { background:var(--accent); } .seg.other { background:var(--warm); }
 .album { border-top:1px solid var(--line); padding-top:14px; display:grid; gap:12px; }
 .album-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px; }
-.album-head h3 { margin:0; font:600 17px var(--f-display); }
+.album-head h3 { margin:0; font-size:17px; font-weight:650; letter-spacing:-.3px; }
 .chips { display:flex; flex-wrap:wrap; gap:6px; }
-.ch { font-size:13px; padding:4px 10px; border-radius:7px; border:1px solid transparent; white-space:nowrap; }
+.ch { font-size:12.5px; padding:4px 11px; border-radius:20px; border:1px solid transparent; white-space:nowrap; }
 .ch small { opacity:.75; margin-left:4px; }
-.ch.wish { background:var(--surface); border-color:var(--accent); color:var(--ink); font-weight:600; }
-.ch.alta { background:var(--surface); border-color:var(--line); color:var(--ink); font-weight:600; }
+.ch.wish { background:rgba(var(--acc-rgb),.06); border-color:var(--accent); color:var(--ink); font-weight:650; }
+.ch.alta { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.18); color:var(--ink); font-weight:650; }
 .ch.other { background:var(--warm-soft); color:var(--warm-ink); }
-.ch.free { background:transparent; border:1px dashed var(--muted); color:var(--ink-2); }
+.ch.free { background:transparent; border:1px dashed rgba(255,255,255,.28); color:var(--ink-2); }
 .ch.mine { background:var(--accent-soft); color:var(--accent-ink); }
 .star { color:var(--accent); }
-button.ch { font:inherit; font-size:13px; cursor:pointer; background:transparent; }
+button.ch { font:inherit; font-size:12.5px; cursor:pointer; background:transparent; }
 button.ch.pick:hover { border-color:var(--good); }
-button.ch.sel { background:var(--good-soft); color:var(--good); border:1px solid var(--good); font-weight:600; }
-.tab { font:inherit; font-size:14px; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); cursor:pointer; }
+button.ch.sel { background:var(--good-soft); color:var(--good); border:1px solid var(--good); font-weight:650; }
+.tab { font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:20px; border:0; background:rgba(255,255,255,.07); color:var(--ink-2); cursor:pointer; transition:background .2s; }
+.tab:hover { background:rgba(255,255,255,.12); color:var(--ink); }
 .toggle { font-size:13px; color:var(--ink-2); display:flex; gap:6px; align-items:center; cursor:pointer; }
 .toggle input { accent-color:var(--accent); }
-textarea { font:14px var(--f-body); color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; resize:vertical; width:100%; }
-textarea:focus { outline:2px solid var(--accent); outline-offset:0; border-color:transparent; }
+textarea, select, input[type=text] { font:14px var(--sans); color:var(--ink); background:rgba(0,0,0,.22); border:1px solid var(--glass-b); border-radius:10px; }
+textarea { padding:10px 12px; resize:vertical; width:100%; }
+select, input[type=text] { padding:6px 10px; border-radius:8px; }
+select option { background:var(--surface); }
+textarea:focus, input[type=text]:focus, select:focus { outline:2px solid var(--accent); outline-offset:0; border-color:transparent; }
 #mineOut { display:grid; gap:14px; }
 .mg { display:grid; gap:6px; }
 .mg-head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:14px; }
-.mg-head label { display:flex; gap:8px; align-items:center; cursor:pointer; font-weight:600; }
+.mg-head label { display:flex; gap:8px; align-items:center; cursor:pointer; font-weight:650; }
 .mg-head input { accent-color:var(--accent); }
 .mg.off .chips { opacity:.4; }
-.give { display:grid; gap:8px; padding:14px; border-radius:10px; background:var(--sunk); }
-.give-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:14px; color:var(--ink-2); }
-.give input[type=text] { font:13px var(--f-mono); padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:var(--surface); color:var(--ink); width:160px; }
-.give code { white-space:normal; overflow-wrap:anywhere; display:block; padding:8px 10px; background:var(--surface); }
+.give { display:grid; gap:8px; padding:14px; border-radius:12px; background:rgba(255,255,255,.04); border:1px solid var(--line); }
+.give-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13.5px; color:var(--ink-2); }
+.give input[type=text] { font:13px var(--mono); width:160px; }
+.give code { white-space:normal; overflow-wrap:anywhere; display:block; padding:8px 10px; background:rgba(0,0,0,.22); }
 .serieslist { display:flex; flex-wrap:wrap; gap:6px; }
-.serieslist button { font:13px var(--f-body); padding:3px 10px; border-radius:7px; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); cursor:pointer; }
+.serieslist button { font-size:12.5px; padding:3px 11px; border-radius:20px; border:1px solid var(--glass-b); background:rgba(255,255,255,.04); color:var(--ink-2); cursor:pointer; }
 .serieslist button:hover { border-color:var(--accent); color:var(--accent-ink); }
 .serieslist span { color:var(--muted); font-variant-numeric:tabular-nums; }
-select { font:14px var(--f-body); padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:var(--surface); color:var(--ink); }
-#upd input[type=text] { font:14px var(--f-body); padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:var(--surface); color:var(--ink); }
 .unk { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:6px; }
-#cls input[type=text] { font:14px var(--f-body); padding:5px 9px; border-radius:6px; border:1px solid var(--line); background:var(--surface); color:var(--ink); min-width:0; width:220px; }
+#cls input[type=text] { min-width:0; width:220px; }
 #wlBuild { display:grid; gap:10px; }
 #wlBuild .ch { cursor:pointer; }
-.ogrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:18px 28px; }
-.og h3 { margin:0 0 6px; font:600 12px var(--f-body); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
-.oline { display:flex; gap:10px; align-items:baseline; padding:4px 0; font-size:14px; color:var(--ink-2); }
+.ogrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:10px 28px; }
+.oline { display:flex; gap:10px; align-items:baseline; padding:4px 0; font-size:13.5px; color:var(--ink-2); }
 .oline .cmd { flex:none; }
-.line { width:100%; height:auto; }
-.line polyline { fill:none; stroke:var(--accent); stroke-width:2; }
-.line circle { fill:var(--accent); stroke:var(--surface); stroke-width:2; }
-.axis { stroke:var(--line); } .tick { fill:var(--muted); font:12px var(--f-body); }
 
 /* wishlist, sobrants, intercanvis */
-.two { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; align-items:start; }
-table { width:100%; border-collapse:collapse; font-size:14px; }
-td { padding:7px 0; border-bottom:1px solid var(--line); vertical-align:baseline; }
+table { width:100%; border-collapse:collapse; font-size:13.5px; }
+td { padding:8px 0; border-bottom:1px solid var(--line); vertical-align:baseline; }
 tr:last-child td { border-bottom:0; }
 td + td { padding-left:12px; }
 td.num { text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-2); }
 td.sub { color:var(--muted); }
-.owners { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:18px 24px; }
-.owner h3 { margin:0 0 4px; font:600 14px var(--f-body); overflow-wrap:anywhere; }
+.owners { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
+.owner { padding:14px 16px; border-radius:14px; background:rgba(255,255,255,.04); border:1px solid var(--line); min-width:0; }
+.owner h3 { margin:0 0 6px; font-size:14px; font-weight:650; overflow-wrap:anywhere; }
 .owner ul { list-style:none; margin:0; padding:0; display:grid; gap:2px; }
-.owner li { display:flex; gap:8px; align-items:baseline; justify-content:space-between; padding:4px 0; font-size:14px; }
+.owner li { display:flex; gap:8px; align-items:baseline; justify-content:space-between; padding:4px 0; font-size:13.5px; }
 .owner label { display:flex; gap:8px; align-items:baseline; cursor:pointer; min-width:0; }
 .owner input { accent-color:var(--accent); }
-.status { font-size:12px; color:var(--muted); white-space:nowrap; }
-.cmd, .copybtn { font:12.5px var(--f-mono); background:var(--sunk); color:var(--ink-2); padding:1px 7px; border-radius:5px;
-  border:1px solid transparent; cursor:copy; white-space:nowrap; }
-.cmd:hover, .copybtn:hover { border-color:var(--accent); color:var(--accent-ink); }
-.copybtn { font:600 12px var(--f-body); margin-left:8px; padding:2px 9px; vertical-align:1px; }
+.status { font-size:11.5px; color:var(--muted); white-space:nowrap; }
+.cmd, .copybtn { font:12.5px var(--mono); background:rgba(var(--acc-rgb),.08); color:var(--accent-ink); padding:2px 8px; border-radius:7px;
+  border:1px solid rgba(var(--acc-rgb),.2); cursor:copy; white-space:nowrap; transition:border-color .2s, background .2s; }
+.cmd:hover, .copybtn:hover { border-color:var(--accent); background:rgba(var(--acc-rgb),.14); }
+.copybtn { font:650 11.5px var(--sans); margin-left:8px; padding:2px 10px; border-radius:20px; vertical-align:1px; }
 .cmd.done, .copybtn.done { background:var(--good-soft); color:var(--good); border-color:transparent; }
-.recvbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; color:var(--ink-2); font-size:14px; margin:0; }
-.foot { margin-top:8px; padding-top:16px; border-top:1px solid var(--line); text-align:center; font-size:13px; color:var(--muted); }
-.foot a { color:var(--ink-2); font-weight:600; text-decoration:none; } .foot a:hover { color:var(--accent-ink); }
-button.primary { font:600 14px var(--f-body); padding:7px 14px; border-radius:8px; border:0; background:var(--accent); color:var(--on-accent); cursor:pointer; }
-button.primary:hover:not(:disabled) { filter:brightness(1.1); }
-button.primary:disabled { opacity:.35; cursor:default; }
-.tab:hover { border-color:var(--accent); color:var(--accent-ink); }
+.recvbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; color:var(--ink-2); font-size:13.5px; margin:0; }
+.foot { padding:12px 18px; text-align:center; font-size:12px; color:var(--muted); }
+.panel > div:empty { display:none; }
+.foot a { color:var(--ink-2); font-weight:650; text-decoration:none; } .foot a:hover { color:var(--accent); }
+button.primary { font-size:13px; font-weight:650; padding:9px 16px; border-radius:10px; border:0; cursor:pointer; color:var(--on-accent);
+  background:linear-gradient(135deg,var(--acc-fort),var(--acc-fort2)); box-shadow:0 2px 10px rgba(var(--acc-rgb),.22); transition:filter .2s, transform .1s; }
+button.primary:hover:not(:disabled) { filter:brightness(1.12); }
+button.primary:active:not(:disabled), .tab:active, .nav button:active { transform:scale(.97); }
+button.primary:disabled { opacity:.35; cursor:default; box-shadow:none; }
 button, a, label, .row, .task { touch-action:manipulation; }
-#tip { position:fixed; pointer-events:none; background:var(--ink); color:var(--bg); padding:6px 10px; border-radius:7px; font-size:13px; display:none; max-width:280px; z-index:9; }
-@media (max-width:600px) {
-  .row { grid-template-columns:1fr auto; } .row .track { grid-column:1 / -1; grid-row:2; }
-  .stat { padding-right:14px; margin-right:14px; }
+#tip { position:fixed; pointer-events:none; padding:5px 10px; border-radius:8px; font-size:12px; color:var(--ink-2); background:var(--surface);
+  border:1px solid var(--glass-b); box-shadow:0 4px 14px rgba(0,0,0,.35); display:none; max-width:280px; z-index:9; }
+/* llum que segueix el ratolí per sobre de les targetes (no al mòbil) */
+@media (hover:hover) and (pointer:fine) {
+  .panel, .resum { position:relative; }
+  .panel::after, .resum::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:0; transition:opacity .3s;
+    background:radial-gradient(280px circle at var(--mx,50%) var(--my,50%),rgba(var(--acc-rgb),.07),transparent 70%); }
+  .panel:hover::after, .resum:hover::after { opacity:1; }
 }
-@media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; } }
+@media (max-width:900px) { .resum { grid-template-columns:1fr; } }
+@media (max-width:640px) {
+  main { padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+  .resum { padding:20px 18px; } .hola { font-size:26px; } .panel { padding:16px; }
+  .g2 { grid-template-columns:1fr; }
+  .row { grid-template-columns:1fr auto; } .row .track { grid-column:1 / -1; grid-row:2; }
+}
+@media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
 """
 
 
@@ -981,8 +1020,6 @@ def write_dashboard(d, hist):
         alerts.append(alert(t("Nous"), "", e(t("{n} personatges nous a les teves sèries", n=news))))
     if d["missing"]:
         alerts.append(alert(t("Harem"), "", e(t("{n} personatges teus no surten al harem: torna a enganxar el $mms a «Posar al dia»", n=len(d["missing"])))))
-    alerts_html = (f'<section class="panel"><h2>{e(t("Avisos"))}</h2><ul class="alerts">{"".join(alerts)}</ul></section>' if alerts
-                   else f'<p class="muted" style="margin:0">{e(t("Cap avís: res de nou des de l’última actualització."))}</p>')
 
     bars = []
     for s in series:
@@ -1058,44 +1095,61 @@ def write_dashboard(d, hist):
         f'<div class="og"><h3>{e(t(g))}</h3>' + "".join(f'<div class="oline">{cmd_html(c)}<span>{e(t(desc))}</span></div>' for c, desc in items) + "</div>"
         for g, items in ORDRES)
     oc = f"oc.html?lang={LANG}"
+    avatar = DIR / "icones" / "mudae_rodo.png"  # no va al repo ni al .zip (no és nostre): qui no el té veu el logo propi
+    if avatar.exists():
+        src = "data:image/png;base64," + base64.b64encode(avatar.read_bytes()).decode()
+        logo = f'<img class="logo round" src="{src}" alt="" width="42" height="42">'
+        favicon = f'<link rel="icon" href="{src}">'
+    else:
+        logo = ('<svg class="logo" viewBox="0 0 42 42" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">'
+                '<stop offset="0" stop-color="#58a6ff"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs>'
+                '<rect width="42" height="42" rx="11" fill="url(#lg)"/><path d="M21 8l10 10-10 16-10-16z" fill="#fff" fill-opacity=".92"/>'
+                '<path d="M11 18h20M21 8l-3.5 10L21 34l3.5-16z" fill="none" stroke="#1d4ed8" stroke-opacity=".35"/></svg>')
+        favicon = ""
     T_ = lambda s, **kw: e(t(s, **kw))  # text traduït i escapat, per a l'HTML
 
     page = f"""<!doctype html>
 <html lang="{LANG}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f6f5f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#131218" media="(prefers-color-scheme: dark)">
-<title>{e(TITLE_TEXT)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<meta name="color-scheme" content="dark"><meta name="theme-color" content="#141417">
+<title>{e(TITLE_TEXT)}</title>{favicon}
 <style>{STYLE}</style></head><body><main>
-<header class="top">
- <div class="title"><h1>{e(TITLE_TEXT)}</h1>
-  <div class="tools"><span class="muted">{T_("Dades del {date}", date=f"{dt.datetime.now():%d/%m/%Y %H:%M}")}</span>
-   <button type="button" class="ghost" id="lnkBtn">{T_("Crear accés directe a l'escriptori")}</button>
-   <button type="button" class="ghost" id="stopBtn">{T_("Tancar el servidor")}</button>
-   <span id="toolMsg" role="status"></span></div></div>
- <div class="stats">
-  <div class="stat"><span>{T_("Col·lecció")}</span><b>{pct}%</b><span>{T_("{a} de {b}", a=owned, b=total)}</span></div>
-  <div class="stat"><span>{T_("Harem")}</span><b>{len(d["harem"])}</b><span>{T_("{n} sobrants", n=len(d["sobrants"]))}</span></div>
-  <div class="stat"><span>{T_("Wishlist")}</span><b>{len(d["wishlist"])}/15</b><span>{T_("tot bé") if not wl_bad else T_("{n} per arreglar", n=len(wl_bad))}</span></div>
-  <div class="stat"><span>{T_("Intercanvis")}</span><b>{len(d["trades"])}</b><span>{T_("{n} oberts", n=pend)}</span></div>
+<header class="hdr fu">
+ <div class="hdr-l">
+  {logo}
+  <div><h1 class="logo-name">{e(TITLE_TEXT)}</h1><div class="logo-sub">{T_("Dades del {date}", date=f"{dt.datetime.now():%d/%m/%Y %H:%M}")}</div></div>
+ </div>
+ <div class="hdr-r">
+  <span class="pill" id="toolMsg" role="status"></span>
+  <button type="button" class="pill" id="lnkBtn">{T_("Crear accés directe a l'escriptori")}</button>
+  <button type="button" class="pill" id="stopBtn"><span class="dot ok"></span>{T_("Tancar el servidor")}</button>
  </div>
 </header>
-<div class="now-grid">
- <section class="panel"><div class="panel-head"><h2>{T_("Què toca ara")}</h2></div><p id="clock" class="clock"></p>{checklist}</section>
+<section class="resum glass fu" aria-labelledby="hola">
+ <div>
+  <h2 class="hola" id="hola">{T_("Hola, {name}", name=ME) if ME else T_("Hola")}</h2>
+  <p id="clock" class="clock"></p>
+  {f'<ul class="alerts" aria-label="{T_("Avisos")}">{"".join(alerts)}</ul>' if alerts else ""}
+ </div>
+ <div class="fets">
+  <div class="fet"><div class="fet-l">{T_("Col·lecció")}</div><div class="fet-v">{pct}%</div><div class="fet-s">{T_("{a} de {b}", a=owned, b=total)}</div></div>
+  <div class="fet"><div class="fet-l">{T_("Harem")}</div><div class="fet-v">{len(d["harem"])}</div><div class="fet-s">{T_("{n} sobrants", n=len(d["sobrants"]))}</div></div>
+  <div class="fet"><div class="fet-l">{T_("Wishlist")}</div><div class="fet-v">{len(d["wishlist"])}/15</div><div class="fet-s">{T_("tot bé") if not wl_bad else T_("{n} per arreglar", n=len(wl_bad))}</div></div>
+  <div class="fet"><div class="fet-l">{T_("Intercanvis")}</div><div class="fet-v">{len(d["trades"])}</div><div class="fet-s">{T_("{n} oberts", n=pend)}</div></div>
+ </div>
+</section>
+<nav class="nav" role="tablist" aria-label="{T_("Seccions")}">
+ <button type="button" role="tab" data-go="avui" aria-controls="v-avui">{T_("Avui")}</button>
+ <button type="button" role="tab" data-go="coll" aria-controls="v-coll">{T_("Col·leccions")}</button>
+ <button type="button" role="tab" data-go="wl" aria-controls="v-wl">{T_("Wishlist")}{f'<span class="n">{len(wl_bad)}</span>' if wl_bad else ""}</button>
+ <button type="button" role="tab" data-go="trades" aria-controls="v-trades">{T_("Intercanvis")}</button>
+ <button type="button" role="tab" data-go="eines" aria-controls="v-eines">{T_("Eines")}</button>
+</nav>
+<div class="view g2" id="v-avui" role="tabpanel">
+ <section class="panel"><div class="panel-head"><h2>{T_("Què toca ara")}</h2></div>{checklist}</section>
  <section class="panel ocbox"><div class="panel-head"><h2>{T_("Ajudant del $oc")}</h2><a href="{oc}" style="font-size:13px">{T_("Obrir a part")}</a></div>
  <iframe src="{oc}" title="{T_("Ajudant del $oc")}"></iframe></section>
 </div>
-{alerts_html}
-<section class="panel" id="upd">
- <div class="panel-head"><h2>{T_("Posar al dia")}</h2><span id="updAge" class="muted" style="font-size:13px"></span></div>
- <div class="give-row">{T_("Què enganxes:")}
-  <select id="updKind" aria-label="{T_("Què enganxes:")}"><option value="harem">{T_("El teu harem ($mms)")}</option><option value="wishlist">{T_("La wishlist ($wl)")}</option><option value="serie">{T_("Una sèrie ($imas)")}</option></select>
-  <span id="updSerieBox" hidden>{T_("Sèrie:")} <select id="updSerie" aria-label="{T_("Sèrie:")}">{serie_opts}<option value="__new__">{T_("Sèrie nova…")}</option></select>
-  <input type="text" id="updNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de la sèrie, com surt a Mudae")}" placeholder="{T_("Nom de la sèrie, com surt a Mudae")}" hidden></span>
-  <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mms">$mms</button></span></div>
- <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
- <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
-</section>
+<div class="view" id="v-coll" role="tabpanel" hidden>
 <section class="panel" id="coll">
  <div class="panel-head"><h2>{T_("Col·leccions")}</h2>
   <div class="legend"><span><i style="background:var(--accent)"></i>{T_("Teus")}</span><span><i style="background:var(--warm)"></i>{T_("D'algú altre")}</span><span><i style="background:var(--sunk)"></i>{T_("Lliures")}</span></div></div>
@@ -1111,11 +1165,37 @@ def write_dashboard(d, hist):
    <button type="button" class="tab" id="gotClear">{T_("Desmarca")}</button><span id="gotMsg" role="status"></span></div>
  </div>
 </section>
+</div>
+<div class="view g2" id="v-wl" role="tabpanel" hidden>
+ <section class="panel" id="wlp"><div class="panel-head"><h2>{T_("Wishlist")}</h2><span class="muted" style="font-size:13px">{T_("{n} de 15 llocs (l'estrella també compta)", n=len(d["wishlist"]))}</span></div>
+  <table>{wl}</table>
+  <div id="wlBuild"></div>
+ </section>
+ <section class="panel"><h2>{T_("Sobrants per sèrie")}</h2><table>{sob}</table></section>
+</div>
+<div class="view" id="v-trades" role="tabpanel" hidden>
+<section class="panel">
+ <div class="panel-head"><h2>{T_("Intercanvis per persona")}</h2>
+  <p class="recvbar"><button id="recvBtn" class="primary" disabled>{T_("Ja són meus")}</button><span id="recvMsg" role="status">{T_("Marca els que t'han donat.")}</span></p></div>
+ <div class="owners">{trades}</div>
+</section>
 <section class="panel" id="mine">
  <div class="panel-head"><h2>{T_("Buscar entre els meus")}</h2><span class="muted" style="font-size:13px">{T_("{n} personatges al teu harem", n=len(d["harem"]))}</span></div>
  <label for="mineQ" class="muted" style="font-size:14px">{T_("Enganxa sèries o noms, separats per / , comes o línies (com la llista que t'envia un amic). No cal escriure-les bé del tot.")}</label>
  <textarea id="mineQ" rows="3" spellcheck="false" placeholder="Naruto / South Park / full metal alchimist / Rezero"></textarea>
  <div id="mineOut"></div>
+</section>
+</div>
+<div class="view" id="v-eines" role="tabpanel" hidden>
+<section class="panel" id="upd">
+ <div class="panel-head"><h2>{T_("Posar al dia")}</h2><span id="updAge" class="muted" style="font-size:13px"></span></div>
+ <div class="give-row">{T_("Què enganxes:")}
+  <select id="updKind" aria-label="{T_("Què enganxes:")}"><option value="harem">{T_("El teu harem ($mms)")}</option><option value="wishlist">{T_("La wishlist ($wl)")}</option><option value="serie">{T_("Una sèrie ($imas)")}</option></select>
+  <span id="updSerieBox" hidden>{T_("Sèrie:")} <select id="updSerie" aria-label="{T_("Sèrie:")}">{serie_opts}<option value="__new__">{T_("Sèrie nova…")}</option></select>
+  <input type="text" id="updNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de la sèrie, com surt a Mudae")}" placeholder="{T_("Nom de la sèrie, com surt a Mudae")}" hidden></span>
+  <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mms">$mms</button></span></div>
+ <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
+ <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
 </section>
 <section class="panel" id="cls">
  <div class="panel-head"><h2>{T_("Sèrie dels teus personatges")}</h2><span class="muted" style="font-size:13px">{T_("dels que no col·lecciones")}</span></div>
@@ -1126,19 +1206,8 @@ def write_dashboard(d, hist):
  {datalists}
 </section>
 <section class="panel"><h2>{T_("Ordres d'ús habitual")}</h2><div class="ogrid">{ordres}</div></section>
-<div class="two">
- <section class="panel" id="wlp"><div class="panel-head"><h2>{T_("Wishlist")}</h2><span class="muted" style="font-size:13px">{T_("{n} de 15 llocs (l'estrella també compta)", n=len(d["wishlist"]))}</span></div>
-  <table>{wl}</table>
-  <div id="wlBuild"></div>
- </section>
- <section class="panel"><h2>{T_("Sobrants per sèrie")}</h2><table>{sob}</table></section>
 </div>
-<section class="panel">
- <div class="panel-head"><h2>{T_("Intercanvis per persona")}</h2>
-  <p class="recvbar"><button id="recvBtn" class="primary" disabled>{T_("Ja són meus")}</button><span id="recvMsg" role="status">{T_("Marca els que t'han donat.")}</span></p></div>
- <div class="owners">{trades}</div>
-</section>
-<footer class="foot">Developed by <a href="https://github.com/Vlarac03">Vlarac</a> · {T_("Tauler de Mudae")} · {T_("Projecte de fans, no afiliat amb Mudae")}</footer>
+<footer class="foot glass">Developed by <a href="https://github.com/Vlarac03">Vlarac</a> · {T_("Tauler de Mudae")} · {T_("Projecte de fans, no afiliat amb Mudae")}</footer>
 </main><div id="tip"></div>
 <script>{JS_HEAD.replace("__I18N__", js(STRINGS.get(LANG, {})))}
 // Botó «Ja són meus» dels intercanvis: només funciona amb el servidor local engegat
@@ -1190,7 +1259,30 @@ document.addEventListener('mousemove', ev => {{
   tip.textContent = el.dataset.tip; tip.style.display = 'block';
   tip.style.left = Math.min(ev.clientX + 12, innerWidth - tip.offsetWidth - 8) + 'px';
   tip.style.top = (ev.clientY + 14) + 'px';
+  const g = ev.target.closest('.panel, .resum');  // la llum que segueix el ratolí
+  if (g) {{ const r = g.getBoundingClientRect(); g.style.setProperty('--mx', ev.clientX - r.left + 'px'); g.style.setProperty('--my', ev.clientY - r.top + 'px'); }}
 }});
+// Pestanyes: una vista cada vegada; es recorda l'última (també després de desar, que recarrega la pàgina)
+const tabs = [...document.querySelectorAll('.nav [data-go]')];
+function go(v, focus) {{
+  if (!document.getElementById('v-' + v)) v = 'avui';
+  tabs.forEach(b => {{
+    const on = b.dataset.go === v;
+    b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1;
+    document.getElementById('v-' + b.dataset.go).hidden = !on;
+    if (on && focus) b.focus();
+  }});
+  try {{ localStorage.setItem('mudae-vista', v); }} catch (err) {{}}
+}}
+tabs.forEach((b, i) => {{
+  b.onclick = () => go(b.dataset.go);
+  b.onkeydown = ev => {{
+    const k = {{ ArrowRight: 1, ArrowLeft: -1 }}[ev.key];
+    if (k) {{ ev.preventDefault(); go(tabs[(i + k + tabs.length) % tabs.length].dataset.go, true); }}
+  }};
+}});
+let first = 'avui'; try {{ first = localStorage.getItem('mudae-vista') || 'avui'; }} catch (err) {{}}
+go(first);
 </script><script>{JS_TODAY.replace("__CLAIM__", json.dumps(CLAIM_HOURS))}</script>
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
 <script>{JS_UPD.replace("__META__", js(read_meta()))}</script>
