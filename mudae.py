@@ -162,6 +162,8 @@ def read_series():
             m = CLAIM.match(line)
             h = HEART_ONLY.match(line)
             name, owner = (m.group(1).strip(), m.group(2)) if m else (h.group(1).strip(), "algú") if h else (line, "")
+            if owner.casefold() == ME.casefold():  # Mudae escriu els noms en minúscula («vlarac»), tu pots haver posat «Vlarac»
+                owner = ME
             if f.stem in spec and name in harem:  # a les especials, el que és al teu harem és teu (no hi ha cap $imaso que ho digui)
                 owner = ME
             if name not in seen:
@@ -1548,7 +1550,7 @@ def mark_given(names, to=""):
         changed = False
         for k, raw in enumerate(text):
             m = CLAIM.match(re.sub(r"^\d+\.\s+", "", raw.strip()))
-            if m and m.group(1).strip() in names and m.group(2) == ME:
+            if m and m.group(1).strip() in names and m.group(2).casefold() == ME.casefold():
                 text[k] = f"{m.group(1).strip()} 💞 => {to}"
                 changed = True
         if changed:

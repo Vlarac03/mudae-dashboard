@@ -42,6 +42,17 @@ class Llegir(Base):
         self.assertEqual(got, [("Aragog", "jo"), ("Dobby", ""), ("San", "algú")])  # sense duplicats
 
 
+class Majuscules(Base):
+    def test_nom_amb_majuscula(self):
+        mudae.ME = "Jo"  # a Configura.bat amb majúscula; Mudae escriu «jo»
+        self.write("harem.txt", "Aragog\n")
+        self.write("series/HP.txt", "Aragog => jo\nDobby => pep\n")
+        self.assertEqual([r["owner"] for r in mudae.read_series()], ["Jo", "pep"])
+        self.assertEqual(mudae.state(mudae.read_series()[0]["owner"]), "Meu")
+        mudae.mark_given(["Aragog"], "@anna")
+        self.assertEqual((self.tmp / "series/HP.txt").read_text(encoding="utf-8"), "Aragog 💞 => anna\nDobby => pep\n")
+
+
 class Desar(Base):
     def test_privat_conserva_propietaris(self):
         self.write("harem.txt", "Kiki\n")
