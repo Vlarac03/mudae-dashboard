@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ajudant $oc</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Figtree:wght@400;600&display=swap">
+<style>
+/* mateixos colors que el tauler; els colors de les esferes són els del joc */
+:root { --bg:#f6f5f9; --surface:#ffffff; --sunk:#efedf4; --line:#e3e0ea; --ink:#1d1b24; --ink-2:#55516a; --muted:#8a869b;
+  --accent:#6b5fc7; --accent-soft:#ebe8fa; --accent-ink:#4a3fa3;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif; --f-body:"Figtree", "Segoe UI", system-ui, sans-serif; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#131218; --surface:#1b1a22; --sunk:#24222d; --line:#2f2d3a;
+  --ink:#ecebf2; --ink-2:#b5b2c4; --muted:#7f7b90; --accent:#a497f0; --accent-soft:#2a2645; --accent-ink:#cdc5ff; color-scheme:dark; } }
+:root[data-theme="dark"] { --bg:#131218; --surface:#1b1a22; --sunk:#24222d; --line:#2f2d3a;
+  --ink:#ecebf2; --ink-2:#b5b2c4; --muted:#7f7b90; --accent:#a497f0; --accent-soft:#2a2645; --accent-ink:#cdc5ff; color-scheme:dark; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 var(--f-body); }
+main { max-width:520px; margin:0 auto; padding-block:24px 40px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:14px; }
+h1 { font:700 24px var(--f-display); margin:0; }
+p { margin:0; color:var(--ink-2); }
+a { color:var(--accent-ink); }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.palette { display:flex; flex-wrap:wrap; gap:6px; }
+.palette button { font:inherit; font-size:14px; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); border-radius:8px; padding:5px 11px; cursor:pointer; }
+.palette button:hover, .row button:hover { border-color:var(--accent); }
+.cell:hover { border-color:var(--accent); }
+button { touch-action:manipulation; }
+.palette button[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); color:var(--accent-ink); font-weight:600; }
+.dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+.grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.cell { aspect-ratio:1; max-width:100%; border-radius:10px; border:1px solid var(--line); background:var(--sunk); font:600 12px var(--f-body); color:var(--muted);
+  cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative; }
+.cell.cand { border:1.5px dashed var(--accent); background:var(--surface); color:var(--ink-2); }
+.cell.best { border:2.5px solid var(--accent); background:var(--accent-soft); color:var(--accent-ink); }
+.cell.best::after { content:attr(data-click); position:absolute; bottom:5px; font-size:10px; letter-spacing:.06em; color:var(--accent-ink); }
+.cell.center { background-image:repeating-linear-gradient(45deg,transparent 0 6px,var(--line) 6px 7px); }
+#msg { padding:12px 14px; border-radius:10px; background:var(--surface); border:1px solid var(--line); font-size:15px; }
+.row { display:flex; gap:12px; align-items:center; }
+.row button { font:inherit; font-size:14px; padding:7px 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; }
+.legend { font-size:13px; color:var(--muted); }
+/* dins del tauler: sense títol, fons ni enllaç de tornada */
+.framed body { background:transparent; } .framed main { padding:0; } .framed h1, .framed .back { display:none; }
+</style>
+<script>if (window.self !== window.top) document.documentElement.classList.add('framed');</script></head><body><main>
+<h1 data-i18n="title">Ajudant del $oc</h1>
+<p data-i18n="intro">Tria el color de sota i clica la casella on ha sortit. Les vores discontínues són on pot ser la vermella; la gruixuda és la que et recomano clicar.</p>
+<div class="palette" id="pal"></div>
+<div class="grid" id="grid"></div>
+<div id="msg" role="status" aria-live="polite"></div>
+<div class="row"><button id="reset" data-i18n="reset">Nova partida</button><a class="back" href="dashboard.html" data-i18n="back">Tornar al tauler</a></div>
+<p class="legend" data-i18n="rules">Regles: vermella mai al centre · taronja tocant la vermella · groga en diagonal · verda a la mateixa fila o columna · turquesa en línia (fila, columna o diagonal) · blava mai en línia.</p>
+<p class="legend back">Developed by <a href="https://github.com/Vlarac03">Vlarac</a></p>
+
+<script id="logic">
+// Tauler 5x5, caselles 0..24. Color per casella: null (amagada) o un dels COLORS.
+const N = 5, CENTER = 12;
+const rc = i => [Math.floor(i / N), i % N];
+function rel(a, b) {
+  const [r1, c1] = rc(a), [r2, c2] = rc(b);
+  const dr = Math.abs(r1 - r2), dc = Math.abs(c1 - c2);
+  if (a === b) return 'same';
+  if (dr === 0 || dc === 0) return 'line';   // mateixa fila o columna
+  if (dr === dc) return 'diag';
+  return 'none';
+}
+const near = (a, b) => a !== b && Math.max(Math.abs(rc(a)[0] - rc(b)[0]), Math.abs(rc(a)[1] - rc(b)[1])) === 1;
+// La vermella a R és compatible amb haver vist `color` a X?
+function fits(R, X, color) {
+  const k = rel(R, X);
+  switch (color) {
+    case 'red': return k === 'same';
+    case 'blue': return k === 'none';
+    case 'teal': return k === 'line' || k === 'diag';
+    case 'green': return k === 'line';
+    case 'yellow': return k === 'diag';
+    // "adjacent" pot voler dir també en diagonal: ho acceptem per no descartar mai la bona
+    case 'orange': return near(R, X);
+    default: return true;
+  }
+}
+function candidates(board) {
+  const red = board.indexOf('red');
+  if (red >= 0) return [red];
+  const out = [];
+  for (let R = 0; R < N * N; R++) {
+    if (R === CENTER || board[R]) continue;
+    if (board.every((col, X) => !col || fits(R, X, col))) out.push(R);
+  }
+  return out;
+}
+// Casella a clicar: la que deixa menys candidates de mitjana, segons si surt vermella, en línia, en diagonal o blava.
+function best(board) {
+  const red = board.indexOf('red');
+  if (red >= 0) {  // ja tens la vermella: ves a per les taronges (tocant-la, mateixa fila o columna)
+    const opts = [];
+    for (let X = 0; X < N * N; X++) if (!board[X] && near(X, red) && rel(X, red) === 'line') opts.push(X);
+    return { pick: opts[0] ?? null, cands: [red], oranges: opts };
+  }
+  const cands = candidates(board);
+  if (cands.length <= 1) return { pick: cands[0] ?? null, cands };
+  let pick = null, score = Infinity;
+  for (let X = 0; X < N * N; X++) {
+    if (board[X]) continue;
+    const groups = {};
+    for (const R of cands) { const k = rel(R, X); groups[k] = (groups[k] || 0) + 1; }
+    let s = Object.values(groups).reduce((a, n) => a + n * n, 0) / cands.length;
+    if (cands.includes(X)) s -= 0.01;  // a igualtat, millor una que pugui ser la vermella
+    if (s < score) { score = s; pick = X; }
+  }
+  return { pick, cands };
+}
+if (typeof module !== 'undefined') module.exports = { candidates, best, rel };
+</script>
+
+<script>
+// Textos: ?lang=ca, es o en (el tauler hi posa el de config.json); sense res, en anglès
+const L = {
+  es: {
+    title: 'Ayudante del $oc', intro: 'Elige el color de abajo y haz clic en la casilla donde ha salido. Los bordes discontinuos son donde puede estar la roja; el grueso es el que te recomiendo.',
+    reset: 'Nueva partida', back: 'Volver al panel', click: 'CLIC', row: 'f', col: 'c',
+    rules: 'Reglas: roja nunca en el centro · naranja tocando la roja · amarilla en diagonal · verde en la misma fila o columna · turquesa en línea (fila, columna o diagonal) · azul nunca en línea.',
+    blue: 'Azul', teal: 'Turquesa', green: 'Verde', yellow: 'Amarilla', orange: 'Naranja', red: 'Roja', clear: 'Borrar',
+    found: '¡Encontrada! Las naranjas están tocándola: prueba <b>{c}</b>.', foundOnly: '¡Encontrada!', start: 'Marca la azul que ya sale destapada.',
+    none: 'Ninguna casilla encaja: revisa los colores que has marcado.', one: 'La roja está en <b>{c}</b>. ¡Haz clic!',
+    many: 'Puede estar en <b>{n}</b> casillas. Haz clic en <b>{c}</b>.', hint: 'Si te quedan tantos clics como casillas posibles, haz clic en ellas directamente.' },
+  en: {
+    title: '$oc helper', intro: 'Pick the color below and click the square where it appeared. Dashed borders show where the red one can be; the thick one is the square I recommend.',
+    reset: 'New game', back: 'Back to the dashboard', click: 'CLICK', row: 'r', col: 'c',
+    rules: 'Rules: red never in the center · orange touching the red · yellow on a diagonal · green in the same row or column · teal in line (row, column or diagonal) · blue never in line.',
+    blue: 'Blue', teal: 'Teal', green: 'Green', yellow: 'Yellow', orange: 'Orange', red: 'Red', clear: 'Clear',
+    found: 'Found it! The orange ones are touching it: try <b>{c}</b>.', foundOnly: 'Found it!', start: 'Mark the blue one that is already revealed.',
+    none: 'No square fits: check the colors you marked.', one: 'The red one is at <b>{c}</b>. Click it!',
+    many: 'It can be in <b>{n}</b> squares. Click <b>{c}</b>.', hint: 'If you have as many clicks left as possible squares, just click them.' },
+  ca: {
+    click: 'CLICA', row: 'f', col: 'c', blue: 'Blava', teal: 'Turquesa', green: 'Verda', yellow: 'Groga', orange: 'Taronja', red: 'Vermella', clear: 'Esborrar',
+    found: 'Trobada! Les taronges són tocant-la: prova <b>{c}</b>.', foundOnly: 'Trobada!', start: 'Marca la blava que ja surt destapada.',
+    none: 'Cap casella encaixa: revisa els colors que has marcat.', one: 'La vermella és a <b>{c}</b>. Clica-la!',
+    many: 'Pot ser en <b>{n}</b> caselles. Clica <b>{c}</b>.', hint: 'Si et queden tants clics com caselles possibles, clica-les directament.' },
+};
+const LANG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('lang') in L ? new URLSearchParams(location.search).get('lang') : 'en';
+const T = (k, v) => { let r = L[LANG][k] ?? L.ca[k] ?? k; for (const x in v || {}) r = r.split('{' + x + '}').join(v[x]); return r; };
+if (typeof document !== 'undefined') {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-i18n]').forEach(el => { if (L[LANG][el.dataset.i18n]) el.textContent = L[LANG][el.dataset.i18n]; });
+  document.querySelector('a.back').href = 'dashboard.html';
+  const COLORS = [['blue', T('blue'), '#3a5fcd'], ['teal', T('teal'), '#1baf9a'], ['green', T('green'), '#2e9e3e'], ['yellow', T('yellow'), '#e0b000'],
+                  ['orange', T('orange'), '#eb6834'], ['red', T('red'), '#d93030'], [null, T('clear'), 'transparent']];
+  const name = i => `${T('row')}${Math.floor(i / 5) + 1} ${T('col')}${i % 5 + 1}`;
+  let board = Array(25).fill(null), current = 'blue';
+  const pal = document.getElementById('pal'), grid = document.getElementById('grid'), msg = document.getElementById('msg');
+  for (const [key, label, hex] of COLORS) {
+    const b = document.createElement('button');
+    b.innerHTML = `<span class="dot" style="background:${hex};border:1px solid var(--line)"></span>${label}`;
+    b.onclick = () => { current = key; render(); };
+    b.dataset.key = key; pal.appendChild(b);
+  }
+  for (let i = 0; i < 25; i++) {
+    const c = document.createElement('button');
+    c.className = 'cell'; c.setAttribute('aria-label', name(i)); c.dataset.click = T('click');
+    c.onclick = () => { board[i] = current; render(); };
+    grid.appendChild(c);
+  }
+  document.getElementById('reset').onclick = () => { board = Array(25).fill(null); current = 'blue'; render(); };
+  function render() {
+    for (const b of pal.children) b.setAttribute('aria-pressed', String(b.dataset.key === String(current)));
+    const res = best(board);
+    [...grid.children].forEach((c, i) => {
+      const col = COLORS.find(x => x[0] === board[i]);
+      c.style.background = board[i] ? col[2] : '';
+      c.textContent = board[i] ? '' : name(i);
+      c.className = 'cell' + (i === 12 ? ' center' : '') + (!board[i] && res.cands.includes(i) ? ' cand' : '') + (i === res.pick && board.some(Boolean) ? ' best' : '');
+    });
+    if (board.includes('red')) {
+      msg.innerHTML = res.oranges.length ? T('found', { c: res.oranges.map(name).join(', ') }) : T('foundOnly');
+    } else if (!board.some(Boolean)) {
+      msg.textContent = T('start');
+    } else if (res.cands.length === 0) {
+      msg.textContent = T('none');
+    } else if (res.cands.length === 1) {
+      msg.innerHTML = T('one', { c: name(res.cands[0]) });
+    } else {
+      msg.innerHTML = T('many', { n: res.cands.length, c: name(res.pick) }) +
+        `<br><span style="font-size:13px;color:var(--muted)">${T('hint')}</span>`;
+    }
+  }
+  render();
+}
+</script>
+</main></body></html>

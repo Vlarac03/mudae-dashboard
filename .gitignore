@@ -1,0 +1,13 @@
+# Dades personals: no es pugen mai
+dades/
+Mudae - estrategia.xlsx
+dashboard.html
+
+# Generat
+dist/
+*.zip
+__pycache__/
+
+# Imatges que no són nostres (avatar de Mudae, logos de Hypixel): només la icona pròpia
+icones/*
+!icones/tauler.ico

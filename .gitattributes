@@ -1,0 +1,5 @@
+* text=auto
+# cmd llegeix malament els .bat sense CRLF
+*.bat text eol=crlf
+*.png binary
+*.ico binary
