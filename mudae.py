@@ -60,12 +60,10 @@ def canon(v):
 
 TITLE_TEXT = f"Mudae · {CONFIG['servidor']}" if CONFIG.get("servidor") else t("Tauler de Mudae")
 ALTRES = "Altres (no la sé: mira-la amb $im)"
-# Ordre preferit per omplir la wishlist quan s'allibera un lloc (després, la resta de prioritat Alta)
-PREFERITS = ["Leonard Hofstadter", "Alastor Moody", "George Weasley", "Arthur Weasley", "Lucius Malfoy", "Fawkes",
-             "Cedric Diggory", "Gellert Grindelwald", "Howl", "Yubaba", "Kamaji", "Major Monogram",
-             "Jeremy Johnson", "Suzy Johnson", "Javier Esposito", "Kevin Ryan", "Stuart Bloom", "Meemaw"]
+# Personatges que vols que el tauler et proposi primer quan s'allibera un lloc a la wishlist (després, la resta de prioritat Alta)
+PREFERITS = CONFIG.get("preferits", [])
 
-CLAIM_HOURS = CONFIG.get("hores_reclam", [1, 4, 7, 10, 13, 16, 19, 22])  # reclams cada 3 h al minut 02 (per defecte, les del servidor Calvomasters)
+CLAIM_HOURS = CONFIG.get("hores_reclam", [1, 4, 7, 10, 13, 16, 19, 22])  # reclams cada 3 h al minut 02
 GRUPS = {
     "dia": "EN COMENÇAR EL DIA",
     "hora": "CADA HORA (minut 02)",
@@ -73,7 +71,7 @@ GRUPS = {
     "aconseguit": "UN COP PER SETMANA (o quan aconsegueixis algú)",
     "temps": "QUAN TINGUIS TEMPS",
 }
-RT_HORES = CONFIG.get("rt_hores", 20)  # $rt: cada 50 h, -10 h per Esmeralda II, III i IV (Victor té la IV)
+RT_HORES = CONFIG.get("rt_hores", 50)  # $rt: cada 50 h, -10 h per cada insígnia Esmeralda II, III i IV
 # (grup, què, ordre, com, quan es torna a poder fer): surt al full Rutina i al tauler.
 # «hora» = al minut 02 · «reclam» = al pròxim reclam · «utc» = a mitjanit UTC · un número = hores des que la fas
 RUTINA = [
@@ -203,8 +201,7 @@ def build_data():
     changes = []
     for r in rows:
         prev = old["col"].get((r["serie"], r["name"])) or old["col_name"].get(r["name"])  # per nom: si la sèrie s'ha reanomenat
-        default = "Baixa" if r["serie"] == "Studio Ghibli" else "Mitjana"
-        r["prio"] = (prev or {}).get("prio") or default
+        r["prio"] = (prev or {}).get("prio") or "Mitjana"
         r["notes"] = (prev or {}).get("notes")
         r["state"] = state(r["owner"])
         if prev is None:
@@ -251,8 +248,6 @@ def build_data():
     for s in sobrants:
         size[s["serie"]] = size.get(s["serie"], 0) + 1
     sobrants.sort(key=lambda s: (s["serie"] == ALTRES, -size[s["serie"]], s["serie"], s["name"]))
-    if "Emma Watson" in harem and not old["sob"]:
-        next(s for s in sobrants if s["name"] == "Emma Watson")["todo"] = "Guardar"
     missing = sorted(mine - set(harem))  # teus segons $ima però no al $mm: sol voler dir que el harem és vell
 
     series = {}
@@ -578,7 +573,7 @@ draw();
 
 
 STYLE = """
-/* El mateix aspecte que el dashboard del homelab: fosc grafit, targetes de vidre i un sol accent blau.
+/* Fosc grafit, targetes de vidre i un sol accent blau.
    El color només marca estat: blau = teu, taronja = d'algú altre, puntejat = lliure, verd/vermell = avisos */
 :root {
   --bg:#141417; --bg-grad:linear-gradient(160deg,#1b1b1f 0%,#141417 50%,#111114 100%);

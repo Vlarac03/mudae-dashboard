@@ -65,7 +65,8 @@ El panel no se conecta a Discord ni a Mudae y no pide ninguna cuenta. Solo lee l
 | `servidor` | Opcional: sale en el título del panel y del Excel. |
 | `discord_id` | Opcional: el número que te da `$myid`, para que los comandos `$give` que copias te mencionen bien. |
 | `hores_reclam` | Opcional: las horas en que se puede reclamar en vuestro servidor. Por defecto, `[1, 4, 7, 10, 13, 16, 19, 22]` (cada 3 horas, en el minuto 02). |
-| `rt_hores` | Opcional: cada cuánto puedes usar `$rt`. Por defecto, `20` (Esmeralda IV; sin insignias de Esmeralda son 50). |
+| `rt_hores` | Opcional: cada cuánto puedes usar `$rt`. Por defecto, `50`; quita 10 horas por cada insignia Esmeralda II, III y IV (`20` con las tres). |
+| `preferits` | Opcional: personajes que el panel te propone primero cuando se libera un hueco en la wishlist, por ejemplo `["Fawkes", "Howl"]`. |
 
 ## Si algo no va
 

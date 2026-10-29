@@ -65,7 +65,8 @@ The dashboard doesn't connect to Discord or Mudae and doesn't need an account. I
 | `servidor` | Optional: shown in the dashboard and Excel titles. |
 | `discord_id` | Optional: the number `$myid` gives you, so the `$give` commands you copy mention you properly. |
 | `hores_reclam` | Optional: the hours when you can claim on your server. Default `[1, 4, 7, 10, 13, 16, 19, 22]` (every 3 hours, at minute 02). |
-| `rt_hores` | Optional: how often you can use `$rt`. Default `20` (Emerald IV; it's 50 without Emerald badges). |
+| `rt_hores` | Optional: how often you can use `$rt`. Default `50`; take off 10 hours for each Emerald II, III and IV badge (`20` with all three). |
+| `preferits` | Optional: characters the dashboard suggests first when a wishlist slot frees up, for example `["Fawkes", "Howl"]`. |
 
 ## Troubleshooting
 

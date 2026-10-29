@@ -65,7 +65,8 @@ El tauler no es connecta a Discord ni a Mudae i no demana cap compte. Només lle
 | `servidor` | Opcional: surt al títol del tauler i de l'Excel. |
 | `discord_id` | Opcional: el número que et dona `$myid`, perquè les ordres `$give` que copies et mencionin bé. |
 | `hores_reclam` | Opcional: les hores en què es pot reclamar al vostre servidor. Per defecte, `[1, 4, 7, 10, 13, 16, 19, 22]` (cada 3 hores, al minut 02). |
-| `rt_hores` | Opcional: cada quant pots fer servir `$rt`. Per defecte, `20` (Esmeralda IV; sense insígnies d'Esmeralda són 50). |
+| `rt_hores` | Opcional: cada quant pots fer servir `$rt`. Per defecte, `50`; treu-ne 10 hores per cada insígnia Esmeralda II, III i IV (`20` amb totes tres). |
+| `preferits` | Opcional: personatges que el tauler et proposa primer quan s'allibera un lloc a la wishlist, per exemple `["Fawkes", "Howl"]`. |
 
 ## Si alguna cosa no va
 
