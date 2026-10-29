@@ -16,6 +16,7 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 - **`$oc` helper**: mark the colors that appear and it tells you which square to click to find the red sphere.
 - **Collections**: one album per series with your characters, the free ones, the ones on your wishlist and the ones other players own (and who). Click the ones you get to mark them as yours.
 - **Custom collections**: a group you pick, even if it isn't a Mudae series (for example, the Eevees from the Pokédex). Type its name and characters, and the `$imaso` of the series they come from fills in who owns each one.
+- **Upgrades**: paste your `$k`, `$kt` or `$opp <character>` and it tells you which badge, tower floor and sphere perk to get next, and how much kakera you still need.
 - **Wishlist**: warns you about characters you already own or someone else claimed, and builds the `$wishremove` and `$wish` commands for you.
 - **Trades and gifts**: the `$give` command for each player, and a search box that understands misspelled series lists («full metal alchimist», «Rezero»…).
 - **Update**: paste your `$mms`, `$wl` or `$imaso` and click a button. It reminds you if your harem is more than a week old.
@@ -88,6 +89,7 @@ Tests:
 python -m unittest discover tests
 node tests/test_oc.mjs
 node tests/test_rutina.mjs
+node tests/test_millores.mjs
 ```
 
 Missing translations: `python tools/textos.py`. Clean zip to share (no personal data): `python tools/fer_zip.py`.

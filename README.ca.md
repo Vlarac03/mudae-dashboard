@@ -16,6 +16,7 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 - **Ajudant del `$oc`**: marques els colors que surten i et diu quina casella clicar per trobar la vermella.
 - **Col·leccions**: un àlbum per sèrie amb els teus personatges, els lliures, els de la wishlist i els d'altres jugadors (i de qui són). Cliques els que aconsegueixes per marcar-los com a teus.
 - **Col·leccions especials**: un grup que tries tu, encara que no sigui una sèrie de Mudae (per exemple, els Eevee de la Pokédex). Escrius el nom i els personatges, i el `$imaso` de la sèrie d'on surten t'hi posa de qui és cada un.
+- **Millores**: enganxes el `$k`, el `$kt` o un `$opp <personatge>` i et diu quina insígnia, quin pis de la torre i quina millora d'esferes et toca, i quanta kakera et falta.
 - **Wishlist**: t'avisa dels que ja són teus o que ha reclamat algú, i et prepara les ordres `$wishremove` i `$wish`.
 - **Intercanvis i regals**: l'ordre `$give` per a cada jugador, i un cercador que entén llistes de sèries mal escrites («full metal alchimist», «Rezero»…).
 - **Posar al dia**: enganxes el `$mms`, el `$wl` o un `$imaso` i cliques un botó. T'avisa si fa més d'una setmana que no poses al dia el harem.
@@ -88,6 +89,7 @@ Proves:
 python -m unittest discover tests
 node tests/test_oc.mjs
 node tests/test_rutina.mjs
+node tests/test_millores.mjs
 ```
 
 Textos sense traduir: `python tools/textos.py`. Un `.zip` net per passar-lo a algú (sense cap dada personal): `python tools/fer_zip.py`.

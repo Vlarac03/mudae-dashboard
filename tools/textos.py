@@ -26,6 +26,7 @@ def keys():
     for g, que, ordre, com, _ in mudae.RUTINA:
         found |= {que, com, *(p for p in ordre.split(" · ") if not p.startswith("$"))}
     found |= set(mudae.GRUPS.values())
+    found |= {d for *_, d in mudae.BADGES} | {d for _, d in mudae.TOWER} | set(mudae.PERKS.values()) | {g for g, _ in mudae.PERK_GROUPS}
     for g, items in mudae.ORDRES:
         found |= {g, *(desc for _, desc in items)}
     for _, cmds in mudae.ORDRES:

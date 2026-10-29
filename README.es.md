@@ -16,6 +16,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 - **Ayudante del `$oc`**: marcas los colores que salen y te dice en qué casilla hacer clic para encontrar la roja.
 - **Colecciones**: un álbum por serie con tus personajes, los libres, los de la wishlist y los de otros jugadores (y de quién son). Haces clic en los que consigues para marcarlos como tuyos.
 - **Colecciones especiales**: un grupo que eliges tú, aunque no sea una serie de Mudae (por ejemplo, los Eevee de la Pokédex). Escribes el nombre y los personajes, y el `$imaso` de la serie de la que salen te pone de quién es cada uno.
+- **Mejoras**: pegas el `$k`, el `$kt` o un `$opp <personaje>` y te dice qué insignia, qué piso de la torre y qué mejora de esferas te toca, y cuánta kakera te falta.
 - **Wishlist**: te avisa de los que ya son tuyos o que ha reclamado alguien, y te prepara los comandos `$wishremove` y `$wish`.
 - **Intercambios y regalos**: el comando `$give` para cada jugador, y un buscador que entiende listas de series mal escritas («full metal alchimist», «Rezero»…).
 - **Poner al día**: pegas el `$mms`, el `$wl` o un `$imaso` y haces clic en un botón. Te avisa si hace más de una semana que no pones al día el harem.
@@ -88,6 +89,7 @@ Pruebas:
 python -m unittest discover tests
 node tests/test_oc.mjs
 node tests/test_rutina.mjs
+node tests/test_millores.mjs
 ```
 
 Textos sin traducir: `python tools/textos.py`. Un `.zip` limpio para pasárselo a alguien (sin datos personales): `python tools/fer_zip.py`.
