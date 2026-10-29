@@ -10,7 +10,7 @@ OUT = ROOT / "dist" / "Mudae-tauler.zip"
 FILES = ["mudae.py", "i18n.py", "oc.html", "Actualitza.bat", "Configura.bat", "README.md", "README.ca.md", "README.es.md", "LICENSE",
          "icones/tauler.ico", "assets/icona-256.png", "assets/tauler.png", "assets/col-leccions.png", "assets/cercador.png"]
 PERSONAL = (".xlsx", "dashboard.html", "harem.txt", "wishlist.txt", "config.json", "historial.csv", "actualitzat.json",
-            "series-sobrants.json", "mudae.ico", "hypixel")
+            "series-sobrants.json", "especials.json", "mudae.ico", "hypixel")
 
 OUT.parent.mkdir(exist_ok=True)
 with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as z:

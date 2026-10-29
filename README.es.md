@@ -15,6 +15,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 - **Qué toca ahora**: reloj de tiradas y reclamos, y una lista donde cada tarea queda marcada hasta que la puedes volver a hacer (`$daily` y `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a medianoche UTC, tiradas cada hora…).
 - **Ayudante del `$oc`**: marcas los colores que salen y te dice en qué casilla hacer clic para encontrar la roja.
 - **Colecciones**: un álbum por serie con tus personajes, los libres, los de la wishlist y los de otros jugadores (y de quién son). Haces clic en los que consigues para marcarlos como tuyos.
+- **Colecciones especiales**: un grupo que eliges tú, aunque no sea una serie de Mudae (por ejemplo, los Eevee de la Pokédex). Escribes el nombre y los personajes, y el `$imaso` de la serie de la que salen te pone de quién es cada uno.
 - **Wishlist**: te avisa de los que ya son tuyos o que ha reclamado alguien, y te prepara los comandos `$wishremove` y `$wish`.
 - **Intercambios y regalos**: el comando `$give` para cada jugador, y un buscador que entiende listas de series mal escritas («full metal alchimist», «Rezero»…).
 - **Poner al día**: pegas el `$mms`, el `$wl` o un `$imaso` y haces clic en un botón. Te avisa si hace más de una semana que no pones al día el harem.

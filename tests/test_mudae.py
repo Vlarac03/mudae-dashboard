@@ -94,6 +94,31 @@ class Desar(Base):
         self.assertEqual([n for n, _ in mudae.lines(self.tmp / "harem.txt")], ["Dobby"])
 
 
+class Especials(Base):
+    def test_crear_amb_el_que_ja_sabem(self):
+        self.write("harem.txt", "Eevee\n")
+        self.write("series/Pokedex.txt", "Vaporeon 💞 => pep\nJolteon\n")
+        mudae.save_special("Eevees", "Eevee\nVaporeon $ Jolteon\n")
+        self.assertEqual(mudae.specials(), ["Eevees"])
+        got = [(r["name"], r["owner"]) for r in mudae.read_series() if r["serie"] == "Eevees"]
+        self.assertEqual(got, [("Eevee", "jo"), ("Vaporeon", "pep"), ("Jolteon", "")])
+
+    def test_posar_al_dia_nomes_agafa_els_del_grup(self):
+        mudae.save_special("Eevees", "Eevee\nVaporeon\nJolteon\n")
+        paste = "1. Pokédex 3/1025\n\nPokémon\n2 más - Escriba $ima? para mostrar todos los alias.\n \n\nBulbasaur => anna\nEevee => pep\nVaporeon => jo\n"
+        mudae.save_paste("serie", "Eevees", paste)
+        got = [(r["name"], r["owner"]) for r in mudae.read_series()]
+        self.assertEqual(got, [("Eevee", "pep"), ("Vaporeon", "jo"), ("Jolteon", "")])  # sense Bulbasaur
+        with self.assertRaises(ValueError):
+            mudae.save_paste("serie", "Eevees", "Pikachu => anna\n")
+
+    def test_no_trepitja_una_serie(self):
+        self.write("series/Pingu.txt", "Pingu\n")
+        with self.assertRaises(ValueError):
+            mudae.save_special("Pingu", "Pinga\n")
+        self.assertEqual(mudae.specials(), [])
+
+
 class Idiomes(unittest.TestCase):
     def test_tots_els_textos_traduits(self):
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))

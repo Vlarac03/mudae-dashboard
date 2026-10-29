@@ -293,6 +293,18 @@ ES = {
     "Hola, {name}": "Hola, {name}",
     "Hola": "Hola",
     "Seccions": "Secciones",
+    "Cap personatge de «{name}» al text enganxat. Enganxa el $imaso de la sèrie d'on surten.": "Ningún personaje de «{name}» en el texto pegado. Pega el $imaso de la serie de la que salen.",
+    "Col·lecció especial": "Colección especial",
+    "Col·lecció especial: enganxa el $imaso de la sèrie d'on surten els personatges (totes les pàgines). Només se n'agafaran els d'aquesta col·lecció.": "Colección especial: pega el $imaso de la serie de la que salen los personajes (todas las páginas). Solo se cogerán los de esta colección.",
+    "Desar la col·lecció": "Guardar la colección",
+    "Els teus es marquen sols. Per saber de qui són els altres, ves a Eines → «Posar al dia», tria la col·lecció i enganxa el $imaso de la sèrie d'on surten. Per canviar-la, escriu el nom d'una que ja tens: s'hi carreguen els seus personatges.": "Los tuyos se marcan solos. Para saber de quién son los demás, ve a Herramientas → «Poner al día», elige la colección y pega el $imaso de la serie de la que salen. Para cambiarla, escribe el nombre de una que ya tienes: se cargan sus personajes.",
+    "Escriu almenys un personatge, un per línia.": "Escribe al menos un personaje, uno por línea.",
+    "Ja tens una sèrie que es diu «{name}»: tria un altre nom.": "Ya tienes una serie que se llama «{name}»: elige otro nombre.",
+    "Nom del grup": "Nombre del grupo",
+    "Personatges": "Personajes",
+    "Un grup triat per tu: per exemple, els Eevee de la Pokédex": "Un grupo elegido por ti: por ejemplo, los Eevee de la Pokédex",
+    "Un personatge per línia, com surt a Mudae": "Un personaje por línea, como sale en Mudae",
+    "especial": "especial",
 }
 
 EN = {
@@ -584,6 +596,18 @@ EN = {
     "Hola, {name}": "Hi, {name}",
     "Hola": "Hi",
     "Seccions": "Sections",
+    "Cap personatge de «{name}» al text enganxat. Enganxa el $imaso de la sèrie d'on surten.": "None of the characters in «{name}» are in the pasted text. Paste the $imaso of the series they come from.",
+    "Col·lecció especial": "Custom collection",
+    "Col·lecció especial: enganxa el $imaso de la sèrie d'on surten els personatges (totes les pàgines). Només se n'agafaran els d'aquesta col·lecció.": "Custom collection: paste the $imaso of the series the characters come from (all pages). Only this collection's characters are taken.",
+    "Desar la col·lecció": "Save collection",
+    "Els teus es marquen sols. Per saber de qui són els altres, ves a Eines → «Posar al dia», tria la col·lecció i enganxa el $imaso de la sèrie d'on surten. Per canviar-la, escriu el nom d'una que ja tens: s'hi carreguen els seus personatges.": "Yours are marked automatically. To see who owns the rest, go to Tools → «Update», pick the collection and paste the $imaso of the series they come from. To edit one, type the name of a collection you already have: its characters load in.",
+    "Escriu almenys un personatge, un per línia.": "Write at least one character, one per line.",
+    "Ja tens una sèrie que es diu «{name}»: tria un altre nom.": "You already have a series called «{name}»: pick another name.",
+    "Nom del grup": "Group name",
+    "Personatges": "Characters",
+    "Un grup triat per tu: per exemple, els Eevee de la Pokédex": "A group you pick: for example, the Eevees from the Pokédex",
+    "Un personatge per línia, com surt a Mudae": "One character per line, as Mudae shows it",
+    "especial": "custom",
 }
 
 STRINGS = {"es": ES, "en": EN}

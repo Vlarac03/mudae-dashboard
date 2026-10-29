@@ -133,14 +133,37 @@ def lines(path):
     return out
 
 
+def specials():
+    """Col·leccions especials: grups de personatges triats per tu (p. ex. els Eevee de la Pokédex), no sèries de Mudae."""
+    f = DADES / "especials.json"
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else []
+
+
+def parse_owners(text):
+    """Nom -> propietari d'un text de Mudae ($imaso, $imas o una llista): "" lliure, None «💞» sense saber de qui."""
+    out = {}
+    for raw in text.splitlines():
+        line = re.sub(r"^\d+\.\s+", "", raw.replace("⭐", "").strip())
+        if not line or SKIP.search(line):
+            continue
+        m, h = CLAIM.match(line), HEART_ONLY.match(line)
+        name, owner = (m.group(1), m.group(2)) if m else (h.group(1), None) if h else (line, "")
+        out.setdefault(name.strip(), owner)
+    return out
+
+
 def read_series():
     rows = []
+    spec = set(specials())
+    harem = {n for n, _ in lines(DADES / "harem.txt")} if spec else set()
     for f in sorted((DADES / "series").glob("*.txt")):
         seen = set()
         for line, _ in lines(f):
             m = CLAIM.match(line)
             h = HEART_ONLY.match(line)
             name, owner = (m.group(1).strip(), m.group(2)) if m else (h.group(1).strip(), "algú") if h else (line, "")
+            if f.stem in spec and name in harem:  # a les especials, el que és al teu harem és teu (no hi ha cap $imaso que ho digui)
+                owner = ME
             if name not in seen:
                 seen.add(name)
                 rows.append({"serie": f.stem, "name": name, "owner": owner})
@@ -208,8 +231,11 @@ def build_data():
     rank = {n: i for i, n in enumerate(PREFERITS)}
     free_alta.sort(key=lambda r: (rank.get(r["name"], len(rank)), r["serie"], r["name"]))
 
-    trades = []
+    trades, seen = [], set()
     for r in sorted((r for r in rows if r["state"] == "D'algú altre"), key=lambda r: (r["owner"], r["serie"], r["name"])):
+        if r["name"] in seen:
+            continue
+        seen.add(r["name"])
         offer, st = old["trade"].get((r["owner"], r["name"]), (None, "Pendent"))
         trades.append({**r, "offer": offer, "status": st or "Pendent"})
 
@@ -883,7 +909,7 @@ render();
 
 JS_UPD = r"""
 // «Posar al dia»: enganxes el que diu Mudae i el servidor ho desa a dades/ i refà l'Excel i el tauler
-const META = __META__;
+const META = __META__, SPECIALS = __SPECIALS__;
 const kindSel = document.getElementById('updKind'), serieBox = document.getElementById('updSerieBox'), serieSel = document.getElementById('updSerie');
 const newIn = document.getElementById('updNew'), txt = document.getElementById('updText'), updBtn = document.getElementById('updBtn');
 const updMsg = document.getElementById('updMsg'), updCmd = document.getElementById('updCmd'), age = document.getElementById('updAge');
@@ -899,7 +925,9 @@ const serieName = () => serieSel.value === '__new__' ? newIn.value.trim() : seri
 function syncUpd() {
   serieBox.hidden = kindSel.value !== 'serie';
   newIn.hidden = serieSel.value !== '__new__';
-  const cmd = kindSel.value === 'harem' ? '$mms' : kindSel.value === 'wishlist' ? '$wl' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
+  const esp = kindSel.value === 'serie' && SPECIALS.includes(serieName());
+  document.getElementById('updEsp').hidden = !esp;
+  const cmd = kindSel.value === 'harem' ? '$mms' : kindSel.value === 'wishlist' ? '$wl' : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
   updCmd.textContent = cmd; updCmd.dataset.copy = cmd;
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
@@ -913,6 +941,30 @@ updBtn.onclick = async () => {
   } catch (err) { updMsg.innerHTML = NET_MSG(); syncUpd(); }
 };
 syncUpd();
+"""
+
+
+JS_ESP = r"""
+// «Col·lecció especial»: un grup de personatges triat per tu; si escrius el nom d'una que ja tens, s'hi carreguen els seus
+const espName = document.getElementById('espName'), espText = document.getElementById('espText');
+const espBtn = document.getElementById('espBtn'), espMsg = document.getElementById('espMsg');
+const espSync = () => { espBtn.disabled = location.protocol === 'file:' || !espName.value.trim() || !espText.value.trim(); };
+espName.addEventListener('input', () => {
+  const n = espName.value.trim();
+  if (SPECIALS.includes(n) && COLL[n] && !espText.value.trim()) espText.value = COLL[n].map(c => c.n).join('\n');
+  espSync();
+});
+espText.addEventListener('input', espSync);
+if (location.protocol === 'file:') espMsg.innerHTML = OFF_MSG();
+espBtn.onclick = async () => {
+  espBtn.disabled = true; espMsg.textContent = T('Desant…');
+  try {
+    const j = await postJSON('/especial', { name: espName.value.trim(), text: espText.value });
+    if (j.ok) { try { localStorage.setItem('mudae-coll', espName.value.trim()); } catch (e) {} location.reload(); }
+    else { espMsg.innerHTML = ERR_MSG(j.error); espSync(); }
+  } catch (err) { espMsg.innerHTML = NET_MSG(); espSync(); }
+};
+espSync();
 """
 
 
@@ -1040,6 +1092,8 @@ def write_dashboard(d, hist):
     if d["missing"]:
         alerts.append(alert(t("Harem"), "", e(t("{n} personatges teus no surten al harem: torna a enganxar el $mms a «Posar al dia»", n=len(d["missing"])))))
 
+    spec = specials()
+    esp_tag = f' <span class="tag accent">{e(t("especial"))}</span>'
     bars = []
     for s in series:
         p = s["Meu"] / s["total"] * 100
@@ -1047,7 +1101,7 @@ def write_dashboard(d, hist):
         tip = t("{serie}: {mine} teus · {other} d'algú altre · {free} lliures", serie=s["name"], mine=s["Meu"], other=s["D'algú altre"], free=s["Lliure"])
         bars.append(
             f'<div class="row" data-serie="{e(s["name"])}" data-tip="{e(tip)}" role="button" tabindex="0">'
-            f'<div class="lbl">{e(s["name"])}</div>'
+            f'<div class="lbl">{e(s["name"])}{esp_tag if s["name"] in spec else ""}</div>'
             f'<div class="track"><div class="seg mine" style="width:{p:.2f}%"></div>'
             f'<div class="seg other" style="width:{o:.2f}%"></div></div>'
             f'<div class="val">{s["Meu"]}/{s["total"]} · <b>{round(p)}%</b></div></div>')
@@ -1184,6 +1238,14 @@ def write_dashboard(d, hist):
    <button type="button" class="tab" id="gotClear">{T_("Desmarca")}</button><span id="gotMsg" role="status"></span></div>
  </div>
 </section>
+<section class="panel" id="esp">
+ <div class="panel-head"><h2>{T_("Col·lecció especial")}</h2><span class="muted" style="font-size:13px">{T_("Un grup triat per tu: per exemple, els Eevee de la Pokédex")}</span></div>
+ <div class="give-row"><input type="text" id="espName" list="dlEsp" spellcheck="false" autocomplete="off" placeholder="{T_("Nom del grup")}" aria-label="{T_("Nom del grup")}">
+  <datalist id="dlEsp">{"".join(f'<option value="{e(x)}">' for x in spec)}</datalist></div>
+ <textarea id="espText" rows="5" spellcheck="false" aria-label="{T_("Personatges")}" placeholder="{T_("Un personatge per línia, com surt a Mudae")}"></textarea>
+ <div class="give-row"><button class="primary" id="espBtn" disabled>{T_("Desar la col·lecció")}</button><span id="espMsg" role="status"></span></div>
+ <p class="muted" style="margin:0;font-size:13px">{T_("Els teus es marquen sols. Per saber de qui són els altres, ves a Eines → «Posar al dia», tria la col·lecció i enganxa el $imaso de la sèrie d'on surten. Per canviar-la, escriu el nom d'una que ja tens: s'hi carreguen els seus personatges.")}</p>
+</section>
 </div>
 <div class="view g2" id="v-wl" role="tabpanel" hidden>
  <section class="panel" id="wlp"><div class="panel-head"><h2>{T_("Wishlist")}</h2><span class="muted" style="font-size:13px">{T_("{n} de 15 llocs (l'estrella també compta)", n=len(d["wishlist"]))}</span></div>
@@ -1213,6 +1275,7 @@ def write_dashboard(d, hist):
   <span id="updSerieBox" hidden>{T_("Sèrie:")} <select id="updSerie" aria-label="{T_("Sèrie:")}">{serie_opts}<option value="__new__">{T_("Sèrie nova…")}</option></select>
   <input type="text" id="updNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de la sèrie, com surt a Mudae")}" placeholder="{T_("Nom de la sèrie, com surt a Mudae")}" hidden></span>
   <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mms">$mms</button></span></div>
+ <p class="muted" id="updEsp" style="margin:0;font-size:13px" hidden>{T_("Col·lecció especial: enganxa el $imaso de la sèrie d'on surten els personatges (totes les pàgines). Només se n'agafaran els d'aquesta col·lecció.")}</p>
  <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
  <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
 </section>
@@ -1304,7 +1367,8 @@ let first = 'avui'; try {{ first = localStorage.getItem('mudae-vista') || 'avui'
 go(first);
 </script><script>{JS_TODAY.replace("__CLAIM__", json.dumps(CLAIM_HOURS))}</script>
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
-<script>{JS_UPD.replace("__META__", js(read_meta()))}</script>
+<script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec))}</script>
+<script>{JS_ESP}</script>
 <script>{JS_CLS}</script>
 <script>{JS_WL.replace("__WL__", wl_json)}</script>
 <script>{JS_MINE.replace("__MINE__", js(mine)).replace("__COLLS__", js([x["name"] for x in series])).replace("__ALTRES__", js(ALTRES))}</script></body></html>"""
@@ -1354,6 +1418,66 @@ def merge_owners(text, old):
     return "\n".join(out)
 
 
+def series_path(serie):
+    if not serie or re.search(r'[\\/:*?"<>|]', serie) or serie.startswith("."):
+        raise ValueError(t("Posa el nom de la sèrie (sense / \\ : * ? \" < > |)."))
+    return DADES / "series" / f"{serie}.txt"
+
+
+def touch_meta(serie):
+    meta = read_meta()
+    meta.setdefault("series", {})[serie] = dt.date.today().isoformat()
+    (DADES / "actualitzat.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def owner_line(name, owner):
+    return f"{name} 💞 => {owner}" if owner else name
+
+
+def save_special(name, text):
+    """Crea o canvia una col·lecció especial: el nom del grup i els seus personatges, un per línia (o separats per $).
+
+    Els teus surten del harem; dels altres, es manté el propietari que ja sabíem (d'aquesta o d'una altra col·lecció).
+    """
+    name = name.strip()
+    path = series_path(name)
+    if path.exists() and name not in specials():
+        raise ValueError(t("Ja tens una sèrie que es diu «{name}»: tria un altre nom.", name=name))
+    names = list(parse_owners("\n".join(re.split(r"\s+\$\s+", text))))
+    if not names:
+        raise ValueError(t("Escriu almenys un personatge, un per línia."))
+    known = {}
+    for r in read_series():
+        if r["owner"] and (r["serie"] == name or r["name"] not in known):
+            known[r["name"]] = r["owner"]  # el d'aquesta mateixa col·lecció mana
+    harem = {n for n, _ in lines(DADES / "harem.txt")}
+    rows = [owner_line(n, ME if n in harem else "" if known.get(n) == ME else known.get(n, "")) for n in names]
+    path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    spec = specials()
+    if name not in spec:
+        (DADES / "especials.json").write_text(json.dumps(spec + [name], ensure_ascii=False, indent=1), encoding="utf-8")
+    touch_meta(name)
+
+
+def update_special(name, text):
+    """«Posar al dia» d'una especial: enganxes el $imaso de la sèrie d'on surten i només se n'agafen els seus personatges."""
+    found = {n.casefold(): o for n, o in parse_owners(drop_header(text)).items()}
+    path = series_path(name)
+    harem = {n for n, _ in lines(DADES / "harem.txt")}
+    rows, hits = [], 0
+    for n, old in parse_owners(path.read_text(encoding="utf-8-sig")).items():
+        new = found.get(n.casefold(), old)
+        if n.casefold() in found:
+            hits += 1
+        if new is None:  # «Nom 💞» sense propietari: el que sabíem, o teu si és al harem
+            new = old or (ME if n in harem else "algú")
+        rows.append(owner_line(n, new))
+    if not hits:
+        raise ValueError(t("Cap personatge de «{name}» al text enganxat. Enganxa el $imaso de la sèrie d'on surten.", name=name))
+    path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    touch_meta(name)
+
+
 def save_paste(kind, serie, text):
     """Desa el que has enganxat al tauler al fitxer de dades/ que toca. Si no s'hi troba cap nom, no toca res."""
     if kind == "harem":
@@ -1362,9 +1486,9 @@ def save_paste(kind, serie, text):
         path = DADES / "wishlist.txt"
     elif kind == "serie":
         serie = serie.strip()
-        if not serie or re.search(r'[\\/:*?"<>|]', serie) or serie.startswith("."):
-            raise ValueError(t("Posa el nom de la sèrie (sense / \\ : * ? \" < > |)."))
-        path = DADES / "series" / f"{serie}.txt"
+        path = series_path(serie)
+        if serie in specials():
+            return update_special(serie, text)
     else:
         raise ValueError(t("No sé què és «{kind}».", kind=kind))
     old = path.read_text(encoding="utf-8-sig") if path.exists() else None
@@ -1433,6 +1557,7 @@ def mark_given(names, to=""):
 
 def mark_received(name):
     """Posa `name` com a teu al fitxer de la seva sèrie (i al harem), com si ho hagués dit el $imaso."""
+    found = False
     for f in sorted((DADES / "series").glob("*.txt")):
         text = f.read_text(encoding="utf-8-sig").splitlines()
         for k, raw in enumerate(text):
@@ -1441,10 +1566,12 @@ def mark_received(name):
             if (m.group(1).strip() if m else line) == name:
                 text[k] = f"{name} 💞 => {ME}"
                 f.write_text("\n".join(text) + "\n", encoding="utf-8")
-                harem = DADES / "harem.txt"
-                if name not in [n for n, _ in lines(harem)]:
-                    harem.write_text(harem.read_text(encoding="utf-8-sig").rstrip("\n") + f"\n{name}\n", encoding="utf-8")
-                return
+                found = True
+    if found:
+        harem = DADES / "harem.txt"
+        if name not in [n for n, _ in lines(harem)]:
+            harem.write_text(harem.read_text(encoding="utf-8-sig").rstrip("\n") + f"\n{name}\n", encoding="utf-8")
+        return
     raise ValueError(t("No trobo «{name}» a cap de les teves sèries.", name=name))
 
 
@@ -1503,6 +1630,8 @@ def do_action(action, body):
         make_shortcut()
     elif action == "dades":
         save_paste(str(body["kind"]), str(body.get("serie") or ""), str(body["text"]))
+    elif action == "especial":
+        save_special(str(body["name"]), str(body["text"]))
     else:
         raise ValueError(t("No sé fer «{action}».", action=action))
 
