@@ -1,4 +1,4 @@
-"""Fa dist/Mudae-tauler.zip per compartir o penjar com a release: el programa, sense cap dada personal.
+"""Fa dist/Mudae-dashboard.zip per compartir o penjar com a release: el programa, sense cap dada personal.
 
 Executa: python tools/fer_zip.py
 """
@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "dist" / "Mudae-tauler.zip"
+OUT = ROOT / "dist" / "Mudae-dashboard.zip"
 FILES = ["mudae.py", "i18n.py", "oc.html", "Actualitza.bat", "Configura.bat", "README.md", "README.ca.md", "README.es.md", "LICENSE",
          "icones/tauler.ico", "assets/icona-256.png", "assets/tauler.png", "assets/col-leccions.png", "assets/cercador.png"]
 PERSONAL = (".xlsx", "dashboard.html", "harem.txt", "wishlist.txt", "config.json", "historial.csv", "actualitzat.json",
