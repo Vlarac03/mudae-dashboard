@@ -50,6 +50,18 @@ class Desar(Base):
         self.assertEqual(mudae.merge_owners(new, old).splitlines(),
                          ["Aragog 💞 => jo", "Dudley 💞 => pep", "Dobby 💞 => algú", "Norris", "Kiki 💞 => jo"])
 
+    def test_imaso_sense_capcalera(self):
+        paste = ("1. Harry Potter 3/94\n\nHP\nHarry Potter and the Philosopher's Stone\n"
+                 "4 más - Escriba $ima? para mostrar todos los alias.\n \n\n"
+                 "Aberforth Dumbledore\nAragog => jo\n2. Dudley Dursley => pep\nWinky (HP)\n")
+        mudae.save_paste("serie", "Harry Potter", paste)
+        got = [(r["name"], r["owner"]) for r in mudae.read_series()]
+        self.assertEqual(got, [("Aberforth Dumbledore", ""), ("Aragog", "jo"), ("Dudley Dursley", "pep"), ("Winky (HP)", "")])
+
+    def test_imaso_sense_alies_no_perd_personatges(self):
+        mudae.save_paste("serie", "ABBA", "1. ABBA 1/4\n\nAgnetha\nAnni-Frid => jo\nBenny\nBjörn\n")
+        self.assertEqual([r["name"] for r in mudae.read_series()], ["Agnetha", "Anni-Frid", "Benny", "Björn"])
+
     def test_text_sense_noms_no_toca_res(self):
         self.write("harem.txt", "Kiki\n")
         with self.assertRaises(ValueError):

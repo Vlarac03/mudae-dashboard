@@ -17,7 +17,7 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 - **Collections**: one album per series with your characters, the free ones, the ones on your wishlist and the ones other players own (and who). Click the ones you get to mark them as yours.
 - **Wishlist**: warns you about characters you already own or someone else claimed, and builds the `$wishremove` and `$wish` commands for you.
 - **Trades and gifts**: the `$give` command for each player, and a search box that understands misspelled series lists («full metal alchimist», «Rezero»…).
-- **Update**: paste your `$mms`, `$wl` or `$imas` and click a button. It reminds you if your harem is more than a week old.
+- **Update**: paste your `$mms`, `$wl` or `$imaso` and click a button. It reminds you if your harem is more than a week old.
 - **Common commands**: all of them, with what they do and a copy button.
 - **Excel**: the same in a spreadsheet, which keeps what you type in it (priorities, notes, trade status).
 
@@ -33,7 +33,7 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 4. In the dashboard, go to **«Update»** and paste, in this order:
    - **Your harem**: type `$mms` in Discord, copy the message Mudae sends you by DM and paste it choosing «Your harem».
    - **Your wishlist**: `$wl`, choosing «Your wishlist».
-   - **Each series you collect**: `$imas <series>` (for example `$imas Harry Potter`), choosing «A series» → «New series…» and typing its name as Mudae shows it.
+   - **Each series you collect**: `$imaso <series>` (for example `$imaso Harry Potter`), choosing «A series» → «New series…» and typing its name as Mudae shows it.
 
 From then on, open the dashboard with the **Mudae** shortcut on your desktop.
 

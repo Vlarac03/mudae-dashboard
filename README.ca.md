@@ -17,7 +17,7 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 - **Col·leccions**: un àlbum per sèrie amb els teus personatges, els lliures, els de la wishlist i els d'altres jugadors (i de qui són). Cliques els que aconsegueixes per marcar-los com a teus.
 - **Wishlist**: t'avisa dels que ja són teus o que ha reclamat algú, i et prepara les ordres `$wishremove` i `$wish`.
 - **Intercanvis i regals**: l'ordre `$give` per a cada jugador, i un cercador que entén llistes de sèries mal escrites («full metal alchimist», «Rezero»…).
-- **Posar al dia**: enganxes el `$mms`, el `$wl` o un `$imas` i cliques un botó. T'avisa si fa més d'una setmana que no poses al dia el harem.
+- **Posar al dia**: enganxes el `$mms`, el `$wl` o un `$imaso` i cliques un botó. T'avisa si fa més d'una setmana que no poses al dia el harem.
 - **Ordres d'ús habitual**: totes, amb el que fan i un botó de copiar.
 - **Excel**: el mateix en un full de càlcul, que respecta el que hi escrius (prioritats, notes, estat dels intercanvis).
 
@@ -33,7 +33,7 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 4. Al tauler, ves a **«Posar al dia»** i enganxa-hi, per ordre:
    - **El teu harem**: escriu `$mms` a Discord, copia el missatge que t'arriba per privat i enganxa'l triant «El teu harem».
    - **La teva wishlist**: `$wl`, triant «La wishlist».
-   - **Cada sèrie que col·lecciones**: `$imas <sèrie>` (per exemple, `$imas Harry Potter`), triant «Una sèrie» → «Sèrie nova…» i escrivint-ne el nom tal com surt a Mudae.
+   - **Cada sèrie que col·lecciones**: `$imaso <sèrie>` (per exemple, `$imaso Harry Potter`), triant «Una sèrie» → «Sèrie nova…» i escrivint-ne el nom tal com surt a Mudae.
 
 A partir d'aquí, obre el tauler amb l'accés directe **Mudae** de l'escriptori.
 

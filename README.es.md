@@ -17,7 +17,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 - **Colecciones**: un álbum por serie con tus personajes, los libres, los de la wishlist y los de otros jugadores (y de quién son). Haces clic en los que consigues para marcarlos como tuyos.
 - **Wishlist**: te avisa de los que ya son tuyos o que ha reclamado alguien, y te prepara los comandos `$wishremove` y `$wish`.
 - **Intercambios y regalos**: el comando `$give` para cada jugador, y un buscador que entiende listas de series mal escritas («full metal alchimist», «Rezero»…).
-- **Poner al día**: pegas el `$mms`, el `$wl` o un `$imas` y haces clic en un botón. Te avisa si hace más de una semana que no pones al día el harem.
+- **Poner al día**: pegas el `$mms`, el `$wl` o un `$imaso` y haces clic en un botón. Te avisa si hace más de una semana que no pones al día el harem.
 - **Comandos de uso habitual**: todos, con lo que hacen y un botón de copiar.
 - **Excel**: lo mismo en una hoja de cálculo, que respeta lo que escribes en ella (prioridades, notas, estado de los intercambios).
 
@@ -33,7 +33,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 4. En el panel, ve a **«Poner al día»** y pega, por orden:
    - **Tu harem**: escribe `$mms` en Discord, copia el mensaje que te llega por privado y pégalo eligiendo «Tu harem».
    - **Tu wishlist**: `$wl`, eligiendo «La wishlist».
-   - **Cada serie que coleccionas**: `$imas <serie>` (por ejemplo, `$imas Harry Potter`), eligiendo «Una serie» → «Serie nueva…» y escribiendo su nombre tal como sale en Mudae.
+   - **Cada serie que coleccionas**: `$imaso <serie>` (por ejemplo, `$imaso Harry Potter`), eligiendo «Una serie» → «Serie nueva…» y escribiendo su nombre tal como sale en Mudae.
 
 A partir de aquí, abre el panel con el acceso directo **Mudae** del escritorio.
 

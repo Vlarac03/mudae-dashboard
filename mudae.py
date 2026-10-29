@@ -90,15 +90,34 @@ RUTINA = [
     ("reclam", "4. Un altre de bo?", "$rt", "Et deixa tornar a reclamar. Cada {rt} h: només per a la wishlist o les teves sèries", RT_HORES),
     ("reclam", "5. Sense poder?", "$dk", "Recarrega el poder i dona kakera. Cada 20 h", 20),
     ("aconseguit", "Treure'l de la wishlist", "$wishremove <nom>", "I posa-hi el primer de «Per omplir» (full Wishlist)", None),
-    ("aconseguit", "Posar al dia les dades", "$mms · $wl · $imas <sèrie>", "Per privat i sense pàgines. Enganxa-ho a «Posar al dia» del tauler", None),
+    ("aconseguit", "Posar al dia les dades", "$mms · $wl · $imaso <sèrie>", "Per privat i sense pàgines. Enganxa-ho a «Posar al dia» del tauler", None),
     ("aconseguit", "Obrir el tauler", "Mudae", "Accés directe de l'escriptori: posa al dia l'Excel i obre el tauler", None),
     ("temps", "Intercanvis", "$trade @persona", "Full Intercanvis: a qui demanar què. Ofereix dels Sobrants", None),
     ("temps", "Kakera estalviada", "$build 8", "Quan arribis als 35.000: pis [8] de la torre (o l'[11])", None),
 ]
 
 SKIP = re.compile(r"Harem de|Wishlist|^Page\b|\bAPP\b|—\s*\d{1,2}:\d{2}|^\$|^Mudae$|^\d+\s*/\s*\d+$", re.I)
-HEART_ONLY = re.compile(r"^(.*?)\s*(?:💞|💖|💗|❤️|❤|♥️|♥)\s*$")  # «Nom 💞» del $imas per privat: reclamat, propietari desconegut
+HEART_ONLY = re.compile(r"^(.*?)\s*(?:💞|💖|💗|❤️|❤|♥️|♥)\s*$")  # «Nom 💞» del $imas (sense la «o»): reclamat, propietari desconegut
 CLAIM = re.compile(r"^(.*?)\s*(?:💞|💖|💗|❤️|❤|♥️|♥)?\s*=>\s*(\S+)\s*$")
+IMASO_TITLE = re.compile(r"^(?:\d+\.\s+)?\S.*\s\d+\s*/\s*\d+$")  # «1. Harry Potter 49/94»: el títol del $imaso
+
+
+def drop_header(text):
+    """El $imaso comença amb el títol de la sèrie («1. Harry Potter 49/94») i un bloc amb els àlies: ho traiem.
+
+    El bloc d'àlies acaba amb «… $ima? …» o amb la línia separadora de Mudae (un espai). Si no hi és, només traiem
+    el títol: més val que surti algun àlies com a personatge que perdre personatges de veritat.
+    """
+    rows = text.splitlines()
+    for i, raw in enumerate(rows[:6]):
+        if IMASO_TITLE.match(raw.strip()):
+            k = next((j for j in range(i + 1, len(rows)) if rows[j].strip()), len(rows))   # primera línia del bloc
+            end = next((j for j in range(k, len(rows)) if not rows[j].strip()), len(rows))  # línia buida que el tanca
+            block = rows[k:end]
+            aliases = block and not any("=>" in r for r in block) and (
+                "$ima?" in block[-1] or (end < len(rows) and rows[end] != ""))
+            return "\n".join(rows[:i] + rows[end + 1 if aliases else k:])
+    return text
 
 
 def lines(path):
@@ -754,7 +773,7 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
     ("Reclamar i kakera", [("$tu", "Tot el que tens disponible"), ("$rt", "Torna a poder reclamar"), ("$dk", "Recarrega el poder i dona kakera"),
                            ("$mu", "Quan podràs reclamar"), ("$k", "La teva kakera i com guanyar-ne")]),
     ("La teva col·lecció", [("$mms", "El teu harem sencer, per privat"), ("$mmbs", "El harem amb la sèrie de cada un, per privat"),
-                            ("$imas <sèrie>", "Una sèrie sencera amb propietaris, per privat"), ("$im <personatge>", "Fitxa d'un personatge"),
+                            ("$imaso <sèrie>", "Una sèrie sencera amb propietaris, per privat"), ("$im <personatge>", "Fitxa d'un personatge"),
                             ("$wl", "La teva wishlist"), ("$wish <nom>", "Afegeix a la wishlist (diversos: separa'ls amb $)"),
                             ("$wishremove <nom>", "Treu de la wishlist"), ("$sw <nom>", "Desig estrella")]),
     ("Intercanvis", [("$give @persona", "Regala personatges (separa'ls amb $)"), ("$trade @persona", "Intercanvi amb confirmació dels dos")]),
@@ -880,7 +899,7 @@ const serieName = () => serieSel.value === '__new__' ? newIn.value.trim() : seri
 function syncUpd() {
   serieBox.hidden = kindSel.value !== 'serie';
   newIn.hidden = serieSel.value !== '__new__';
-  const cmd = kindSel.value === 'harem' ? '$mms' : kindSel.value === 'wishlist' ? '$wl' : '$imas ' + (serieName() || '<' + T('sèrie') + '>');
+  const cmd = kindSel.value === 'harem' ? '$mms' : kindSel.value === 'wishlist' ? '$wl' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
   updCmd.textContent = cmd; updCmd.dataset.copy = cmd;
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
@@ -1190,7 +1209,7 @@ def write_dashboard(d, hist):
 <section class="panel" id="upd">
  <div class="panel-head"><h2>{T_("Posar al dia")}</h2><span id="updAge" class="muted" style="font-size:13px"></span></div>
  <div class="give-row">{T_("Què enganxes:")}
-  <select id="updKind" aria-label="{T_("Què enganxes:")}"><option value="harem">{T_("El teu harem ($mms)")}</option><option value="wishlist">{T_("La wishlist ($wl)")}</option><option value="serie">{T_("Una sèrie ($imas)")}</option></select>
+  <select id="updKind" aria-label="{T_("Què enganxes:")}"><option value="harem">{T_("El teu harem ($mms)")}</option><option value="wishlist">{T_("La wishlist ($wl)")}</option><option value="serie">{T_("Una sèrie ($imaso)")}</option></select>
   <span id="updSerieBox" hidden>{T_("Sèrie:")} <select id="updSerie" aria-label="{T_("Sèrie:")}">{serie_opts}<option value="__new__">{T_("Sèrie nova…")}</option></select>
   <input type="text" id="updNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de la sèrie, com surt a Mudae")}" placeholder="{T_("Nom de la sèrie, com surt a Mudae")}" hidden></span>
   <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mms">$mms</button></span></div>
@@ -1316,7 +1335,7 @@ def read_meta():
 
 
 def merge_owners(text, old):
-    """El $imas per privat diu «Nom 💞» però no de qui és: hi posem el propietari que ja teníem apuntat."""
+    """El $imas (sense la «o») diu «Nom 💞» però no de qui és: hi posem el propietari que ja teníem apuntat."""
     prev = {}
     for raw in old.splitlines():
         m = CLAIM.match(re.sub(r"^\d+\.\s+", "", raw.strip()))
@@ -1349,6 +1368,8 @@ def save_paste(kind, serie, text):
     else:
         raise ValueError(t("No sé què és «{kind}».", kind=kind))
     old = path.read_text(encoding="utf-8-sig") if path.exists() else None
+    if kind == "serie":
+        text = drop_header(text)
     if kind == "serie" and any(HEART_ONLY.match(l.strip()) for l in text.splitlines()):
         text = merge_owners(text, old or "")
     path.write_text(text.strip() + "\n", encoding="utf-8")
@@ -1411,7 +1432,7 @@ def mark_given(names, to=""):
 
 
 def mark_received(name):
-    """Posa `name` com a teu al fitxer de la seva sèrie (i al harem), com si ho hagués dit el $imas."""
+    """Posa `name` com a teu al fitxer de la seva sèrie (i al harem), com si ho hagués dit el $imaso."""
     for f in sorted((DADES / "series").glob("*.txt")):
         text = f.read_text(encoding="utf-8-sig").splitlines()
         for k, raw in enumerate(text):
