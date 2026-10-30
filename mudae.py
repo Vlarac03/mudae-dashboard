@@ -568,6 +568,7 @@ document.addEventListener('change', ev => {
 const tuText = document.getElementById('tuText'), tuMsg = document.getElementById('tuMsg');
 tuText.addEventListener('input', () => {  // en enganxar el $tu, es marca sol
   const r = readTu(tuText.value); if (!Object.keys(r).length) return;
+  if (window.millTu) window.millTu(tuText.value);
   applyTu(r, Date.now()); tuText.value = '';
   tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
 });
@@ -902,7 +903,7 @@ PERKS = {1: "Més probabilitat que surtin els personatges del costat a la teva w
          7: "Els botons de kakera poden passar a kakera del caos",
          8: "El primer cop del dia: 4 botons de kakera a meitat de poder, només per a tu",
          9: "El primer cop del dia: un botó d'esferes", 10: "El primer $oh del dia dona +20 esferes"}
-PERK_GROUPS = [("Funciona cada dia, encara que no et surti el personatge", [10]),
+PERK_GROUPS = [("Funciona cada dia, encara que no et surti el personatge, i se suma: +20 esferes per cada personatge que la té (fins a 100)", [10]),
                ("Només quan et surt aquest personatge: posa-les al que et surt més (mira el $mmy)", [4, 5, 2, 3]),
                ("Només el primer cop del dia que te'l treus", [8, 9]),
                ("Les menys útils", [1, 6, 7])]
@@ -1107,23 +1108,27 @@ syncUpd();
 
 JS_MILL = r"""
 // Pestanya «Millores»: llegeix el que enganxes de Mudae ($k, $kt, $opp) i recomana el següent pas. Es guarda al navegador.
-const BADGES = __BADGES__, PLAN = __PLAN__, TOWER = __TOWER__, PORD = __PORD__, SORD = __SORD__;
+const BADGES = __BADGES__, PLAN = __PLAN__, TOWER = __TOWER__, PORD = __PORD__, SORD = __SORD__, PDESC = __PDESC__, SDESC = __SDESC__;
 // Esferes: les millores 1-5 d'un personatge tenen 6 nivells, les 6-10 un (wiki, «Perks / Level»); la botiga ($os), 10 nivells de +4.000
 const PCOST = [200, 400, 600, 800, 1000, 2000];
 const perkMax = n => n <= 5 ? 6 : 1, perkCost = (n, l) => n <= 5 ? PCOST[l] : 1000;
 const shopMax = () => 10, shopCost = (n, l) => 4000 * (l + 1);
+const KEYS_OFTEN = 10;  // shortcut: llindar triat per Claude (una clau cada cop que et surt un personatge teu); canviar-lo si Victor en vol un altre
 const num = t => Number(String(t).replace(/[^\d]/g, ''));
 const fmtK = n => n.toLocaleString(document.documentElement.lang);
 // Què diu el text enganxat: kakera o esferes que tens, nivells d'insígnies, cost del pròxim pis, nivells de les esferes
+// Nivells del $opp o del $os: Mudae posa [MAX] en lloc de [LVL n] quan ja és al màxim
+const LVL = /\[(?:LVL\s*(\d+)|MAX)\]/;
+const levelsOf = (text, max) => [...text.matchAll(new RegExp(LVL, 'g'))].slice(0, 10).map((m, i) => m[1] != null ? +m[1] : max(i + 1));
 function readMudae(text, tv) {
   const out = {}, have = text.match(/(?:Tienes|You have|Tens|Vous avez|Hai|Du hast|Você tem)\s+(\d[\d.,]*)/i);
-  if (/\$shoprefund/i.test(text) && /\[LVL\s*\d+\]/.test(text)) {  // $os: la botiga d'esferes
-    out.shop = [...text.matchAll(/\[LVL\s*(\d+)\]/g)].slice(0, 10).map(m => +m[1]);
+  if (/\$shoprefund/i.test(text) && LVL.test(text)) {  // $os: la botiga d'esferes
+    out.shop = levelsOf(text, shopMax);
     if (have) out.sp = num(have[1]);
-  } else if (/\[LVL\s*\d+\]/.test(text)) {
+  } else if (LVL.test(text)) {
     const rows = text.split(/\r?\n/).map(l => l.trim());
-    const first = rows.findIndex(l => /\[LVL\s*\d+\]/.test(l));
-    out.opp = { name: first > 0 ? rows[first - 1] : '', levels: [...text.matchAll(/\[LVL\s*(\d+)\]/g)].slice(0, 10).map(m => +m[1]) };
+    const first = rows.findIndex(l => LVL.test(l));
+    out.opp = { name: first > 0 ? rows[first - 1] : '', levels: levelsOf(text, perkMax) };
     if (have) out.sp = num(have[1]);
   } else if (/\$build/i.test(text)) {
     const cost = text.match(/(?:cuesta|costs?|coûte|costa|kostet)\s+(\d[\d.,]*)/i);
@@ -1131,11 +1136,22 @@ function readMudae(text, tv) {
     if (have) out.k = num(have[1]);
   } else if (/\$bronze/i.test(text) && !/rewards/i.test(text)) {
     out.b = {};
+    // «Sapphire II · 15.000»: el nivell que tens i el preu del següent. Cada servidor pot tenir els seus preus ($badgevalue).
+    const seen = {};
     for (const [name] of BADGES) {
       const m = text.match(new RegExp('\\b' + name + '\\s+(IV|III|II|I)\\b'));
       out.b[name] = m ? ['I', 'II', 'III', 'IV'].indexOf(m[1]) + 1 : 0;
+      const p = text.match(new RegExp('\\b' + name + '(?:\\s+(?:IV|III|II|I))?\\s*·\\s*(\\d[\\d.,]*)'));
+      if (p) seen[name] = num(p[1]) / (out.b[name] + 1);
     }
+    out.bp = {};  // preu per nivell sense el −25 % del Ruby IV (el $k ja el porta descomptat)
+    for (const n in seen) out.bp[n] = Math.round(seen[n] / (out.b.Ruby >= 4 ? 0.75 : 1));
     if (have) out.k = num(have[1]);
+  } else if (/^.+?·.*\(\d+\)\s*$/m.test(text) && !/Capital:/i.test(text)) {  // $mmy=: «Lanie Parish · 🔑 (1)», els que tenen claus
+    out.keys = text.split(/\r?\n/).map(l => l.match(/^\s*(.+?)\s*·.*\((\d+)\)\s*$/)).filter(Boolean)
+      .map(m => [m[1], +m[2]]).sort((a, b) => b[1] - a[1]);
+  } else if (/Capital:/i.test(text)) {  // $tu: «Capital: 4.532:kakera:» i, a la part de les esferes, «Capital: 1.725 :sp:»
+    [...text.matchAll(/Capital:\s*(\d[\d.,]*)\s*(:sp:)?/gi)].forEach((m, i) => { if (m[2] || i > 0) out.sp = num(m[1]); else out.k = num(m[1]); });
   }
   return out;
 }
@@ -1165,9 +1181,12 @@ function millDraw() {
   const k = M.k ?? null;
   $id('millSum').textContent = [k !== null ? T('Kakera: {n}', { n: fmtK(k) }) : '', M.sp != null ? T('Esferes: {n}', { n: fmtK(M.sp) }) : '']
     .filter(Boolean).join(' · ') || T('Encara no has enganxat res');
+  // el que encara no ha enganxat: cada servidor té els seus preus i cada jugador els seus nivells
+  const miss = [!M.bp && '$k', M.nf == null && '$kt', !M.opp && '$opp <personatge>', !M.shop && '$os', !M.keys && '$mmy='].filter(Boolean);
+  $id('millMiss').textContent = miss.length ? T('Per començar, enganxa: {list}', { list: miss.join(' · ') }) : '';
   // insígnies: el nivell de cada una i els 3 passos següents del pla, amb el preu (−25 % amb el Ruby IV)
   document.querySelectorAll('select[data-badge]').forEach(s => { s.value = String(M.b[s.dataset.badge] || 0); });
-  const lvl = Object.fromEntries(BADGES.map(([n]) => [n, M.b[n] || 0])), price = Object.fromEntries(BADGES.map(([n, p]) => [n, p]));
+  const lvl = Object.fromEntries(BADGES.map(([n]) => [n, M.b[n] || 0])), price = Object.fromEntries(BADGES.map(([n, p]) => [n, (M.bp && M.bp[n]) || p]));  // els del $k; si no, els de sèrie
   const next = [];
   let sum = 0;
   for (const [n, l] of PLAN) {
@@ -1196,25 +1215,45 @@ function millDraw() {
     el.className = 'tag' + (v === undefined ? '' : (+el.dataset.perk <= 5 ? v >= 6 : v >= 1) ? ' good' : '');
   });
   // les compres d'esferes recomanades, amb el que costen sumades i si les pots pagar
-  const buyList = (buys, cmd) => { let sum = 0; return buys.map(b => { sum += b.cost;
+  const buyList = (buys, cmd, desc) => { let sum = 0; const said = new Set(); return buys.map(b => { sum += b.cost;
+    const d = said.has(b.n) ? '' : desc[b.n]; said.add(b.n);  // la descripció, només el primer cop que surt cada millora
     return `<li><button class="cmd" data-copy="${esc(cmd)}">${esc(cmd)}</button> <b>${esc(T('Millora {n}', { n: b.n }))} · LVL ${b.l}</b> · ${fmtK(b.cost)}`
-      + (M.sp != null ? ` <span class="tag ${M.sp >= sum ? 'good' : ''}">${esc(M.sp >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - M.sp) }))}</span>` : '') + '</li>'; }).join(''); };
-  $id('perkNext').innerHTML = !M.opp ? '' : buyList(nextBuys(M.opp.levels, PORD, perkMax, perkCost), ('$opp ' + M.opp.name).trim())
+      + (M.sp != null ? ` <span class="tag ${M.sp >= sum ? 'good' : ''}">${esc(M.sp >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - M.sp) }))}</span>` : '')
+      + (d ? `<br><span class="muted" style="font-size:13px">${esc(d)}</span>` : '') + '</li>'; }).join(''); };
+  let perkHtml = !M.opp ? '' : buyList(nextBuys(M.opp.levels, PORD, perkMax, perkCost), ('$opp ' + M.opp.name).trim(), PDESC)
     || '<li>' + esc(T('Aquest personatge ja el tens millorat del tot.')) + '</li>';
+  // les claus diuen quant et surt cada personatge ($mmy=): les 1-5 només funcionen quan et surt, la 10 se suma cada dia
+  const keyOf = Object.fromEntries(M.keys || []), kOpp = M.opp ? keyOf[M.opp.name] || 0 : 0;
+  if (M.opp && kOpp >= KEYS_OFTEN)
+    perkHtml += '<li class="muted">' + esc(T('Et surt sovint ({n} claus): les millores 1-5 hi valen la pena.', { n: kOpp })) + '</li>';
+  else if (M.opp && M.opp.levels[9] >= 1)
+    perkHtml += '<li class="muted">' + esc(T("Aquest ja té la millora 10. Posar-la a un altre personatge que no regalaràs (1.000) et dona +20 esferes cada dia; les altres d'aquest només funcionen quan et surt a les tirades.")) + '</li>';
+  const often = (M.keys || []).slice(0, 5);
+  $id('perkKeys').innerHTML = !M.keys ? esc(T('Enganxa el $mmy= per saber quins et surten més.'))
+    : often.map(([name, n]) => `<button class="cmd" data-copy="${esc('$opp ' + name)}">${esc(name)}</button> <span class="muted" style="font-size:13px">${esc(n === 1 ? T('1 clau') : T('{n} claus', { n }))}</span>`).join('<br>')
+      + (often.length && often[0][1] < KEYS_OFTEN ? '<br><span class="muted" style="font-size:13px">' + esc(T('Encara cap no et surt prou: de moment, la millora 10.')) + '</span>' : '');
+  $id('perkNext').innerHTML = perkHtml;
+  // els personatges que has enganxat amb el $opp (Mudae no té cap llista dels millorats)
+  const ops = Object.entries(M.opps || {}).filter(([, lv]) => lv.some(v => v > 0));
+  const n10 = ops.filter(([, lv]) => lv[9] >= 1).length;
+  $id('perkList').innerHTML = !ops.length ? esc(T('Encara no has enganxat cap personatge millorat.'))
+    : esc(T('Amb la millora 10: {n} (+{e} esferes al primer $oh del dia)', { n: n10, e: n10 * 20 })) + '<br>'
+      + ops.map(([name, lv]) => `<button class="cmd" data-copy="${esc('$opp ' + name)}">${esc(name)}</button> <span class="muted" style="font-size:13px">${lv.map((v, i) => v ? (i + 1) + ':' + v : '').filter(Boolean).join(' ')}</span>`).join('<br>');
   document.querySelectorAll('[data-shop]').forEach(el => {
     const v = M.shop ? M.shop[+el.dataset.shop - 1] : undefined;
     el.textContent = v === undefined ? '' : 'LVL ' + v + '/10';
     el.className = 'tag' + (v >= 10 ? ' good' : '');
   });
   $id('shopNext').innerHTML = !M.shop ? '<li>' + esc(T('Enganxa el $os per veure-hi els nivells')) + '</li>'
-    : buyList(nextBuys(M.shop, SORD, shopMax, shopCost), '$os') || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>';
+    : buyList(nextBuys(M.shop, SORD, shopMax, shopCost), '$os', SDESC) || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>';
 }
 const millText = $id('millText'), millBtn = $id('millBtn'), millMsg = $id('millMsg');
 millText.addEventListener('input', () => { millBtn.disabled = !millText.value.trim(); });
 millBtn.onclick = () => {
   const got = readMudae(millText.value, M.tv);
-  if (!Object.keys(got).length) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt, el $opp o el $os.')); return; }
+  if (!Object.keys(got).length) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt, el $opp, el $os, el $mmy= o el $tu.')); return; }
   if (got.nf != null) Object.assign(got, towerFromKt(M, got.nf));
+  if (got.opp && got.opp.name) got.opps = Object.assign({}, M.opps, { [got.opp.name]: got.opp.levels });
   Object.assign(M, got); millSave(); millText.value = ''; millBtn.disabled = true;
   millMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit')) + '</span>'; millDraw();
 };
@@ -1230,6 +1269,8 @@ document.addEventListener('change', ev => {
   millSave(); millDraw();
 });
 millDraw();
+// el $tu enganxat a «Què toca ara» també posa al dia la kakera i les esferes d'aquí
+window.millTu = text => { const got = readMudae(text, M.tv); if (got.k == null && got.sp == null) return; Object.assign(M, got); millSave(); millDraw(); };
 """
 
 
@@ -1605,9 +1646,10 @@ def write_dashboard(d, hist):
 <div class="view" id="v-mill" role="tabpanel" hidden>
 <section class="panel">
  <div class="panel-head"><h2>{T_("Què tens")}</h2><span class="muted" id="millSum" style="font-size:13px"></span></div>
- <label for="millText" class="muted" style="font-size:14px">{T_("Enganxa el que et diu Mudae amb $k (kakera i insígnies), $kt (torre), $opp <personatge> o $os (esferes), d'un en un. Es guarda en aquest navegador.")}</label>
+ <label for="millText" class="muted" style="font-size:14px">{T_("Enganxa el que et diu Mudae amb $k (kakera i insígnies), $kt (torre), $opp <personatge> o $os (esferes), $mmy= (claus) o $tu, d'un en un. Es guarda en aquest navegador.")}</label>
  <textarea id="millText" rows="4" spellcheck="false"></textarea>
  <div class="give-row"><button class="primary" id="millBtn" disabled>{T_("Llegir")}</button><span id="millMsg" role="status"></span></div>
+ <p class="muted" id="millMiss" style="margin:0;font-size:13px"></p>
 </section>
 <div class="g2">
  <section class="panel"><div class="panel-head"><h2>{T_("Insígnies")}</h2><span class="muted" style="font-size:13px">$kakerareward</span></div>
@@ -1626,6 +1668,9 @@ def write_dashboard(d, hist):
  <div class="ogrid">{perk_rows}</div>
  <p class="muted" style="margin:0;font-size:13px">{T_("Les 5 primeres tenen 6 nivells i les altres 5, un. Si millores un personatge del tot, les 5 primeres pugen un nivell més. Fes-les servir en personatges que no regalaràs: si te'n divorcies, perds el 10 %.")}</p>
  <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="perkNext"></ul>
+ <h3 class="og-h">{T_("Els que et surten més (claus, $mmy=)")}</h3><p id="perkKeys" style="margin:0;font-size:14px;line-height:1.9"></p>
+ <h3 class="og-h">{T_("Personatges que has millorat")}</h3><p id="perkList" style="margin:0;font-size:14px;line-height:1.9"></p>
+ <p class="muted" style="margin:0;font-size:13px">{T_("Mudae no té cap llista dels personatges millorats: el tauler recorda els que enganxes amb el $opp. El $op sol només et mostra el primer.")}</p>
 </section>
 <section class="panel"><div class="panel-head"><h2>{T_("Botiga d'esferes")}</h2><span class="muted" style="font-size:13px">$os</span></div>
  <div class="og">{shop_rows}</div>
@@ -1737,7 +1782,7 @@ go(first);
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
 <script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec))}</script>
 <script>{JS_ESP}</script>
-<script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER))}</script>
+<script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
 <script>{JS_CLS}</script>
 <script>{JS_WL.replace("__WL__", wl_json)}</script>
 <script>{JS_MINE.replace("__MINE__", js(mine)).replace("__COLLS__", js([x["name"] for x in series])).replace("__ALTRES__", js(ALTRES))}</script></body></html>"""

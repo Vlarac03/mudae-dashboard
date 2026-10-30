@@ -6,7 +6,8 @@ const py = readFileSync(new URL('../mudae.py', import.meta.url), 'utf8');
 const js = py.match(/JS_MILL = r"""([\s\S]*?)"""/)[1];
 const BADGES = ['Bronze', 'Silver', 'Gold', 'Sapphire', 'Ruby', 'Emerald', 'Diamond'].map(n => [n, 0]);
 const num = js.match(/const num = [^\n]*/)[0];
-const readMudae = new Function('BADGES', num + '\n' + js.match(/function readMudae[\s\S]*?\n}\n/)[0] + 'return readMudae;')(BADGES);
+const costs = js.match(/const PCOST[^\n]*\n[^\n]*\n[^\n]*/)[0], lvl = js.match(/const LVL[^\n]*\n[^\n]*/)[0];
+const readMudae = new Function('BADGES', [num, costs, lvl, js.match(/function readMudae[\s\S]*?\n}\n/)[0]].join('\n') + 'return readMudae;')(BADGES);
 
 const k = `¿Cómo coleccionar kakera en el servidor? (Cambie las opciones con $togglekakera)
 Tienes 28.223!
@@ -18,7 +19,19 @@ Convierte tu kakera en insignias de poder:
  Ruby I · 14.000
 Kakeratower: $kt
 Desbloquea un nivel con $bronze, $silver...`;
-assert.deepEqual(readMudae(k, 5000), { b: { Bronze: 4, Silver: 4, Gold: 4, Sapphire: 2, Ruby: 1, Emerald: 0, Diamond: 0 }, k: 28223 });
+// el preu que surt és el del nivell següent: Sapphire II → el III costa 15.000 (5.000 per nivell, els de sèrie)
+assert.deepEqual(readMudae(k, 5000), { b: { Bronze: 4, Silver: 4, Gold: 4, Sapphire: 2, Ruby: 1, Emerald: 0, Diamond: 0 }, bp: { Sapphire: 5000, Ruby: 7000 }, k: 28223 });
+// un servidor amb altres preus ($badgevalue) i el Ruby IV, que ja ve descomptat al $k: el preu per nivell es desa sense descompte
+assert.deepEqual(readMudae('Tienes 10!\n Ruby IV · ¡Máximo alcanzado!\n Emerald · 1.500\n Diamond II · 4.500\nDesbloquea un nivel con $bronze', 5000).bp,
+  { Emerald: 2000, Diamond: 2000 });
+// el $k de Victor (30/10/2026): totes al IV
+const kMax = `Tienes 6.221!\nConvierte tu kakera en insignias de poder:\n` + BADGES.map(([n]) => ` ${n} IV · ¡Máximo alcanzado!`).join('\n') + `\nDesbloquea un nivel con $bronze, $silver...`;
+assert.deepEqual(readMudae(kMax, 5000), { b: Object.fromEntries(BADGES.map(([n]) => [n, 4])), bp: {}, k: 6221 });
+// $mmy=: els personatges amb claus, de més a menys
+assert.deepEqual(readMudae('Harem de jo\n\nLanie Parish ·  🔑 (1)\nHello Kitty ·   (12)\nRui (HOHD) ·   (3)', 5000),
+  { keys: [['Hello Kitty', 12], ['Rui (HOHD)', 3], ['Lanie Parish', 1]] });
+// $tu: les dues «Capital», la de la kakera i la de les esferes
+assert.deepEqual(readMudae('Poder: 110%\nCapital: 4.532:kakera:\n\n0 $oh restantes para hoy\nCapital: 1.725 :sp:\n=> $tuarrange', 5000), { k: 4532, sp: 1725 });
 
 const kt = `Gasta tupara armar los 12 pisos de la torre:
 Tu nivel actual es
@@ -43,7 +56,24 @@ Harry Potter
 [LVL 0] d
 [LVL 1] El primer $oh del día genera +20 spheres`;
 assert.deepEqual(readMudae(opp, 5000), { opp: { name: 'Harry Potter', levels: [2, 0, 0, 6, 0, 0, 0, 0, 0, 1] }, sp: 1780 });
-
+// el $opp de debò (Victor, 30/10/2026): al màxim posa [MAX], no [LVL 1]
+const oppMax = `Mejora los beneficios del personaje seleccionado.
+Un bono se aplica cuando es mejorado completamente. Filtrar con variables funciona.
+Escribe $infosphere para ver más información.
+Tienes 1.725 :sp:
+character image
+Harry Potter
+[LVL 0]  Probabilidad de aparición incrementada...
+[LVL 0]  Valor de kakera base incrementado: 0 > 20
+[MAX]  Probabilidad de obtener +1 botón de kakera
+[LVL 0]  Probabilidad de obtener +1 llave: 0 > 4%
+[LVL 0]  Cantidad de spheres...
+[LVL 0]  Un personaje aleatorio...
+[LVL 0]  Los botones de kakera...
+[LVL 0]  Aparece con 4 botones...
+[LVL 0]  Un botón de sphere...
+[MAX]  El primer $oh del día genera +20 spheres y tiene un +1% de probabilidad de otorgar 1 $oq`;
+assert.deepEqual(readMudae(oppMax, 5000), { opp: { name: 'Harry Potter', levels: [0, 0, 6, 0, 0, 0, 0, 0, 0, 1] }, sp: 1725 });
 const fn = name => js.match(new RegExp(`function ${name}[\\s\\S]*?\\n}\\n`))[0];
 // $os: la botiga d'esferes (10 bonus; alguns ocupen dues línies)
 const os = `Mejora los bonos de los ourobeneficios. Estos bonos se aplican a TODOS los personajes. Escribe $shoprefund para reembolsar las spheres. Escribe $oo para los fragmentos.
@@ -63,8 +93,8 @@ Al hacer click en botones de kakera...
 Spheres cliqueados gracias al beneficio 9 dan más spheres: 0% > 10%
 [LVL 10] El primer $oh del día...`;
 assert.deepEqual(readMudae(os, 5000), { shop: [0, 3, 0, 0, 0, 0, 0, 0, 0, 10], sp: 1725 });
+assert.equal(readMudae(os.replace('[LVL 3]', '[MAX]'), 5000).shop[1], 10);
 // les compres d'esferes recomanades: la primera de l'ordre que no és al màxim, nivell a nivell
-const costs = js.match(/const PCOST[^\n]*\n[^\n]*\n[^\n]*/)[0];
 const [nextBuys, perkMax, perkCost, shopMax, shopCost] = new Function(costs + '\n' + fn('nextBuys') + 'return [nextBuys, perkMax, perkCost, shopMax, shopCost];')();
 const PORD = [10, 4, 5, 2, 3, 8, 9, 1, 6, 7];
 assert.deepEqual(nextBuys([2, 0, 0, 6, 0, 0, 0, 0, 0, 1], PORD, perkMax, perkCost),  // l'Harry Potter de dalt: 10 i 4 fets, toca la 5
