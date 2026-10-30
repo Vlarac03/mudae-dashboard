@@ -581,7 +581,9 @@ function notiBody() {
   if (P) out.push(T('Poder al $tu de les {h}: {p}% ({n} botons de kakera)', { h: hm(new Date(P.t)), p: P.p, n: Math.floor(P.p / P.c) }));
   return out.join('\\n');
 }
-function notify() { try { new Notification(T('Ja pots fer $m'), { body: notiBody(), tag: 'mudae-m' }); } catch (e) {} }
+function notify() {
+  try { const n = new Notification(T('Ja pots fer $m'), { body: notiBody(), tag: 'mudae-m' }); n.onclick = () => { window.focus(); n.close(); }; } catch (e) {}
+}
 function notiDraw() {
   const on = notiOn();
   notiBtn.setAttribute('aria-pressed', on); notiBtn.querySelector('.dot').className = 'dot' + (on ? ' ok' : '');
