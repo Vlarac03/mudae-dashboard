@@ -29,8 +29,8 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 
 ## Instalación (5 minutos)
 
-1. Instala [Python](https://www.python.org/downloads/) 3.12 o más nuevo. En la primera pantalla del instalador, **marca «Add python.exe to PATH»**.
-2. Haz clic en el botón verde **Code → Download ZIP** arriba de esta página y descomprime la carpeta donde la quieras tener (por ejemplo, en Documentos). No la abras desde dentro del zip.
+1. Instala [Python](https://www.python.org/downloads/) 3.12 o más nuevo. En la primera pantalla del instalador, marca «Add python.exe to PATH» (recomendado, aunque sin él también funciona).
+2. Haz clic en el botón verde **Code → Download ZIP** arriba de esta página. Antes de descomprimirlo: clic derecho al ZIP → **Propiedades** → marca **«Desbloquear»** → Aceptar (si no, Windows puede bloquear los `.bat`). Después descomprime la carpeta donde la quieras tener (por ejemplo, en Documentos). No la abras desde dentro del zip.
 3. Doble clic en **`Configura.bat`**. Elige el idioma (el 2 es el español), escribe tu nombre en Mudae (el que sale en «Pertenece a …» en tus personajes) y, si quieres, el del servidor. Crea el acceso directo **Mudae** en el escritorio y abre el panel.
 4. En el panel, ve a **«Poner al día»** y pega, por orden:
    - **Tu harem**: escribe `$mma+s` en Discord, copia el mensaje que te llega por privado y pégalo eligiendo «Tu harem».
@@ -73,6 +73,7 @@ El panel no se conecta a Discord ni a Mudae y no pide ninguna cuenta. Solo lee l
 
 - **«Could not update»**: cierra el Excel y vuelve a abrir Mudae.
 - **Un botón dice «Sin conexión» o «Botón apagado»**: abre el panel con el acceso directo Mudae, no abriendo `dashboard.html` directamente.
+- **Windows dice «Control Inteligente de Aplicaciones ha bloqueado un archivo»** (o SmartScreen avisa) al abrir un `.bat`: borra la carpeta, haz clic derecho al ZIP → Propiedades → **Desbloquear** y vuelve a descomprimirlo (paso 2).
 - **«Python 3.12 or newer is needed»** al abrir `Configura.bat`: instala Python (paso 1) y vuelve a probar.
 
 ## Cómo está hecho

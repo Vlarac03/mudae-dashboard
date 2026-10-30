@@ -29,8 +29,8 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 
 ## Instal·lació (5 minuts)
 
-1. Instal·la [Python](https://www.python.org/downloads/) 3.12 o més nou. A la primera pantalla de l'instal·lador, **marca «Add python.exe to PATH»**.
-2. Clica el botó verd **Code → Download ZIP** a dalt d'aquesta pàgina i descomprimeix la carpeta on la vulguis tenir (per exemple, a Documents). No l'obris des de dins del zip.
+1. Instal·la [Python](https://www.python.org/downloads/) 3.12 o més nou. A la primera pantalla de l'instal·lador, marca «Add python.exe to PATH» (recomanat, tot i que sense també funciona).
+2. Clica el botó verd **Code → Download ZIP** a dalt d'aquesta pàgina. Abans de descomprimir-lo: clic dret al ZIP → **Propietats** → marca **«Desbloqueja»** → D'acord (si no, Windows pot bloquejar els `.bat`). Després descomprimeix la carpeta on la vulguis tenir (per exemple, a Documents). No l'obris des de dins del zip.
 3. Doble clic a **`Configura.bat`**. Tria l'idioma (el 3 és el català), escriu el teu nom a Mudae (el que surt a «Pertenece a …» als teus personatges) i, si vols, el del servidor. Crea l'accés directe **Mudae** a l'escriptori i obre el tauler.
 4. Al tauler, ves a **«Posar al dia»** i enganxa-hi, per ordre:
    - **El teu harem**: escriu `$mma+s` a Discord, copia el missatge que t'arriba per privat i enganxa'l triant «El teu harem».
@@ -73,6 +73,7 @@ El tauler no es connecta a Discord ni a Mudae i no demana cap compte. Només lle
 
 - **«Could not update»**: tanca l'Excel i torna a obrir Mudae.
 - **Un botó diu «Sense connexió» o «Botó apagat»**: obre el tauler amb l'accés directe Mudae, no obrint `dashboard.html` directament.
+- **Windows diu «Control intel·ligent d'aplicacions ha bloquejat un fitxer»** (o SmartScreen avisa) en obrir un `.bat`: esborra la carpeta, clic dret al ZIP → Propietats → **Desbloqueja** i torna'l a descomprimir (pas 2).
 - **«Python 3.12 or newer is needed»** en obrir `Configura.bat`: instal·la Python (pas 1) i torna-ho a provar.
 
 ## Com està fet

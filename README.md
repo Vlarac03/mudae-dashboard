@@ -29,8 +29,8 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 
 ## Install (5 minutes)
 
-1. Install [Python](https://www.python.org/downloads/) 3.12 or newer. On the first screen of the installer, **tick «Add python.exe to PATH»**.
-2. Click the green **Code → Download ZIP** button at the top of this page and unzip the folder somewhere you'll keep it (for example, Documents). Don't run it from inside the zip.
+1. Install [Python](https://www.python.org/downloads/) 3.12 or newer. On the first screen of the installer, tick «Add python.exe to PATH» (recommended, though it also works without it).
+2. Click the green **Code → Download ZIP** button at the top of this page. Before unzipping it: right-click the ZIP → **Properties** → tick **«Unblock»** → OK (otherwise Windows may block the `.bat` files). Then unzip the folder somewhere you'll keep it (for example, Documents). Don't run it from inside the zip.
 3. Double-click **`Configura.bat`**. Choose your language (English by default), then type your Mudae name (the one in «Belongs to …» on your characters) and, if you want, your server's name. It creates a **Mudae** shortcut on your desktop and opens the dashboard.
 4. In the dashboard, go to **«Update»** and paste, in this order:
    - **Your harem**: type `$mma+s` in Discord, copy the message Mudae sends you by DM and paste it choosing «Your harem».
@@ -73,6 +73,7 @@ The dashboard doesn't connect to Discord or Mudae and doesn't need an account. I
 
 - **«Could not update»**: close the Excel file and open Mudae again.
 - **A button says «No connection» or «Button off»**: open the dashboard with the Mudae shortcut, not by opening `dashboard.html` directly.
+- **Windows says «Smart App Control blocked a file»** (or SmartScreen warns you) when opening a `.bat`: delete the folder, right-click the ZIP → Properties → **Unblock** and unzip it again (step 2).
 - **«Python 3.12 or newer is needed»** when opening `Configura.bat`: install Python (step 1) and try again.
 
 ## How it's built
