@@ -1,13 +1,16 @@
 @echo off
 cd /d "%~dp0"
 set PYTHONIOENCODING=utf-8
-set "PYDIR=%USERPROFILE%\AppData\Local\Programs\Python\Python313"
-set "PYEXE=python"
-set "PYWEXE=pythonw"
-if exist "%PYDIR%\python.exe" set "PYEXE=%PYDIR%\python.exe"
-if exist "%PYDIR%\pythonw.exe" set "PYWEXE=%PYDIR%\pythonw.exe"
+rem Find Python 3.12+: python on PATH, else the py launcher (installed even without "Add python.exe to PATH"), else the usual folder
+set "PYEXE="
+for /f "delims=" %%p in ('python -c "import sys; sys.version_info >= (3, 12) and print(sys.executable)" 2^>nul') do set "PYEXE=%%p"
+if not defined PYEXE for /f "delims=" %%p in ('py -3 -c "import sys; sys.version_info >= (3, 12) and print(sys.executable)" 2^>nul') do set "PYEXE=%%p"
+if not defined PYEXE for /d %%d in ("%LOCALAPPDATA%\Programs\Python\Python3*") do if exist "%%d\python.exe" set "PYEXE=%%d\python.exe"
+if not defined PYEXE goto nopython
 "%PYEXE%" -c "import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)" >nul 2>nul
 if errorlevel 1 goto nopython
+set "PYWEXE=%PYEXE:python.exe=pythonw.exe%"
+if not exist "%PYWEXE%" set "PYWEXE=%PYEXE%"
 echo.
 echo === Mudae dashboard setup ===
 echo.
@@ -52,7 +55,7 @@ exit /b 1
 :nopython
 echo Python 3.12 or newer is needed and was not found.
 echo Download it from https://www.python.org/downloads/
-echo When installing it, tick "Add python.exe to PATH". Then open this file again.
+echo Then open this file again.
 echo.
 echo Cal Python 3.12 o mes nou / Hace falta Python 3.12 o mas nuevo: https://www.python.org/downloads/
 pause
