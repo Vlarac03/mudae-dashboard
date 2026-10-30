@@ -3,7 +3,7 @@
 Ús: python mudae.py   (o doble clic a Actualitza.bat)
 
 - dades/series/<Sèrie>.txt  -> el que respon `$ima <sèrie>` (una sèrie per fitxer)
-- dades/harem.txt           -> el teu `$mm`
+- dades/harem.txt           -> el teu harem (el desa el `$mma+s` de «Posar al dia»)
 - dades/wishlist.txt        -> el teu `$wl`
 Pots enganxar-ho tal qual de Discord: les capçaleres i la numeració s'ignoren.
 El que escrius a mà a l'Excel (cel·les grogues) es conserva.
@@ -88,7 +88,7 @@ RUTINA = [
     ("reclam", "4. Un altre de bo?", "$rt", "Et deixa tornar a reclamar. Cada {rt} h: només per a la wishlist o les teves sèries", RT_HORES),
     ("reclam", "5. Sense poder?", "$dk", "Recarrega el poder i dona kakera. Cada 20 h", 20),
     ("aconseguit", "Treure'l de la wishlist", "$wishremove <nom>", "I posa-hi el primer de «Per omplir» (full Wishlist)", None),
-    ("aconseguit", "Posar al dia les dades", "$mms · $wl · $imaso <sèrie>", "Per privat i sense pàgines. Enganxa-ho a «Posar al dia» del tauler", None),
+    ("aconseguit", "Posar al dia les dades", "$mma+s · $wl · $imaso <sèrie>", "Per privat i sense pàgines. Enganxa-ho a «Posar al dia» del tauler", None),
     ("aconseguit", "Obrir el tauler", "Mudae", "Accés directe de l'escriptori: posa al dia l'Excel i obre el tauler", None),
     ("temps", "Intercanvis", "$trade @persona", "Full Intercanvis: a qui demanar què. Ofereix dels Sobrants", None),
     ("temps", "Kakera estalviada", "$build 8", "Quan arribis als 35.000: pis [8] de la torre (o l'[11])", None),
@@ -126,6 +126,7 @@ def lines(path):
     for raw in path.read_text(encoding="utf-8-sig").splitlines():
         star = "⭐" in raw
         line = re.sub(r"^\d+\.\s+", "", raw.replace("⭐", "").strip())  # numeració de Discord: "2. Remus Lupin"
+        line = re.sub(r"\s+\|\s.*$", "", line)  # nota de Mudae ($note): "Ginger Torte | RANDOM"
         line = re.sub(r"(?:\s*(?:✅|❌|✔️?|☑️?)|\s+\+\d+\s*%)+\s*$", "", line)  # marques del $wl: "Albedo ✅ +100%"
         if line and not SKIP.search(line):
             out.append((line.strip(), star))
@@ -830,11 +831,14 @@ PERK_GROUPS = [("Funciona cada dia, encara que no et surti el personatge", [10])
 
 
 ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del tauler
-    ("Tirades", [("$m", "Tirada: personatge qualsevol"), ("$us", "Gasta tirades guardades"), ("$rolls", "Reinici de tirades del vot"),
+    ("Tirades", [("$m", "Tirada: personatge qualsevol"), ("$w", "Tirada: només noies"), ("$h", "Tirada: només nois"),
+                 ("$ma", "Tirada: qualsevol, d'anime"), ("$wa", "Tirada: noies d'anime"), ("$ha", "Tirada: nois d'anime"),
+                 ("$mg", "Tirada: qualsevol, de videojocs"), ("$wg", "Tirada: noies de videojocs"), ("$hg", "Tirada: nois de videojocs"),
+                 ("$us", "Gasta tirades guardades"), ("$rolls", "Reinici de tirades del vot"),
                  ("$daily", "Reinici de tirades (cada 20 h)"), ("$vote", "Vota i guanya un reinici")]),
     ("Reclamar i kakera", [("$tu", "Tot el que tens disponible"), ("$rt", "Torna a poder reclamar"), ("$dk", "Recarrega el poder i dona kakera"),
                            ("$mu", "Quan podràs reclamar"), ("$k", "La teva kakera i com guanyar-ne")]),
-    ("La teva col·lecció", [("$mms", "El teu harem sencer, per privat"), ("$mmbs", "El harem amb la sèrie de cada un, per privat"),
+    ("La teva col·lecció", [("$mma+s", "El teu harem sencer amb la sèrie de cada un, per privat"), ("$mmbs", "El harem amb la sèrie de cada un, per privat"),
                             ("$imaso <sèrie>", "Una sèrie sencera amb propietaris, per privat"), ("$im <personatge>", "Fitxa d'un personatge"),
                             ("$wl", "La teva wishlist"), ("$wish <nom>", "Afegeix a la wishlist (diversos: separa'ls amb $)"),
                             ("$wishremove <nom>", "Treu de la wishlist"), ("$sw <nom>", "Desig estrella")]),
@@ -955,7 +959,7 @@ const fa = n => n === null ? T('mai') : n === 0 ? T('avui') : n === 1 ? T('ahir'
   const h = days(META.harem), w = days(META.wishlist);
   const ser = Object.entries(META.series || {}).sort((a, b) => a[1].localeCompare(b[1]))[0];
   age.textContent = T('Harem: {h} · Wishlist: {w}', { h: fa(h), w: fa(w) }) + (ser ? ' · ' + T('Sèrie més antiga: {s}, {d}', { s: ser[0], d: fa(days(ser[1])) }) : '');
-  if (h === null || h >= 7) age.innerHTML = '<span class="tag bad">' + esc(T('Toca posar al dia el harem: $mms')) + '</span> ' + esc(age.textContent);
+  if (h === null || h >= 7) age.innerHTML = '<span class="tag bad">' + esc(T('Toca posar al dia el harem: $mma+s')) + '</span> ' + esc(age.textContent);
 })();
 const serieName = () => serieSel.value === '__new__' ? newIn.value.trim() : serieSel.value;
 function syncUpd() {
@@ -963,7 +967,7 @@ function syncUpd() {
   newIn.hidden = serieSel.value !== '__new__';
   const esp = kindSel.value === 'serie' && SPECIALS.includes(serieName());
   document.getElementById('updEsp').hidden = !esp;
-  const cmd = kindSel.value === 'harem' ? '$mms' : kindSel.value === 'wishlist' ? '$wl' : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
+  const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
   updCmd.textContent = cmd; updCmd.dataset.copy = cmd;
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
@@ -1212,7 +1216,7 @@ def write_dashboard(d, hist):
     if news:
         alerts.append(alert(t("Nous"), "", e(t("{n} personatges nous a les teves sèries", n=news))))
     if d["missing"]:
-        alerts.append(alert(t("Harem"), "", e(t("{n} personatges teus no surten al harem: torna a enganxar el $mms a «Posar al dia»", n=len(d["missing"])))))
+        alerts.append(alert(t("Harem"), "", e(t("{n} personatges teus no surten al harem: torna a enganxar el $mma+s a «Posar al dia»", n=len(d["missing"])))))
 
     spec = specials()
     esp_tag = f' <span class="tag accent">{e(t("especial"))}</span>'
@@ -1431,10 +1435,10 @@ def write_dashboard(d, hist):
 <section class="panel" id="upd">
  <div class="panel-head"><h2>{T_("Posar al dia")}</h2><span id="updAge" class="muted" style="font-size:13px"></span></div>
  <div class="give-row">{T_("Què enganxes:")}
-  <select id="updKind" aria-label="{T_("Què enganxes:")}"><option value="harem">{T_("El teu harem ($mms)")}</option><option value="wishlist">{T_("La wishlist ($wl)")}</option><option value="serie">{T_("Una sèrie ($imaso)")}</option></select>
+  <select id="updKind" aria-label="{T_("Què enganxes:")}"><option value="harem">{T_("El teu harem ($mma+s)")}</option><option value="wishlist">{T_("La wishlist ($wl)")}</option><option value="serie">{T_("Una sèrie ($imaso)")}</option></select>
   <span id="updSerieBox" hidden>{T_("Sèrie:")} <select id="updSerie" aria-label="{T_("Sèrie:")}">{serie_opts}<option value="__new__">{T_("Sèrie nova…")}</option></select>
   <input type="text" id="updNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de la sèrie, com surt a Mudae")}" placeholder="{T_("Nom de la sèrie, com surt a Mudae")}" hidden></span>
-  <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mms">$mms</button></span></div>
+  <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mma+s">$mma+s</button></span></div>
  <p class="muted" id="updEsp" style="margin:0;font-size:13px" hidden>{T_("Col·lecció especial: enganxa el $imaso de la sèrie d'on surten els personatges (totes les pàgines). Només se n'agafaran els d'aquesta col·lecció.")}</p>
  <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
  <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
@@ -1642,7 +1646,8 @@ def update_special(name, text):
 def save_paste(kind, serie, text):
     """Desa el que has enganxat al tauler al fitxer de dades/ que toca. Si no s'hi troba cap nom, no toca res."""
     if kind == "harem":
-        path = DADES / "harem.txt"
+        classify_harem(text)  # els que no s'han pogut llegir surten a «Sèrie dels teus personatges»
+        return
     elif kind == "wishlist":
         path = DADES / "wishlist.txt"
     elif kind == "serie":
@@ -1671,6 +1676,43 @@ def save_paste(kind, serie, text):
     else:
         meta[kind] = today
     (DADES / "actualitzat.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def classify_harem(text):
+    """$mma+s: el harem sencer, «Personatge - Sèrie» per línia. Desa els noms a harem.txt i la sèrie de cada un a series-sobrants.json.
+
+    Algunes sèries porten un guionet al nom («Vigilante - Boku no Hero Academia: Illegals»): es talla pel primer
+    « - » que deixa a l'esquerra un nom del teu harem (o pel primer, si el harem no el té).
+    """
+    harem = {n for n, _ in lines(DADES / "harem.txt")}
+    got, bad = {}, []
+    for raw in text.splitlines():
+        line = re.sub(r"^\d+\.\s+", "", raw.replace("⭐", "").strip())
+        if not line or SKIP.search(line):
+            continue
+        parts = line.split(" - ")
+        if len(parts) < 2:
+            bad.append(line)
+            continue
+        cut = next((k for k in range(1, len(parts)) if " - ".join(parts[:k]).strip() in harem), 1)
+        name, serie = " - ".join(parts[:cut]).strip(), " - ".join(parts[cut:]).strip()
+        if name and serie:
+            got[name] = serie
+    if not got:
+        raise ValueError(t("No he trobat cap «Personatge - Sèrie». Copia el missatge del $mma+s sencer."))
+    (DADES / "harem.txt").write_text("\n".join(got) + "\n", encoding="utf-8")
+    path = DADES / "series-sobrants.json"
+    old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    by_name = {n: sr for sr, ns in old.items() for n in ns if sr != ALTRES}  # el que ja sabíem i ara no surt, es queda
+    by_name.update(got)
+    m = {}
+    for n, sr in sorted(by_name.items(), key=lambda kv: (kv[1], kv[0])):
+        m.setdefault(sr, []).append(n)
+    path.write_text(json.dumps(m, ensure_ascii=False, indent=1), encoding="utf-8")
+    meta = read_meta()
+    meta["harem"] = dt.date.today().isoformat()
+    (DADES / "actualitzat.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+    return len(got), bad
 
 
 def classify(name, serie):

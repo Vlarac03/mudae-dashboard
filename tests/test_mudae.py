@@ -30,8 +30,8 @@ class Base(unittest.TestCase):
 
 class Llegir(Base):
     def test_ignora_capcaleres_i_numeracio(self):
-        self.write("harem.txt", "1. MudaeAPP — 18:02\nHarem de jo\n2. Remus Lupin\nPage 1 / 21\n$mms\nHedwig ⭐\n")
-        self.assertEqual(mudae.lines(self.tmp / "harem.txt"), [("Remus Lupin", False), ("Hedwig", True)])
+        self.write("harem.txt", "1. MudaeAPP — 18:02\nHarem de jo\n2. Remus Lupin\nPage 1 / 21\n$mms\nHedwig ⭐\nGinger Torte | RANDOM\n")
+        self.assertEqual(mudae.lines(self.tmp / "harem.txt"), [("Remus Lupin", False), ("Hedwig", True), ("Ginger Torte", False)])
 
     def test_wishlist_amb_marques(self):
         self.write("wishlist.txt", "ggezw's Wishlist - 15/15 $wl, 1/1 $sw\nAlbedo ✅ ⭐ +100%\nNero ✅ +200%\nRukia Kuchiki ✅\n"
@@ -93,6 +93,20 @@ class Desar(Base):
     def test_nom_de_serie_perillos(self):
         with self.assertRaises(ValueError):
             mudae.save_paste("serie", "../fora", "Dobby\n")
+
+    def test_series_del_harem(self):
+        self.write("harem.txt", "Agnetha\nOboro Shirakumo\nAloe\n")
+        self.write("series-sobrants.json", '{"Vella": ["Aloe"]}')
+        paste = ("1. Agnetha - ABBA\nOboro Shirakumo - Vigilante - Boku no Hero Academia: Illegals\n"
+                 "2. Endeavor - Boku no Hero Academia\nlinia sense guionet\n")
+        mudae.save_paste("harem", "", paste)
+        got = json.loads((self.tmp / "series-sobrants.json").read_text(encoding="utf-8"))
+        self.assertEqual(got, {"ABBA": ["Agnetha"], "Boku no Hero Academia": ["Endeavor"], "Vella": ["Aloe"],
+                               "Vigilante - Boku no Hero Academia: Illegals": ["Oboro Shirakumo"]})
+        self.assertEqual([n for n, _ in mudae.lines(self.tmp / "harem.txt")], ["Agnetha", "Oboro Shirakumo", "Endeavor"])
+        self.assertIn("harem", json.loads((self.tmp / "actualitzat.json").read_text(encoding="utf-8")))
+        with self.assertRaises(ValueError):
+            mudae.save_paste("harem", "", "res de Mudae aquí\n")
 
     def test_classifica(self):
         self.write("harem.txt", "Aloe\n")

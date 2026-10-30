@@ -19,7 +19,7 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 - **Millores**: enganxes el `$k`, el `$kt` o un `$opp <personatge>` i et diu quina insígnia, quin pis de la torre i quina millora d'esferes et toca, i quanta kakera et falta.
 - **Wishlist**: t'avisa dels que ja són teus o que ha reclamat algú, i et prepara les ordres `$wishremove` i `$wish`.
 - **Intercanvis i regals**: l'ordre `$give` per a cada jugador, i un cercador que entén llistes de sèries mal escrites («full metal alchimist», «Rezero»…).
-- **Posar al dia**: enganxes el `$mms`, el `$wl` o un `$imaso` i cliques un botó. T'avisa si fa més d'una setmana que no poses al dia el harem.
+- **Posar al dia**: enganxes el `$mma+s` (el teu harem, amb la sèrie de cada personatge), el `$wl` o un `$imaso` i cliques un botó. T'avisa si fa més d'una setmana que no poses al dia el harem.
 - **Ordres d'ús habitual**: totes, amb el que fan i un botó de copiar.
 - **Excel**: el mateix en un full de càlcul, que respecta el que hi escrius (prioritats, notes, estat dels intercanvis).
 
@@ -33,7 +33,7 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 2. Clica el botó verd **Code → Download ZIP** a dalt d'aquesta pàgina i descomprimeix la carpeta on la vulguis tenir (per exemple, a Documents). No l'obris des de dins del zip.
 3. Doble clic a **`Configura.bat`**. Tria l'idioma (el 3 és el català), escriu el teu nom a Mudae (el que surt a «Pertenece a …» als teus personatges) i, si vols, el del servidor. Crea l'accés directe **Mudae** a l'escriptori i obre el tauler.
 4. Al tauler, ves a **«Posar al dia»** i enganxa-hi, per ordre:
-   - **El teu harem**: escriu `$mms` a Discord, copia el missatge que t'arriba per privat i enganxa'l triant «El teu harem».
+   - **El teu harem**: escriu `$mma+s` a Discord, copia el missatge que t'arriba per privat i enganxa'l triant «El teu harem».
    - **La teva wishlist**: `$wl`, triant «La wishlist».
    - **Cada sèrie que col·lecciones**: `$imaso <sèrie>` (per exemple, `$imaso Harry Potter`), triant «Una sèrie» → «Sèrie nova…» i escrivint-ne el nom tal com surt a Mudae.
 
@@ -44,7 +44,7 @@ A partir d'aquí, obre el tauler amb l'accés directe **Mudae** de l'escriptori.
 - **Què toca ara** et diu què fer i quan. Ves marcant el que fas.
 - **Quan aconsegueixis un personatge**: a «Col·leccions», tria la sèrie, clica'l i clica **Ja són meus**.
 - **Quan regalis**: a «Buscar entre els meus», busca'ls, copia el `$give` i, quan Mudae ho confirmi, clica **Ja els he donat**.
-- **Un cop per setmana**: torna a enganxar el `$mms` a «Posar al dia» (el tauler t'avisa).
+- **Un cop per setmana**: torna a enganxar el `$mma+s` a «Posar al dia» (el tauler t'avisa).
 
 ## Bo de saber
 

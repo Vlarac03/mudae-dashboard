@@ -19,7 +19,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 - **Mejoras**: pegas el `$k`, el `$kt` o un `$opp <personaje>` y te dice qué insignia, qué piso de la torre y qué mejora de esferas te toca, y cuánta kakera te falta.
 - **Wishlist**: te avisa de los que ya son tuyos o que ha reclamado alguien, y te prepara los comandos `$wishremove` y `$wish`.
 - **Intercambios y regalos**: el comando `$give` para cada jugador, y un buscador que entiende listas de series mal escritas («full metal alchimist», «Rezero»…).
-- **Poner al día**: pegas el `$mms`, el `$wl` o un `$imaso` y haces clic en un botón. Te avisa si hace más de una semana que no pones al día el harem.
+- **Poner al día**: pegas el `$mma+s` (tu harem, con la serie de cada personaje), el `$wl` o un `$imaso` y haces clic en un botón. Te avisa si hace más de una semana que no pones al día el harem.
 - **Comandos de uso habitual**: todos, con lo que hacen y un botón de copiar.
 - **Excel**: lo mismo en una hoja de cálculo, que respeta lo que escribes en ella (prioridades, notas, estado de los intercambios).
 
@@ -33,7 +33,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 2. Haz clic en el botón verde **Code → Download ZIP** arriba de esta página y descomprime la carpeta donde la quieras tener (por ejemplo, en Documentos). No la abras desde dentro del zip.
 3. Doble clic en **`Configura.bat`**. Elige el idioma (el 2 es el español), escribe tu nombre en Mudae (el que sale en «Pertenece a …» en tus personajes) y, si quieres, el del servidor. Crea el acceso directo **Mudae** en el escritorio y abre el panel.
 4. En el panel, ve a **«Poner al día»** y pega, por orden:
-   - **Tu harem**: escribe `$mms` en Discord, copia el mensaje que te llega por privado y pégalo eligiendo «Tu harem».
+   - **Tu harem**: escribe `$mma+s` en Discord, copia el mensaje que te llega por privado y pégalo eligiendo «Tu harem».
    - **Tu wishlist**: `$wl`, eligiendo «La wishlist».
    - **Cada serie que coleccionas**: `$imaso <serie>` (por ejemplo, `$imaso Harry Potter`), eligiendo «Una serie» → «Serie nueva…» y escribiendo su nombre tal como sale en Mudae.
 
@@ -44,7 +44,7 @@ A partir de aquí, abre el panel con el acceso directo **Mudae** del escritorio.
 - **Qué toca ahora** te dice qué hacer y cuándo. Ve marcando lo que haces.
 - **Cuando consigas un personaje**: en «Colecciones», elige la serie, haz clic en él y en **Ya son míos**.
 - **Cuando regales**: en «Buscar entre los míos», búscalos, copia el `$give` y, cuando Mudae lo confirme, haz clic en **Ya los he dado**.
-- **Una vez por semana**: vuelve a pegar el `$mms` en «Poner al día» (el panel te avisa).
+- **Una vez por semana**: vuelve a pegar el `$mma+s` en «Poner al día» (el panel te avisa).
 
 ## Bueno saber
 

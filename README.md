@@ -19,7 +19,7 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 - **Upgrades**: paste your `$k`, `$kt` or `$opp <character>` and it tells you which badge, tower floor and sphere perk to get next, and how much kakera you still need.
 - **Wishlist**: warns you about characters you already own or someone else claimed, and builds the `$wishremove` and `$wish` commands for you.
 - **Trades and gifts**: the `$give` command for each player, and a search box that understands misspelled series lists («full metal alchimist», «Rezero»…).
-- **Update**: paste your `$mms`, `$wl` or `$imaso` and click a button. It reminds you if your harem is more than a week old.
+- **Update**: paste your `$mma+s` (your harem, with each character's series), `$wl` or an `$imaso` and click a button. It reminds you if your harem is more than a week old.
 - **Common commands**: all of them, with what they do and a copy button.
 - **Excel**: the same in a spreadsheet, which keeps what you type in it (priorities, notes, trade status).
 
@@ -33,7 +33,7 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 2. Click the green **Code → Download ZIP** button at the top of this page and unzip the folder somewhere you'll keep it (for example, Documents). Don't run it from inside the zip.
 3. Double-click **`Configura.bat`**. Choose your language (English by default), then type your Mudae name (the one in «Belongs to …» on your characters) and, if you want, your server's name. It creates a **Mudae** shortcut on your desktop and opens the dashboard.
 4. In the dashboard, go to **«Update»** and paste, in this order:
-   - **Your harem**: type `$mms` in Discord, copy the message Mudae sends you by DM and paste it choosing «Your harem».
+   - **Your harem**: type `$mma+s` in Discord, copy the message Mudae sends you by DM and paste it choosing «Your harem».
    - **Your wishlist**: `$wl`, choosing «Your wishlist».
    - **Each series you collect**: `$imaso <series>` (for example `$imaso Harry Potter`), choosing «A series» → «New series…» and typing its name as Mudae shows it.
 
@@ -44,7 +44,7 @@ From then on, open the dashboard with the **Mudae** shortcut on your desktop.
 - **What to do now** tells you what to do and when. Tick things as you do them.
 - **When you get a character**: in «Collections», choose the series, click it and click **They're mine**.
 - **When you give characters away**: in «Search my characters», find them, copy the `$give` command and, once Mudae confirms it, click **I've given them**.
-- **Once a week**: paste your `$mms` again in «Update» (the dashboard reminds you).
+- **Once a week**: paste your `$mma+s` again in «Update» (the dashboard reminds you).
 
 ## Good to know
 
