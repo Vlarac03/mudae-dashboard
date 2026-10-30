@@ -972,6 +972,11 @@ function syncUpd() {
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
 [kindSel, serieSel, newIn, txt].forEach(el => el.addEventListener('input', syncUpd));
+// el que vas triar l'última vegada (què enganxes i quina sèrie), per no haver-ho de canviar cada cop
+[kindSel, serieSel].forEach(el => {
+  try { const v = localStorage.getItem('mudae-' + el.id); if ([...el.options].some(o => o.value === v)) el.value = v; } catch (e) {}
+  el.addEventListener('change', () => { try { localStorage.setItem('mudae-' + el.id, el.value); } catch (e) {} });
+});
 if (location.protocol === 'file:') updMsg.innerHTML = OFF_MSG();
 updBtn.onclick = async () => {
   updBtn.disabled = true; updMsg.textContent = T('Desant…');
