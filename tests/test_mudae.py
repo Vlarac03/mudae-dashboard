@@ -138,6 +138,14 @@ class Desar(Base):
         self.assertEqual((self.tmp / "series/HP.txt").read_text(encoding="utf-8"), "Hedwig 💞 => anna\nDobby 💞 => jo\n")
         self.assertEqual([n for n, _ in mudae.lines(self.tmp / "harem.txt")], ["Dobby"])
 
+    def test_alliberar(self):  # algú se n'ha divorciat: queda lliure
+        self.write("series/HP.txt", "Hedwig 💞 => anna\n2. Dobby 💞\nWinky\n")
+        mudae.mark_free("Hedwig")
+        mudae.mark_free("Dobby")
+        self.assertEqual([(r["name"], r["owner"]) for r in mudae.read_series()], [("Hedwig", ""), ("Dobby", ""), ("Winky", "")])
+        with self.assertRaises(ValueError):
+            mudae.mark_free("Goku")
+
 
 class Especials(Base):
     def test_crear_amb_el_que_ja_sabem(self):

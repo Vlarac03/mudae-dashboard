@@ -1418,7 +1418,7 @@ def write_dashboard(d, hist):
 <div class="view" id="v-trades" role="tabpanel" hidden>
 <section class="panel">
  <div class="panel-head"><h2>{T_("Intercanvis per persona")}</h2>
-  <p class="recvbar"><button id="recvBtn" class="primary" disabled>{T_("Ja són meus")}</button><span id="recvMsg" role="status">{T_("Marca els que t'han donat.")}</span></p></div>
+  <p class="recvbar"><button id="recvBtn" class="primary" disabled>{T_("Ja són meus")}</button><button id="freeBtn" class="tab" disabled title="{T_("Algú se n'ha divorciat: ara són lliures")}">{T_("Alliberar")}</button><span id="recvMsg" role="status">{T_("Marca els que t'han donat o els que algú ha alliberat.")}</span></p></div>
  <div class="owners">{trades}</div>
 </section>
 <section class="panel" id="mine">
@@ -1478,8 +1478,8 @@ def write_dashboard(d, hist):
 <footer class="foot glass">Developed by <a href="https://github.com/Vlarac03">Vlarac</a> · {T_("Tauler de Mudae")} · {T_("Projecte de fans, no afiliat amb Mudae")}</footer>
 </main><div id="tip"></div>
 <script>{JS_HEAD.replace("__I18N__", js(STRINGS.get(LANG, {})))}
-// Botó «Ja són meus» dels intercanvis: només funciona amb el servidor local engegat
-const recvBtn = document.getElementById('recvBtn'), recvMsg = document.getElementById('recvMsg');
+// Botons «Ja són meus» i «Alliberar» (algú se n'ha divorciat) dels intercanvis: només funcionen amb el servidor local engegat
+const recvBtn = document.getElementById('recvBtn'), freeBtn = document.getElementById('freeBtn'), recvMsg = document.getElementById('recvMsg');
 const picked = () => [...document.querySelectorAll('.recv:checked')].map(i => i.value);
 if (location.protocol === 'file:') {{
   // obert com a fitxer: si el servidor està engegat, hi saltem; si no, avisem
@@ -1487,14 +1487,16 @@ if (location.protocol === 'file:') {{
   fetch('http://127.0.0.1:{PORT}/ping').then(r => r.json()).then(() => location.replace('http://127.0.0.1:{PORT}/dashboard.html'))
     .catch(() => {{ recvMsg.innerHTML = OFF_MSG(); }});
 }} else {{
-  document.addEventListener('change', ev => {{ if (ev.target.classList.contains('recv')) recvBtn.disabled = !picked().length; }});
-  recvBtn.onclick = async () => {{
-    recvBtn.disabled = true; recvMsg.textContent = T('Desant…');
+  document.addEventListener('change', ev => {{ if (ev.target.classList.contains('recv')) recvBtn.disabled = freeBtn.disabled = !picked().length; }});
+  const send = path => async () => {{
+    recvBtn.disabled = freeBtn.disabled = true; recvMsg.textContent = T('Desant…');
     try {{
-      const j = await postJSON('/rebut', {{ names: picked() }});
-      if (j.ok) location.reload(); else {{ recvMsg.innerHTML = ERR_MSG(j.error); recvBtn.disabled = false; }}
-    }} catch (err) {{ recvMsg.innerHTML = NET_MSG(); recvBtn.disabled = false; }}
+      const j = await postJSON(path, {{ names: picked() }});
+      if (j.ok) location.reload(); else {{ recvMsg.innerHTML = ERR_MSG(j.error); recvBtn.disabled = freeBtn.disabled = false; }}
+    }} catch (err) {{ recvMsg.innerHTML = NET_MSG(); recvBtn.disabled = freeBtn.disabled = false; }}
   }};
+  recvBtn.onclick = send('/rebut');
+  freeBtn.onclick = send('/lliure');
 }}
 // Botons de copiar: copien el text de data-copy i diuen «Copiat»
 document.addEventListener('click', async ev => {{
@@ -1805,6 +1807,22 @@ def mark_received(name):
     raise ValueError(t("No trobo «{name}» a cap de les teves sèries.", name=name))
 
 
+def mark_free(name):
+    """Algú s'ha divorciat de `name`: queda lliure al fitxer de la seva sèrie, com si ho hagués dit el $imaso."""
+    found = False
+    for f in sorted((DADES / "series").glob("*.txt")):
+        text = f.read_text(encoding="utf-8-sig").splitlines()
+        for k, raw in enumerate(text):
+            line = re.sub(r"^\d+\.\s+", "", raw.strip())
+            m = CLAIM.match(line) or HEART_ONLY.match(line)
+            if m and m.group(1).strip() == name:
+                text[k] = name
+                f.write_text("\n".join(text) + "\n", encoding="utf-8")
+                found = True
+    if not found:
+        raise ValueError(t("No trobo «{name}» a cap de les teves sèries.", name=name))
+
+
 PUBLIC = {"/dashboard.html", "/oc.html"}  # l'únic que el servidor deixa veure
 PORT = 8766  # (el 8765 l'ocupaven servidors vells que no es podien tancar sols)
 VERSION = str(Path(__file__).stat().st_mtime_ns)  # canvia cada vegada que es modifica aquest fitxer
@@ -1852,6 +1870,9 @@ def do_action(action, body):
     if action == "rebut":
         for n in body["names"]:
             mark_received(str(n))
+    elif action == "lliure":
+        for n in body["names"]:
+            mark_free(str(n))
     elif action == "donat":
         mark_given([str(n) for n in body["names"]], str(body.get("to") or ""))
     elif action == "classifica":
