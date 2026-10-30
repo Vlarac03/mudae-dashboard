@@ -94,6 +94,11 @@ class Desar(Base):
         with self.assertRaises(ValueError):
             mudae.save_paste("serie", "../fora", "Dobby\n")
 
+    def test_nom_de_serie_amb_dos_punts(self):
+        mudae.save_paste("serie", "Re:Zero / Hyouketsu?", "Emilia\n")
+        self.assertEqual([(r["serie"], r["name"]) for r in mudae.read_series()], [("Re:Zero / Hyouketsu?", "Emilia")])
+        self.assertEqual([f.parent for f in (self.tmp / "series").glob("*.txt")], [self.tmp / "series"])  # el / no fa carpetes
+
     def test_series_del_harem(self):
         self.write("harem.txt", "Agnetha\nOboro Shirakumo\nAloe\n")
         self.write("series-sobrants.json", '{"Vella": ["Aloe"]}')

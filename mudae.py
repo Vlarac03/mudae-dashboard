@@ -157,18 +157,18 @@ def read_series():
     spec = set(specials())
     harem = {n for n, _ in lines(DADES / "harem.txt")} if spec else set()
     for f in sorted((DADES / "series").glob("*.txt")):
-        seen = set()
+        seen, serie = set(), f.stem.translate(FROM_FILE)
         for line, _ in lines(f):
             m = CLAIM.match(line)
             h = HEART_ONLY.match(line)
             name, owner = (m.group(1).strip(), m.group(2)) if m else (h.group(1).strip(), "algú") if h else (line, "")
             if owner.casefold() == ME.casefold():  # Mudae escriu els noms en minúscula («pep»), tu pots haver posat «Pep»
                 owner = ME
-            if f.stem in spec and name in harem:  # a les especials, el que és al teu harem és teu (no hi ha cap $imaso que ho digui)
+            if serie in spec and name in harem:  # a les especials, el que és al teu harem és teu (no hi ha cap $imaso que ho digui)
                 owner = ME
             if name not in seen:
                 seen.add(name)
-                rows.append({"serie": f.stem, "name": name, "owner": owner})
+                rows.append({"serie": serie, "name": name, "owner": owner})
     return rows
 
 
@@ -1588,10 +1588,15 @@ def merge_owners(text, old):
     return "\n".join(out)
 
 
+# Windows no deixa posar \ / : * ? " < > | als noms de fitxer: es desen amb els signes d'amplada completa (：) i es llegeixen tal qual
+TO_FILE = str.maketrans('\\/:*?"<>|', '＼／：＊？＂＜＞｜')
+FROM_FILE = {v: k for k, v in TO_FILE.items()}
+
+
 def series_path(serie):
-    if not serie or re.search(r'[\\/:*?"<>|]', serie) or serie.startswith("."):
-        raise ValueError(t("Posa el nom de la sèrie (sense / \\ : * ? \" < > |)."))
-    return DADES / "series" / f"{serie}.txt"
+    if not serie or serie.startswith("."):
+        raise ValueError(t("Posa el nom de la sèrie."))
+    return DADES / "series" / f"{serie.translate(TO_FILE)}.txt"
 
 
 def touch_meta(serie):
