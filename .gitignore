@@ -11,3 +11,9 @@ __pycache__/
 # Imatges que no són nostres (avatar de Mudae, logos de Hypixel): només la icona pròpia
 icones/*
 !icones/tauler.ico
+
+# Notes de treball de Claude: no es pugen
+CLAUDE.md
+TODO.md
+DESIGN.md
+.claude/
