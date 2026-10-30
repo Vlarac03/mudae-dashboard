@@ -906,6 +906,19 @@ PERK_GROUPS = [("Funciona cada dia, encara que no et surti el personatge", [10])
                ("Només quan et surt aquest personatge: posa-les al que et surt més (mira el $mmy)", [4, 5, 2, 3]),
                ("Només el primer cop del dia que te'l treus", [8, 9]),
                ("Les menys útils", [1, 6, 7])]
+# Botiga d'esferes ($os): bonus per a tots els personatges, 10 nivells (4.000 esferes el primer, +4.000 cada nivell)
+SHOP = {1: "Part del bonus d'aparició de la millora 1 també val per al personatge millorat",
+        2: "Megaesferes: 1/50 en tirar qualsevol personatge teu (1 al dia), amb més premis per nivell",
+        3: "El botó de més de la millora 3 pot no ser de kakera blava",
+        4: "Les claus de la millora 4 poden ser claus Omega, per a qualsevol personatge ($ok)",
+        5: "Les esferes de la millora 5 poden donar +1 $ot",
+        6: "El desig de la millora 6 pot ser un de la teva wishlist sense reclamar, i reclamar-lo és gratis",
+        7: "La kakera del caos de la millora 7 pot donar el doble",
+        8: "Els botons de la millora 8 donen més kakera als personatges millorats del tot",
+        9: "Més botons d'esferes de la millora 9 al dia, i donen més esferes",
+        10: "El primer $oh del dia pot donar $ot per cada personatge millorat del tot"}
+# Ordre recomanat (proposta de Claude): la 2 és l'única que no depèn d'haver millorat personatges; la 10 en demana de millorats del tot
+SHOP_ORDER = [2, 4, 9, 5, 3, 1, 8, 6, 7, 10]
 
 
 ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del tauler
@@ -921,7 +934,8 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
                             ("$wl", "La teva wishlist"), ("$wish <nom>", "Afegeix a la wishlist (diversos: separa'ls amb $)"),
                             ("$wishremove <nom>", "Treu de la wishlist"), ("$sw <nom>", "Desig estrella")]),
     ("Intercanvis", [("$give @persona", "Regala personatges (separa'ls amb $)"), ("$trade @persona", "Intercanvi amb confirmació dels dos")]),
-    ("Esferes", [("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"), ("$oq", "Joc d'esferes"), ("$ot", "Joc d'esferes")]),
+    ("Esferes", [("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"), ("$oq", "Joc d'esferes"), ("$ot", "Joc d'esferes"),
+                 ("$opp <personatge>", "Millora un personatge amb esferes"), ("$os", "Botiga d'esferes: millores per a tots")]),
     ("Torre (kakeratower)", [("$kt", "Pisos, beneficis i preu del següent"), ("$towervalue", "Quant costa cada pis"),
                              ("$build 8", "Pis recomanat: reaccions a kakera −4 % de poder"), ("$build 11", "Pis: +1 tirada per hora"),
                              ("$build <número>", "Construeix el pis que triïs"), ("$destroy", "Desfà la torre i et torna la kakera")]),
@@ -1093,13 +1107,20 @@ syncUpd();
 
 JS_MILL = r"""
 // Pestanya «Millores»: llegeix el que enganxes de Mudae ($k, $kt, $opp) i recomana el següent pas. Es guarda al navegador.
-const BADGES = __BADGES__, PLAN = __PLAN__, TOWER = __TOWER__;
+const BADGES = __BADGES__, PLAN = __PLAN__, TOWER = __TOWER__, PORD = __PORD__, SORD = __SORD__;
+// Esferes: les millores 1-5 d'un personatge tenen 6 nivells, les 6-10 un (wiki, «Perks / Level»); la botiga ($os), 10 nivells de +4.000
+const PCOST = [200, 400, 600, 800, 1000, 2000];
+const perkMax = n => n <= 5 ? 6 : 1, perkCost = (n, l) => n <= 5 ? PCOST[l] : 1000;
+const shopMax = () => 10, shopCost = (n, l) => 4000 * (l + 1);
 const num = t => Number(String(t).replace(/[^\d]/g, ''));
 const fmtK = n => n.toLocaleString(document.documentElement.lang);
 // Què diu el text enganxat: kakera o esferes que tens, nivells d'insígnies, cost del pròxim pis, nivells de les esferes
 function readMudae(text, tv) {
   const out = {}, have = text.match(/(?:Tienes|You have|Tens|Vous avez|Hai|Du hast|Você tem)\s+(\d[\d.,]*)/i);
-  if (/\[LVL\s*\d+\]/.test(text)) {
+  if (/\$shoprefund/i.test(text) && /\[LVL\s*\d+\]/.test(text)) {  // $os: la botiga d'esferes
+    out.shop = [...text.matchAll(/\[LVL\s*(\d+)\]/g)].slice(0, 10).map(m => +m[1]);
+    if (have) out.sp = num(have[1]);
+  } else if (/\[LVL\s*\d+\]/.test(text)) {
     const rows = text.split(/\r?\n/).map(l => l.trim());
     const first = rows.findIndex(l => /\[LVL\s*\d+\]/.test(l));
     out.opp = { name: first > 0 ? rows[first - 1] : '', levels: [...text.matchAll(/\[LVL\s*(\d+)\]/g)].slice(0, 10).map(m => +m[1]) };
@@ -1125,6 +1146,17 @@ function towerNext(M) {
 }
 // El $kt diu quants pisos tens en total: d'aquí surt la torre on ets. Si canvies de torre, els pisos marcats eren de l'anterior.
 function towerFromKt(M, nf) { const t = Math.floor(nf / 12); return { t, f: t === (M.t || 0) ? M.f : [] }; }
+// Les compres següents, per ordre de recomanació: la primera millora que no és al màxim, i així fins a `count`
+function nextBuys(levels, order, max, cost, count = 3) {
+  const lv = Array.from({ length: 10 }, (_, i) => levels[i] || 0), out = [];
+  while (out.length < count) {
+    const n = order.find(n => lv[n - 1] < max(n));
+    if (!n) break;
+    out.push({ n, l: lv[n - 1] + 1, cost: cost(n, lv[n - 1]) });
+    lv[n - 1]++;
+  }
+  return out;
+}
 function millLoad() { try { return Object.assign({ b: {}, f: [], tv: 5000 }, JSON.parse(localStorage.getItem('mudae-millores') || '{}')); } catch (e) { return { b: {}, f: [], tv: 5000 }; } }
 let M = millLoad();
 const millSave = () => { try { localStorage.setItem('mudae-millores', JSON.stringify(M)); } catch (e) {} };
@@ -1163,12 +1195,25 @@ function millDraw() {
     el.textContent = v === undefined ? '' : 'LVL ' + v + (+el.dataset.perk <= 5 ? '/6' : '/1');
     el.className = 'tag' + (v === undefined ? '' : (+el.dataset.perk <= 5 ? v >= 6 : v >= 1) ? ' good' : '');
   });
+  // les compres d'esferes recomanades, amb el que costen sumades i si les pots pagar
+  const buyList = (buys, cmd) => { let sum = 0; return buys.map(b => { sum += b.cost;
+    return `<li><button class="cmd" data-copy="${esc(cmd)}">${esc(cmd)}</button> <b>${esc(T('Millora {n}', { n: b.n }))} · LVL ${b.l}</b> · ${fmtK(b.cost)}`
+      + (M.sp != null ? ` <span class="tag ${M.sp >= sum ? 'good' : ''}">${esc(M.sp >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - M.sp) }))}</span>` : '') + '</li>'; }).join(''); };
+  $id('perkNext').innerHTML = !M.opp ? '' : buyList(nextBuys(M.opp.levels, PORD, perkMax, perkCost), ('$opp ' + M.opp.name).trim())
+    || '<li>' + esc(T('Aquest personatge ja el tens millorat del tot.')) + '</li>';
+  document.querySelectorAll('[data-shop]').forEach(el => {
+    const v = M.shop ? M.shop[+el.dataset.shop - 1] : undefined;
+    el.textContent = v === undefined ? '' : 'LVL ' + v + '/10';
+    el.className = 'tag' + (v >= 10 ? ' good' : '');
+  });
+  $id('shopNext').innerHTML = !M.shop ? '<li>' + esc(T('Enganxa el $os per veure-hi els nivells')) + '</li>'
+    : buyList(nextBuys(M.shop, SORD, shopMax, shopCost), '$os') || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>';
 }
 const millText = $id('millText'), millBtn = $id('millBtn'), millMsg = $id('millMsg');
 millText.addEventListener('input', () => { millBtn.disabled = !millText.value.trim(); });
 millBtn.onclick = () => {
   const got = readMudae(millText.value, M.tv);
-  if (!Object.keys(got).length) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt o el $opp.')); return; }
+  if (!Object.keys(got).length) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt, el $opp o el $os.')); return; }
   if (got.nf != null) Object.assign(got, towerFromKt(M, got.nf));
   Object.assign(M, got); millSave(); millText.value = ''; millBtn.disabled = true;
   millMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit')) + '</span>'; millDraw();
@@ -1452,6 +1497,8 @@ def write_dashboard(d, hist):
         f'<div class="og"><h3>{e(t(g))}</h3>' + "".join(
             f'<div class="oline"><code>{n}</code><span>{e(t(PERKS[n]))}</span><span data-perk="{n}"></span></div>' for n in ns) + "</div>"
         for g, ns in PERK_GROUPS)
+    shop_rows = "".join(
+        f'<div class="oline"><code>{n}</code><span>{e(t(SHOP[n]))}</span><span data-shop="{n}"></span></div>' for n in SHOP_ORDER)
     avatar = DIR / "icones" / "mudae_rodo.png"  # no va al repo ni al .zip (no és nostre): qui no el té veu el logo propi
     if avatar.exists():
         src = "data:image/png;base64," + base64.b64encode(avatar.read_bytes()).decode()
@@ -1558,7 +1605,7 @@ def write_dashboard(d, hist):
 <div class="view" id="v-mill" role="tabpanel" hidden>
 <section class="panel">
  <div class="panel-head"><h2>{T_("Què tens")}</h2><span class="muted" id="millSum" style="font-size:13px"></span></div>
- <label for="millText" class="muted" style="font-size:14px">{T_("Enganxa el que et diu Mudae amb $k (kakera i insígnies), $kt (torre) o $opp <personatge> (esferes), d'un en un. Es guarda en aquest navegador.")}</label>
+ <label for="millText" class="muted" style="font-size:14px">{T_("Enganxa el que et diu Mudae amb $k (kakera i insígnies), $kt (torre), $opp <personatge> o $os (esferes), d'un en un. Es guarda en aquest navegador.")}</label>
  <textarea id="millText" rows="4" spellcheck="false"></textarea>
  <div class="give-row"><button class="primary" id="millBtn" disabled>{T_("Llegir")}</button><span id="millMsg" role="status"></span></div>
 </section>
@@ -1578,6 +1625,12 @@ def write_dashboard(d, hist):
 <section class="panel"><div class="panel-head"><h2>{T_("Esferes")}</h2><span class="muted" id="perkWho" style="font-size:13px"></span></div>
  <div class="ogrid">{perk_rows}</div>
  <p class="muted" style="margin:0;font-size:13px">{T_("Les 5 primeres tenen 6 nivells i les altres 5, un. Si millores un personatge del tot, les 5 primeres pugen un nivell més. Fes-les servir en personatges que no regalaràs: si te'n divorcies, perds el 10 %.")}</p>
+ <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="perkNext"></ul>
+</section>
+<section class="panel"><div class="panel-head"><h2>{T_("Botiga d'esferes")}</h2><span class="muted" style="font-size:13px">$os</span></div>
+ <div class="og">{shop_rows}</div>
+ <p class="muted" style="margin:0;font-size:13px">{T_("Valen per a tots els personatges, però gairebé totes fan més forta una millora dels personatges: primer gasta les esferes amb el $opp. Cada nivell costa 4.000 més que l'anterior, i amb $shoprefund et tornen les esferes.")}</p>
+ <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="shopNext"></ul>
 </section>
 </div>
 <div class="view" id="v-eines" role="tabpanel" hidden>
@@ -1684,7 +1737,7 @@ go(first);
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
 <script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec))}</script>
 <script>{JS_ESP}</script>
-<script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER]))}</script>
+<script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER))}</script>
 <script>{JS_CLS}</script>
 <script>{JS_WL.replace("__WL__", wl_json)}</script>
 <script>{JS_MINE.replace("__MINE__", js(mine)).replace("__COLLS__", js([x["name"] for x in series])).replace("__ALTRES__", js(ALTRES))}</script></body></html>"""
