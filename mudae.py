@@ -1073,6 +1073,10 @@ function syncUpd() {
   const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : kindSel.value === 'totes' ? '$imaa+os ' + ALL.join(' $ ')
     : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
   updCmd.textContent = cmd; updCmd.dataset.copy = cmd;
+  const all = kindSel.value === 'totes', allCopy = document.getElementById('updAllCopy');  // l'ordre sencera ben a la vista, amb les sèries
+  document.getElementById('updAll').hidden = !all;
+  document.getElementById('updAllCmd').textContent = ALL.length ? cmd : T('Encara no tens cap sèrie a la llista.');
+  allCopy.dataset.copy = cmd; allCopy.hidden = !ALL.length;
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
 [kindSel, serieSel, newIn, txt].forEach(el => el.addEventListener('input', syncUpd));
@@ -1688,6 +1692,9 @@ def write_dashboard(d, hist):
   <input type="text" id="updNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de la sèrie, com surt a Mudae")}" placeholder="{T_("Nom de la sèrie, com surt a Mudae")}" hidden></span>
   <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mma+s">$mma+s</button></span></div>
  <p class="muted" id="updEsp" style="margin:0;font-size:13px" hidden>{T_("Col·lecció especial: enganxa el $imaso de la sèrie d'on surten els personatges (totes les pàgines). Només se n'agafaran els d'aquesta col·lecció.")}</p>
+ <div class="give" id="updAll" hidden><div class="give-row"><b>{T_("Ordre amb totes les teves sèries")}</b><button class="copybtn" id="updAllCopy" data-copy="">{T_("Copiar ordre")}</button></div><code id="updAllCmd"></code>
+  <span class="muted" style="font-size:13px">{T_("1. Copia l'ordre: són les teves sèries separades amb $. 2. Envia-la a Mudae. 3. Enganxa a sota tot el que et contesti per privat (tots els missatges).")}</span>
+  <span class="muted" style="font-size:13px">{T_("Per afegir una sèrie a la llista: tria «Una sèrie ($imaso)» → «Sèrie nova…» i enganxa'n el $imaso.")}</span></div>
  <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
  <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
 </section>
