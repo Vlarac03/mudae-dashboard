@@ -13,6 +13,7 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 ## Features
 
 - **What to do now**: a clock for rolls and claims, and a checklist where each task stays ticked until you can do it again (`$daily` and `$dk` every 20 h, `$vote` every 12 h, `$oh` at midnight UTC, rolls every hour…).
+- **Notifications**: while the dashboard is open, it tells you when your rolls are back, and whether you can claim and react to kakera. Turn them on and off with the **Notifications** button at the top.
 - **`$oc` helper**: mark the colors that appear and it tells you which square to click to find the red sphere.
 - **Collections**: one album per series with your characters, the free ones, the ones on your wishlist and the ones other players own (and who). Click the ones you get to mark them as yours.
 - **Custom collections**: a group you pick, even if it isn't a Mudae series (for example, the Eevees from the Pokédex). Type its name and characters, and the `$imaso` of the series they come from fills in who owns each one.
