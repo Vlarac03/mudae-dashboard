@@ -1565,6 +1565,7 @@ def write_dashboard(d, hist):
  </div>
  <div class="hdr-r">
   <span class="pill" id="toolMsg" role="status"></span>
+  <button type="button" class="pill" id="refaBtn">{T_("Actualitzar el tauler")}</button>
   <button type="button" class="pill" id="lnkBtn">{T_("Crear accés directe a l'escriptori")}</button>
   <button type="button" class="pill" id="stopBtn"><span class="dot ok"></span>{T_("Tancar el servidor")}</button>
  </div>
@@ -1735,7 +1736,14 @@ document.addEventListener('click', async ev => {{
 }});
 // Capçalera: accés directe i tancar el servidor
 const toolMsg = document.getElementById('toolMsg'), lnkBtn = document.getElementById('lnkBtn'), stopBtn = document.getElementById('stopBtn');
-if (location.protocol === 'file:') {{ lnkBtn.disabled = stopBtn.disabled = true; }}
+const refaBtn = document.getElementById('refaBtn');
+if (location.protocol === 'file:') {{ lnkBtn.disabled = stopBtn.disabled = refaBtn.disabled = true; }}
+refaBtn.onclick = async () => {{  // torna a fer el tauler i l'Excel amb el codi d'ara, com l'Actualitza.bat
+  refaBtn.disabled = true; toolMsg.textContent = T('Actualitzant…');
+  try {{ const j = await postJSON('/refa'); if (j.ok) return location.reload(); toolMsg.innerHTML = ERR_MSG(j.error); }}
+  catch (err) {{ toolMsg.innerHTML = NET_MSG(); }}
+  refaBtn.disabled = false;
+}};
 lnkBtn.onclick = async () => {{
   lnkBtn.disabled = true; toolMsg.textContent = T('Creant…');
   try {{ const j = await postJSON('/dressera'); toolMsg.innerHTML = j.ok ? '<span class="tag good">' + esc(T("Fet: «Mudae» a l'escriptori")) + '</span>' : ERR_MSG(j.error); }}
@@ -2189,6 +2197,8 @@ def do_action(action, body):
         return save_paste(str(body["kind"]), str(body.get("serie") or ""), str(body["text"]))
     elif action == "especial":
         save_special(str(body["name"]), str(body["text"]))
+    elif action == "refa":
+        pass  # només tornar a fer el tauler i l'Excel (main() ho fa després de cada acció)
     else:
         raise ValueError(t("No sé fer «{action}».", action=action))
 
