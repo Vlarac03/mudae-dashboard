@@ -46,4 +46,12 @@ assert.deepEqual(readMudae(opp, 5000), { opp: { name: 'Harry Potter', levels: [2
 
 assert.deepEqual(readMudae('Hola, això no és de Mudae', 5000), {});
 assert.deepEqual(readMudae('Kakera rewards\nBonus Bronze I + Silver I + Gold I\n$bronze', 5000), {});  // el $kakerareward no són els teus nivells
+// torre: 12 pisos per torre; el $kt diu el total i d'aquí surt la torre on ets
+const fn = name => js.match(new RegExp(`function ${name}[\\s\\S]*?\\n}\\n`))[0];
+const TOWER = [11, 8, 7, 6, 5, 1, 4, 2, 9, 10, 3, 12];
+const [towerNext, towerFromKt] = new Function('TOWER', fn('towerNext') + fn('towerFromKt').replace(/\n$/, '') + '\nreturn [towerNext, towerFromKt];')(TOWER);
+assert.deepEqual(towerNext({ f: [11, 8], tv: 5000 }), { tw: 0, built: 2, cost: 15000, rec: 7 });
+assert.deepEqual(towerNext({ t: 1, f: [], tv: 5000 }), { tw: 1, built: 12, cost: 65000, rec: 11 });  // torre 2: torna a començar per l'11
+assert.deepEqual(towerFromKt({ f: [11, 8] }, 14), { t: 1, f: [] });  // 14 pisos: torre 2, els marcats eren de la 1
+assert.deepEqual(towerFromKt({ t: 1, f: [11, 8] }, 14), { t: 1, f: [11, 8] });
 console.log('millores: totes les proves passen');

@@ -68,7 +68,7 @@ class Desar(Base):
                          ["Aragog 💞 => jo", "Dudley 💞 => pep", "Dobby 💞 => algú", "Norris", "Kiki 💞 => jo"])
 
     def test_imaso_sense_capcalera(self):
-        paste = ("1. Harry Potter 3/94\n\nHP\nHarry Potter and the Philosopher's Stone\n"
+        paste = ("1. Harry Potter 2/4\n\nHP\nHarry Potter and the Philosopher's Stone\n"
                  "4 más - Escriba $ima? para mostrar todos los alias.\n \n\n"
                  "Aberforth Dumbledore\nAragog => jo\n2. Dudley Dursley => pep\nWinky (HP)\n")
         mudae.save_paste("serie", "Harry Potter", paste)
@@ -78,6 +78,15 @@ class Desar(Base):
     def test_imaso_sense_alies_no_perd_personatges(self):
         mudae.save_paste("serie", "ABBA", "1. ABBA 1/4\n\nAgnetha\nAnni-Frid => jo\nBenny\nBjörn\n")
         self.assertEqual([r["name"] for r in mudae.read_series()], ["Agnetha", "Anni-Frid", "Benny", "Björn"])
+
+    def test_imaso_alies_sense_separador(self):  # àlies en altres idiomes i només una línia buida: el títol diu quants n'hi ha
+        mudae.save_paste("serie", "Meme", "🤔   1/3\n\nMeme\nthinking\n🤨\n\nBingus\nDoge  💞 => pep\nWojak\n")
+        self.assertEqual([r["name"] for r in mudae.read_series()], ["Bingus", "Doge", "Wojak"])
+
+    def test_imaso_incomplet_no_es_desa(self):
+        with self.assertRaises(ValueError):
+            mudae.save_paste("serie", "Meme", "🤔   1/5\n\nBingus\nDoge  💞 => pep\nWojak\n")
+        self.assertFalse(mudae.series_path("Meme").exists())
 
     def test_text_sense_noms_no_toca_res(self):
         self.write("harem.txt", "Kiki\n")

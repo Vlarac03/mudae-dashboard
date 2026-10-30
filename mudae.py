@@ -100,21 +100,27 @@ CLAIM = re.compile(r"^(.*?)\s*(?:💞|💖|💗|❤️|❤|♥️|♥)?\s*=>\s*(
 IMASO_TITLE = re.compile(r"^(?:\d+\.\s+)?\S.*\s\d+\s*/\s*\d+$")  # «1. Harry Potter 49/94»: el títol del $imaso
 
 
-def drop_header(text):
+def drop_header(text, check=True):
     """El $imaso comença amb el títol de la sèrie («1. Harry Potter 49/94») i un bloc amb els àlies: ho traiem.
 
-    El bloc d'àlies acaba amb «… $ima? …» o amb la línia separadora de Mudae (un espai). Si no hi és, només traiem
-    el títol: més val que surti algun àlies com a personatge que perdre personatges de veritat.
+    El bloc d'àlies acaba amb «… $ima? …», amb la línia separadora de Mudae (un espai) o, si no, és àlies quan sense
+    ell queden just els personatges que diu el títol. Si al final no en queden tants, no es desa res.
     """
     rows = text.splitlines()
+    count = lambda rs: len(parse_owners("\n".join(rs)))
     for i, raw in enumerate(rows[:6]):
         if IMASO_TITLE.match(raw.strip()):
+            total = int(re.search(r"(\d+)\s*$", raw).group(1))
             k = next((j for j in range(i + 1, len(rows)) if rows[j].strip()), len(rows))   # primera línia del bloc
             end = next((j for j in range(k, len(rows)) if not rows[j].strip()), len(rows))  # línia buida que el tanca
             block = rows[k:end]
             aliases = block and not any("=>" in r for r in block) and (
-                "$ima?" in block[-1] or (end < len(rows) and rows[end] != ""))
-            return "\n".join(rows[:i] + rows[end + 1 if aliases else k:])
+                "$ima?" in block[-1] or (end < len(rows) and rows[end] != "") or count(rows[end + 1:]) == total)
+            body = rows[end + 1 if aliases else k:]
+            if check and count(body) != total:  # a les especials n'hi ha prou amb un tros (els Eevee dels 1.025 Pokémon)
+                raise ValueError(t("Mudae diu que la sèrie té {total} personatges i n'he llegit {n}. Copia el $imaso sencer, per privat i sense pàgines.",
+                                   total=total, n=count(body)))
+            return "\n".join(rows[:i] + body)
     return text
 
 
@@ -1016,6 +1022,13 @@ function readMudae(text, tv) {
   }
   return out;
 }
+// Cada torre té 12 pisos, un de cada; la següent s'obre en acabar-la, amb els mateixos pisos però amb menys efecte (wiki de Mudae)
+function towerNext(M) {
+  const tw = M.t || 0, built = tw * 12 + M.f.length;
+  return { tw, built, cost: M.tv * (built + 1) * (tw >= 75 ? 10 : 1), rec: TOWER.find(n => !M.f.includes(n)) };  // de la torre 76 en amunt, x10
+}
+// El $kt diu quants pisos tens en total: d'aquí surt la torre on ets. Si canvies de torre, els pisos marcats eren de l'anterior.
+function towerFromKt(M, nf) { const t = Math.floor(nf / 12); return { t, f: t === (M.t || 0) ? M.f : [] }; }
 function millLoad() { try { return Object.assign({ b: {}, f: [], tv: 5000 }, JSON.parse(localStorage.getItem('mudae-millores') || '{}')); } catch (e) { return { b: {}, f: [], tv: 5000 }; } }
 let M = millLoad();
 const millSave = () => { try { localStorage.setItem('mudae-millores', JSON.stringify(M)); } catch (e) {} };
@@ -1037,14 +1050,14 @@ function millDraw() {
       + (k !== null ? ` <span class="tag ${k >= sum ? 'good' : ''}">${esc(k >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - k) }))}</span>` : '') + '</li>');
   }
   $id('badgeNext').innerHTML = next.join('') || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>';
-  // torre: pisos marcats, el que en diu el $kt i el pis recomanat
+  // torre: els pisos marcats són els de la torre on ets (M.t torres acabades), el que en diu el $kt i el pis recomanat
   document.querySelectorAll('input[data-floor]').forEach(i => { i.checked = M.f.includes(+i.dataset.floor); });
   $id('towerValue').value = M.tv;
-  const floors = Math.max(M.f.length, M.nf || 0), cost = M.tv * (floors + 1), rec = TOWER.find(n => !M.f.includes(n));
-  let html = T('Pisos: {n} · el següent costa {c}', { n: floors, c: fmtK(cost) });
+  const { tw, built, cost, rec } = towerNext(M);
+  let html = T('Torre {t} · pisos {n}/12 · el següent costa {c}', { t: tw + 1, n: M.f.length, c: fmtK(cost) });
   if (k !== null) html += ' · ' + (k >= cost ? T('el pots pagar') : T('et falten {n}', { n: fmtK(cost - k) }));
   html = esc(html);
-  if (M.nf != null && M.nf !== M.f.length) html += '<br><span class="tag bad">' + esc(T('Segons el $kt tens {n} pisos: marca quins són a la llista', { n: M.nf })) + '</span>';
+  if (M.nf != null && M.nf !== built) html += '<br><span class="tag bad">' + esc(T('Segons el $kt tens {n} pisos: marca quins són a la llista', { n: M.nf })) + '</span>';
   if (rec) html += `<br>${esc(T('Recomanat:'))} <button class="cmd" data-copy="$build ${rec}">$build ${rec}</button>`;
   $id('towerNext').innerHTML = html;
   // esferes: els nivells del personatge que has enganxat
@@ -1060,13 +1073,17 @@ millText.addEventListener('input', () => { millBtn.disabled = !millText.value.tr
 millBtn.onclick = () => {
   const got = readMudae(millText.value, M.tv);
   if (!Object.keys(got).length) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt o el $opp.')); return; }
+  if (got.nf != null) Object.assign(got, towerFromKt(M, got.nf));
   Object.assign(M, got); millSave(); millText.value = ''; millBtn.disabled = true;
   millMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit')) + '</span>'; millDraw();
 };
 document.addEventListener('change', ev => {
   const el = ev.target;
   if (el.dataset && el.dataset.badge) M.b[el.dataset.badge] = +el.value;
-  else if (el.dataset && el.dataset.floor) M.f = [...document.querySelectorAll('input[data-floor]:checked')].map(i => +i.dataset.floor);
+  else if (el.dataset && el.dataset.floor) {
+    M.f = [...document.querySelectorAll('input[data-floor]:checked')].map(i => +i.dataset.floor);
+    if (M.f.length === 12) { M.t = (M.t || 0) + 1; M.f = []; }  // torre acabada: la següent comença buida
+  }
   else if (el.id === 'towerValue') M.tv = Math.min(50000, Math.max(5000, num(el.value) || 5000));
   else return;
   millSave(); millDraw();
@@ -1427,7 +1444,7 @@ def write_dashboard(d, hist):
  <section class="panel"><div class="panel-head"><h2>{T_("Torre")}</h2><span class="muted" style="font-size:13px">$kt</span></div>
   <p class="clock" id="towerNext" style="margin:0"></p>
   <ul class="steps">{tower_rows}</ul>
-  <p class="muted" style="margin:0;font-size:13px">{T_("Marca els pisos que ja tens. Cada pis costa més que l'anterior, triïs el que triïs: construeix primer els de dalt. Amb $destroy et torna la kakera.")}
+  <p class="muted" style="margin:0;font-size:13px">{T_("Marca els pisos que ja tens de la torre on ets. Cada torre té 12 pisos, un de cada: quan l'acabes, comença la següent, amb els mateixos pisos però amb menys efecte (els de la llista són els de la primera). Cada pis costa més que l'anterior, triïs el que triïs: construeix primer els de dalt. Amb $destroy et torna la kakera.")}
    <label style="white-space:nowrap">{T_("Preu base ($towervalue):")} <input type="text" id="towerValue" inputmode="numeric" style="width:90px" aria-label="$towervalue"></label></p>
  </section>
 </div>
@@ -1636,7 +1653,7 @@ def save_special(name, text):
 
 def update_special(name, text):
     """«Posar al dia» d'una especial: enganxes el $imaso de la sèrie d'on surten i només se n'agafen els seus personatges."""
-    found = {n.casefold(): o for n, o in parse_owners(drop_header(text)).items()}
+    found = {n.casefold(): o for n, o in parse_owners(drop_header(text, check=False)).items()}
     path = series_path(name)
     harem = {n for n, _ in lines(DADES / "harem.txt")}
     rows, hits = [], 0
