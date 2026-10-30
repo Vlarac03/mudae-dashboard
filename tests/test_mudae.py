@@ -138,6 +138,37 @@ class Desar(Base):
         self.assertEqual((self.tmp / "series/HP.txt").read_text(encoding="utf-8"), "Hedwig 💞 => anna\nDobby 💞 => jo\n")
         self.assertEqual([n for n, _ in mudae.lines(self.tmp / "harem.txt")], ["Dobby"])
 
+    def test_totes_les_series(self):  # $imaa+os Castle $ Pingu $ Eevees: el propietari va abans de la sèrie
+        self.write("series/Castle.txt", "Kate Beckett\nKevin Ryan\n")
+        self.write("series/Pingu.txt", "Pingu\nPinga\nRobby the Seal\n")
+        self.write("series/Eevees.txt", "Vaporeon\n")
+        self.write("especials.json", '["Eevees"]')
+        paste = ("-----\nCastle + Pingu + Pokémon   3/7\n(bundle)\n\n:western_anim: :IRL:\n\n"
+                 "Kate Beckett  💞 => jo - Castle\nKevin Ryan - Castle\nRichard Castle - Castle\n"
+                 "Pinga  💞 => pep - Pingu\nPingu - Pingu\nVaporeon  💞 => anna - Pokémon\nJolteon - Pokémon\n")
+        warn = mudae.save_paste("totes", "", paste)
+        got = {(r["serie"], r["name"]): r["owner"] for r in mudae.read_series()}
+        self.assertEqual(got[("Castle", "Kate Beckett")], "jo")
+        self.assertEqual(got[("Castle", "Richard Castle")], "")
+        self.assertEqual(got[("Eevees", "Vaporeon")], "anna")
+        self.assertNotIn(("Eevees", "Jolteon"), got)  # de les especials, només els seus
+        self.assertEqual(got[("Pingu", "Pinga")], "")  # Pingu: n'hi havia 3 i n'han sortit 2, no es toca
+        self.assertIn("Pingu (2 de 3)", warn)
+
+    def test_harem_treu_els_que_ja_no_tens(self):
+        self.write("harem.txt", "Hedwig\nDobby\n")
+        self.write("series/HP.txt", "Hedwig 💞 => jo\nDobby 💞 => jo\nWinky 💞 => pep\n")
+        mudae.save_paste("harem", "", "Hedwig - HP\n")
+        self.assertEqual([(r["name"], r["owner"]) for r in mudae.read_series()], [("Hedwig", "jo"), ("Dobby", "algú"), ("Winky", "pep")])
+
+    def test_esborrar_colleccio(self):
+        self.write("series/Eevees.txt", "Vaporeon\n")
+        self.write("especials.json", '["Eevees"]')
+        mudae.delete_series("Eevees")
+        self.assertEqual((mudae.read_series(), mudae.specials()), ([], []))
+        with self.assertRaises(ValueError):
+            mudae.delete_series("../harem")
+
     def test_alliberar(self):  # algú se n'ha divorciat: queda lliure
         self.write("series/HP.txt", "Hedwig 💞 => anna\n2. Dobby 💞\nWinky\n")
         mudae.mark_free("Hedwig")

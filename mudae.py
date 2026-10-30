@@ -476,6 +476,10 @@ const postJSON = (path, body) => fetch(path, { method: 'POST', headers: { 'Conte
 """
 
 
+# Tasques de RUTINA que es marquen soles en enganxar el $tu (per ordre, o per grup i ordre)
+TU_KEY = {"$tu": "tu", "$vote": "vote", "$daily": "daily", "$oh (×4)": "oh", "$oc": "oc", ("hora", "$m"): "rolls",
+          "clic al botó": "kakera", "clic al cor": "claim", "$rt": "rt", "$dk": "dk"}
+
 JS_TODAY = """
 const CLAIM = __CLAIM__, clock = document.getElementById('clock');
 const pad = n => String(n).padStart(2, '0');
@@ -493,12 +497,54 @@ function until(torna, t) {
   }
   return t + Number(torna) * 3600e3;
 }
+// El $tu enganxat: per a cada tasca, quants minuts falten perquè la puguis tornar a fer (0 = ja la pots fer).
+// Fem servir els minuts que diu Mudae, no les hores fixes: cada servidor reinicia tirades i reclams a una hora diferent.
+// true = no la pots fer però el $tu no diu quan: torna com si l'haguessis marcada a mà.
+function readTu(text) {
+  const r = {}, set = (k, v) => { if (!(k in r)) r[k] = v; };  // la primera línia que en parla mana
+  const mins = l => { const m = l.match(/(\\d+)\\s*h(?:\\s*(\\d+)\\s*min)?|(\\d+)\\s*min/i); return m ? (m[1] ? m[1] * 60 + (+m[2] || 0) : +m[3]) : 0; };
+  const no = l => /\\bno puedes\\b|\\bno pots\\b|can't|cannot|can not/i.test(l);
+  const ready = l => /disponible|available|ready|listo|lista|a punt/i.test(l) && !/\\bnot?\\b/i.test(l);  // «no está disponible», «not ready»
+  const wait = l => ready(l) ? 0 : mins(l) || true;
+  const ls = text.split(/\\r?\\n/);
+  ls.forEach((l, k) => {
+    const low = l.toLowerCase(), n = re => { const m = l.match(re); return m ? +m[1] : null; };
+    if (/reclamar|\\bclaim/.test(low)) set('claim', no(l) ? mins(l) || true : 0);
+    else if (n(/(\\d+)\\s*rolls?\\b/i) !== null) { set('rollsN', n(/(\\d+)\\s*rolls?\\b/i)); if (mins(l)) set('rollsIn', mins(l)); }
+    else if (/\\$daily/.test(low)) set('daily', wait(l));
+    else if (/reinicio|reset/.test(low)) set('rollsIn', mins(l));  // «El siguiente reinicio será en 18 min.»: les tirades
+    else if (/kakera/.test(low) && /reacc|react/.test(low)) set('kakera', no(l) ? mins(l) || true : 0);
+    else if (/\\$rt\\b/.test(low)) set('rt', wait(l));
+    else if (/\\$dk\\b/.test(low)) set('dk', wait(l));
+    else if (/\\bvot|\\bvote/.test(low)) set('vote', mins(l));
+    else if (/\\$oh\\b/.test(low)) {
+      const next = mins(l) || mins(ls.slice(k + 1).find(x => x.trim()) || '') || true;  // «14h 16 min hasta la recarga.»
+      const oh = n(/(\\d+)\\s*\\$oh\\b/i), oc = n(/(\\d+)\\s*\\$oc\\b/i);
+      if (oh !== null) set('oh', oh ? 0 : next);
+      if (oc !== null) set('oc', oc ? 0 : next);
+    }
+  });
+  if ('rollsN' in r) r.rolls = r.rollsN ? 0 : r.rollsIn || true;
+  delete r.rollsN; delete r.rollsIn;
+  if (Object.keys(r).length) r.tu = true;  // el $tu mateix: acabes de fer-lo
+  return r;
+}
+// Marca les tasques segons el $tu: si en sabem els minuts, tornen just aleshores ({b: quan}); si no, com si les marquessis a mà
+function applyTu(r, now) {
+  const s = load();
+  document.querySelectorAll('input[data-tu]').forEach(i => {
+    const v = r[i.dataset.tu]; if (v === undefined) return;
+    if (!v) delete s[i.dataset.id];
+    else s[i.dataset.id] = v === true ? now : { b: now + v * 60000 };
+  });
+  save(s); tick();
+}
 function load() { try { return JSON.parse(localStorage.getItem('mudae-fet') || '{}'); } catch (e) { return {}; } }
 function save(s) { try { localStorage.setItem('mudae-fet', JSON.stringify(s)); } catch (e) {} }
 function tick() {
   const now = new Date(), s = load(), m = now.getHours() * 60 + now.getMinutes();
   document.querySelectorAll('input[data-torna]').forEach(i => {
-    const t = s[i.dataset.id], back = typeof t === 'number' ? until(i.dataset.torna, t) : 0;
+    const t = s[i.dataset.id], back = typeof t === 'number' ? until(i.dataset.torna, t) : (t && t.b) || 0;  // {b}: l'hora que deia el $tu
     i.checked = back > +now;
     const when = i.closest('.task').querySelector('.when');
     if (when) when.textContent = i.checked ? T('Torna a les {h} ({rest})', { h: hm(new Date(back)), rest: fmt(Math.ceil((back - now) / 60000)) }) : '';
@@ -519,6 +565,12 @@ document.addEventListener('change', ev => {
   if (i.checked) s[i.dataset.id] = Date.now(); else delete s[i.dataset.id];
   save(s); tick();
 });
+const tuText = document.getElementById('tuText'), tuMsg = document.getElementById('tuMsg');
+tuText.addEventListener('input', () => {  // en enganxar el $tu, es marca sol
+  const r = readTu(tuText.value); if (!Object.keys(r).length) return;
+  applyTu(r, Date.now()); tuText.value = '';
+  tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
+});
 tick(); setInterval(tick, 30000);
 
 // mentre la pestanya és oberta, diu al servidor que continua aquí; si es tanca, el servidor plega sol
@@ -528,7 +580,7 @@ if (location.protocol.startsWith('http')) setInterval(() => fetch('/ping', { cac
 
 JS_COLL = """
 const COLL = __DATA__;
-const chips = document.getElementById('chips'), hide = document.getElementById('hideMine'), title = document.getElementById('albumTitle');
+const album = document.querySelector('#coll .album'), chips = document.getElementById('chips'), hide = document.getElementById('hideMine'), title = document.getElementById('albumTitle');
 const ORDER = { wish: 0, alta: 1, other: 2, free: 3, mine: 4 };  // primer el que et falta
 const kind = c => c.st === 'Meu' ? 'mine' : c.st !== 'Lliure' ? 'other' : c.wl ? 'wish' : c.prio === 'Alta' ? 'alta' : 'free';
 let cur = Object.keys(COLL)[0];
@@ -539,7 +591,11 @@ function draw() {
   if (!cur) return;
   const list = COLL[cur], mine = list.filter(c => c.st === 'Meu').length;
   title.textContent = `${cur} · ` + T('{a} de {b}', { a: mine, b: list.length });
-  document.querySelectorAll('.row[data-serie]').forEach(r => r.classList.toggle('on', r.dataset.serie === cur));
+  document.querySelectorAll('.row[data-serie]').forEach(r => {
+    const on = r.dataset.serie === cur;
+    r.classList.toggle('on', on && !album.hidden); r.setAttribute('aria-expanded', String(on && !album.hidden));
+    if (on) r.after(album);  // l'àlbum s'obre just sota la barra que has clicat, no a baix de tot
+  });
   chips.innerHTML = [...list].sort((a, b) => ORDER[kind(a)] - ORDER[kind(b)] || a.n.localeCompare(b.n))
     .filter(c => !(hide.checked && c.st === 'Meu')).map(c => {
       const k = kind(c);
@@ -561,6 +617,16 @@ chips.addEventListener('click', ev => {
   got.has(b.dataset.pick) ? got.delete(b.dataset.pick) : got.add(b.dataset.pick); draw();
 });
 document.getElementById('gotClear').onclick = () => { got.clear(); gotMsg.textContent = ''; draw(); };
+document.getElementById('collDel').onclick = async ev => {  // ja no la fas: fora de les col·leccions (el harem no es toca)
+  if (location.protocol === 'file:') { gotMsg.innerHTML = OFF_MSG(); gotBar.hidden = false; return; }
+  if (!confirm(T("Deixes de fer «{s}»? S'esborra de les col·leccions; el teu harem no es toca.", { s: cur }))) return;
+  ev.target.disabled = true;
+  try {
+    const j = await postJSON('/esborra', { name: cur });
+    if (j.ok) { try { localStorage.removeItem('mudae-coll'); } catch (e) {} location.reload(); }
+    else { gotBar.hidden = false; gotMsg.innerHTML = ERR_MSG(j.error); ev.target.disabled = false; }
+  } catch (err) { gotBar.hidden = false; gotMsg.innerHTML = NET_MSG(); ev.target.disabled = false; }
+};
 document.getElementById('gotBtn').onclick = async ev => {
   const btn = ev.target;
   if (location.protocol === 'file:') { gotMsg.innerHTML = OFF_MSG(); return; }
@@ -570,7 +636,12 @@ document.getElementById('gotBtn').onclick = async ev => {
     if (j.ok) location.reload(); else { gotMsg.innerHTML = ERR_MSG(j.error); btn.disabled = false; }
   } catch (err) { gotMsg.innerHTML = NET_MSG(); btn.disabled = false; }
 };
-function show(s) { cur = s; try { localStorage.setItem('mudae-coll', s); } catch (e) {} draw(); }
+function show(s) {  // clicar la sèrie oberta la tanca
+  album.hidden = s === cur && !album.hidden; cur = s;
+  try { localStorage.setItem('mudae-coll', s); } catch (e) {}
+  draw();
+  if (!album.hidden) album.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
 hide.onchange = () => { try { localStorage.setItem('mudae-hide', hide.checked ? '1' : '0'); } catch (e) {} draw(); };
 document.querySelectorAll('.row[data-serie]').forEach(r => {
   r.onclick = () => show(r.dataset.serie);
@@ -703,6 +774,7 @@ details[open] summary { margin-bottom:6px; }
 .track { display:flex; gap:2px; height:6px; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden; }
 .seg.mine { background:var(--accent); } .seg.other { background:var(--warm); }
 .album { border-top:1px solid var(--line); padding-top:14px; display:grid; gap:12px; }
+.bars .album { margin:4px 0 12px; padding:14px 0; border-bottom:1px solid var(--line); }
 .album-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px; }
 .album-head h3 { margin:0; font-size:17px; font-weight:650; letter-spacing:-.3px; }
 .chips { display:flex; flex-wrap:wrap; gap:6px; }
@@ -798,7 +870,7 @@ button, a, label, .row, .task { touch-action:manipulation; }
   .g2 { grid-template-columns:1fr; }
   .row { grid-template-columns:1fr auto; } .row .track { grid-column:1 / -1; grid-row:2; }
 }
-@media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+@media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
 """
 
 
@@ -968,27 +1040,51 @@ const fa = n => n === null ? T('mai') : n === 0 ? T('avui') : n === 1 ? T('ahir'
   if (h === null || h >= 7) age.innerHTML = '<span class="tag bad">' + esc(T('Toca posar al dia el harem: $mma+s')) + '</span> ' + esc(age.textContent);
 })();
 const serieName = () => serieSel.value === '__new__' ? newIn.value.trim() : serieSel.value;
+// totes les sèries d'una vegada: a+ diu la sèrie de cada personatge, o els propietaris, s per privat
+const ALL = [...serieSel.options].map(o => o.value).filter(v => v !== '__new__' && !SPECIALS.includes(v));
+// Què has enganxat, mirant el text: la wishlist, moltes sèries o el harem («Nom - Sèrie»), o una sèrie (títol «Sèrie 12/34»)
+function detect(text) {
+  const ls = text.split(/\r?\n/).map(l => l.replace(/^\d+\.\s+/, '').trim()).filter(Boolean);
+  if (ls.slice(0, 4).some(l => /wishlist/i.test(l))) return { kind: 'wishlist' };
+  if (ls.filter(l => / - /.test(l)).length > ls.length / 2) return { kind: ls.some(l => /=>.* - /.test(l)) ? 'totes' : 'harem' };
+  const title = ls.slice(0, 6).map(l => l.match(/^(.*\S)\s+\d+\s*\/\s*\d+$/)).find(Boolean);
+  return title ? { kind: 'serie', serie: title[1] } : {};
+}
 function syncUpd() {
   serieBox.hidden = kindSel.value !== 'serie';
   newIn.hidden = serieSel.value !== '__new__';
   const esp = kindSel.value === 'serie' && SPECIALS.includes(serieName());
   document.getElementById('updEsp').hidden = !esp;
-  const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
+  const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : kindSel.value === 'totes' ? '$imaa+os ' + ALL.join(' $ ')
+    : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
   updCmd.textContent = cmd; updCmd.dataset.copy = cmd;
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
 [kindSel, serieSel, newIn, txt].forEach(el => el.addEventListener('input', syncUpd));
+txt.addEventListener('paste', () => setTimeout(() => {  // tria sol «Què enganxes» (i la sèrie, si la tens)
+  const d = detect(txt.value); if (!d.kind) return;
+  kindSel.value = d.kind;
+  const opt = d.serie && [...serieSel.options].find(o => o.value.toLowerCase() === d.serie.toLowerCase());
+  if (opt) serieSel.value = opt.value;
+  [kindSel, serieSel].forEach(el => { try { localStorage.setItem('mudae-' + el.id, el.value); } catch (e) {} });
+  syncUpd(); updMsg.innerHTML = '<span class="tag">' + esc(T('Detectat: {k}', { k: kindSel.selectedOptions[0].textContent })) + '</span>';
+}));
 // el que vas triar l'última vegada (què enganxes i quina sèrie), per no haver-ho de canviar cada cop
 [kindSel, serieSel].forEach(el => {
   try { const v = localStorage.getItem('mudae-' + el.id); if ([...el.options].some(o => o.value === v)) el.value = v; } catch (e) {}
   el.addEventListener('change', () => { try { localStorage.setItem('mudae-' + el.id, el.value); } catch (e) {} });
 });
 if (location.protocol === 'file:') updMsg.innerHTML = OFF_MSG();
+try {  // el que no s'ha pogut posar al dia la vegada anterior (es desa abans de recarregar)
+  const w = sessionStorage.getItem('mudae-avis');
+  if (w) { sessionStorage.removeItem('mudae-avis'); updMsg.innerHTML = '<span class="tag good">' + esc(T('Desat')) + '</span> <span class="tag bad">' + esc(T('Atenció')) + '</span> ' + esc(w); }
+} catch (e) {}
 updBtn.onclick = async () => {
   updBtn.disabled = true; updMsg.textContent = T('Desant…');
   try {
     const j = await postJSON('/dades', { kind: kindSel.value, serie: serieName(), text: txt.value });
-    if (j.ok) location.reload(); else { updMsg.innerHTML = ERR_MSG(j.error); syncUpd(); }
+    if (j.ok) { try { if (j.warn) sessionStorage.setItem('mudae-avis', j.warn); } catch (e) {} location.reload(); }
+    else { updMsg.innerHTML = ERR_MSG(j.error); syncUpd(); }
   } catch (err) { updMsg.innerHTML = NET_MSG(); syncUpd(); }
 };
 syncUpd();
@@ -1144,13 +1240,19 @@ const WL = __WL__, MAX = 15;
 const wlBox = document.getElementById('wlBuild');
 const bad = WL.wl.filter(w => !w.ok), keep = WL.wl.filter(w => w.ok);
 const free = MAX - keep.length;
-const pick = new Set(WL.cand.slice(0, free).map(c => c.n));
+// la col·lecció que vols completar (o totes): te'n recomana els primers, ja ordenats pel servidor
+const SER = [...new Set(WL.cand.map(c => c.s))].sort((a, b) => a.localeCompare(b));
+let only = ''; try { only = localStorage.getItem('mudae-wlser') || ''; } catch (e) {}
+if (!SER.includes(only)) only = '';
+const cands = () => WL.cand.filter(c => !only || c.s === only);
+let pick = new Set(cands().slice(0, Math.max(free, 0)).map(c => c.n));
 const note = s => '<p class="muted" style="margin:0;font-size:14px">' + s + '</p>';
 function drawWl() {
   let html = '';
   if (bad.length) {
-    const cmd = '$wishremove ' + bad.map(w => w.n).join(' $ ');
-    html += `<div class="give"><div class="give-row"><b>${esc(T('1. Treu-ne {n}', { n: bad.length }))}</b><button class="copybtn" data-copy="${esc(cmd)}">${esc(T('Copiar ordre'))}</button></div><code>${esc(cmd)}</code></div>`;
+    // $wishpurge treu d'una vegada els reclamats (teus o d'altres) i els repetits; els posats amb $wishl (bloquejats) es queden
+    html += `<div class="give"><div class="give-row"><b>${esc(T('1. Treu-ne {n}', { n: bad.length }))}</b><button class="copybtn" data-copy="$wishpurge">${esc(T('Copiar ordre'))}</button></div><code>$wishpurge</code>`
+      + note(esc(T("Treu els que ja estan reclamats: {names}. Si en vols guardar algun, torna'l a posar amb $wishl (bloquejat) i el $wishpurge no el tocarà.", { names: bad.map(w => w.n).join(', ') }))) + '</div>';
   }
   if (free > 0) {
     const chosen = WL.cand.filter(c => pick.has(c.n)).map(c => c.n);
@@ -1158,7 +1260,11 @@ function drawWl() {
     html += `<div class="give"><div class="give-row"><b>${bad.length ? '2. ' : ''}${esc(T(free === 1 ? 'Omple {n} lloc' : 'Omple {n} llocs', { n: free }))}</b>`
       + `<span class="muted">${esc(T("tria'n {n}: {c} de {n}", { n: free, c: chosen.length }))}</span>`
       + (chosen.length ? `<button class="copybtn" data-copy="${esc(cmd)}">${esc(T('Copiar ordre'))}</button>` : '') + '</div>'
-      + `<div class="chips">${WL.cand.slice(0, 40).map(c => `<label class="ch ${pick.has(c.n) ? 'wish' : 'free'}" data-tip="${esc(c.s)}">`
+      + `<label class="muted" style="font-size:14px">${esc(T('Col·lecció que vols completar:'))} <select id="wlSer">`
+      + `<option value="">${esc(T("Totes: la més a prop d'acabar"))}</option>`
+      + SER.map(s => `<option value="${esc(s)}"${s === only ? ' selected' : ''}>${esc(s)}</option>`).join('') + '</select></label>'
+      + (WL.cand.length ? note(esc(T("Ja te n'he triat els recomanats; clica un nom per canviar-lo."))) : note(esc(T('No queda cap personatge lliure a les teves col·leccions.'))))
+      + `<div class="chips">${cands().slice(0, 40).map(c => `<label class="ch ${pick.has(c.n) ? 'wish' : 'free'}" data-tip="${esc(c.s)}">`
         + `<input type="checkbox" data-wlc="${esc(c.n)}" ${pick.has(c.n) ? 'checked' : ''} hidden>${esc(c.n)}</label>`).join('')}</div>`
       + (chosen.length ? `<code>${esc(cmd)}</code>` : '')
       + (chosen.length > free ? `<span class="tag bad">${esc(T("N'has triat {n} de més", { n: chosen.length - free }))}</span>` : '')
@@ -1170,6 +1276,10 @@ function drawWl() {
   wlBox.innerHTML = html;
 }
 wlBox.addEventListener('change', ev => {
+  if (ev.target.id === 'wlSer') {  // una altra col·lecció: torna a triar els recomanats
+    only = ev.target.value; try { localStorage.setItem('mudae-wlser', only); } catch (e) {}
+    pick = new Set(cands().slice(0, free).map(c => c.n)); return drawWl();
+  }
   const n = ev.target.dataset.wlc; if (n === undefined) return;
   ev.target.checked ? pick.add(n) : pick.delete(n); drawWl();
 });
@@ -1210,6 +1320,19 @@ def group_title(g):
 def give_cmd(ts):
     me = f"<@{DISCORD_ID}>" if DISCORD_ID else f"@{ME}"
     return f"$give {me} " + " $ ".join(tr["name"] for tr in ts)
+
+
+def wish_candidates(d):
+    """Lliures de les teves col·leccions per posar a la wishlist: preferits, la col·lecció més a prop d'acabar i prioritat alta primer."""
+    pct = {s["name"]: s["Meu"] / s["total"] for s in d["series"]}
+    rank = {n: i for i, n in enumerate(PREFERITS)}
+    wl, seen, out = {w["name"] for w in d["wishlist"]}, set(), []
+    for r in sorted((r for r in d["rows"] if r["state"] == "Lliure" and r["name"] not in wl),
+                    key=lambda r: (rank.get(r["name"], len(rank)), -pct[r["serie"]], r["prio"] != "Alta", r["serie"], r["name"])):
+        if r["name"] not in seen:
+            seen.add(r["name"])
+            out.append({"n": r["name"], "s": r["serie"]})
+    return out
 
 
 def write_dashboard(d, hist):
@@ -1260,7 +1383,7 @@ def write_dashboard(d, hist):
         f'{e(t("Lliure")) if w["ok"] else e(w["todo"])}</span></td></tr>'
         for w in d["wishlist"])
     wl_json = json.dumps({"wl": [{"n": w["name"], "star": w["star"], "ok": w["ok"]} for w in d["wishlist"]],
-                          "cand": [{"n": r["name"], "s": r["serie"]} for r in d["free_alta"]]}, ensure_ascii=False).replace("</", r"<\/")
+                          "cand": wish_candidates(d)}, ensure_ascii=False).replace("</", r"<\/")
 
     by_owner = {}
     for tr in d["trades"]:
@@ -1286,7 +1409,8 @@ def write_dashboard(d, hist):
         if g != prev:
             out.append(f'</div><div class="grp" data-period="{g}"><h3>{e(group_title(g))}</h3>')
             prev = g
-        box = (f'<input type="checkbox" data-id="r{i}" data-torna="{torna}">' if torna is not None
+        tu = TU_KEY.get((g, ordre)) or TU_KEY.get(ordre)  # quina línia del $tu la marca
+        box = (f'<input type="checkbox" data-id="r{i}" data-torna="{torna}"' + (f' data-tu="{tu}"' if tu else "") + '>' if torna is not None
                else '<span class="bullet">·</span>')
         out.append(f'<label class="task">{box}<span><b>{e(t(que))}</b> {cmd_html(ordre)}'
                    f'<span class="desc">{e(t(com, rt=RT_HORES))}</span><span class="when"></span></span></label>')
@@ -1379,7 +1503,9 @@ def write_dashboard(d, hist):
  <button type="button" role="tab" data-go="eines" aria-controls="v-eines">{T_("Eines")}</button>
 </nav>
 <div class="view g2" id="v-avui" role="tabpanel">
- <section class="panel"><div class="panel-head"><h2>{T_("Què toca ara")}</h2></div>{checklist}</section>
+ <section class="panel"><div class="panel-head"><h2>{T_("Què toca ara")}</h2></div>
+  <textarea id="tuText" rows="2" spellcheck="false" aria-label="$tu" placeholder="{T_("Enganxa aquí el teu $tu i les caselles es marquen soles…")}"></textarea>
+  <span id="tuMsg" role="status"></span>{checklist}</section>
  <section class="panel ocbox"><div class="panel-head"><h2>{T_("Ajudant del $oc")}</h2><a href="{oc}" style="font-size:13px">{T_("Obrir a part")}</a></div>
  <iframe src="{oc}" title="{T_("Ajudant del $oc")}"></iframe></section>
 </div>
@@ -1390,7 +1516,8 @@ def write_dashboard(d, hist):
  <div class="bars">{"".join(bars)}</div>
  <div class="album">
   <div class="album-head"><h3 id="albumTitle"></h3>
-   <label class="toggle"><input type="checkbox" id="hideMine"> {T_("Amaga els que ja tinc")}</label></div>
+   <span class="give-row" style="margin:0"><label class="toggle"><input type="checkbox" id="hideMine"> {T_("Amaga els que ja tinc")}</label>
+    <button type="button" class="tab" id="collDel">{T_("Deixar de fer-la")}</button></span></div>
   <div class="legend">
    <span class="ch wish"><span class="star">★</span> {T_("A la wishlist")}</span><span class="ch alta">{T_("Lliure · prioritat alta")}</span>
    <span class="ch other">{T_("D'algú altre")}<small>{T_("qui el té")}</small></span><span class="ch free">{T_("Lliure")}</span><span class="ch mine">{T_("Teu")}</span></div>
@@ -1457,7 +1584,7 @@ def write_dashboard(d, hist):
 <section class="panel" id="upd">
  <div class="panel-head"><h2>{T_("Posar al dia")}</h2><span id="updAge" class="muted" style="font-size:13px"></span></div>
  <div class="give-row">{T_("Què enganxes:")}
-  <select id="updKind" aria-label="{T_("Què enganxes:")}"><option value="harem">{T_("El teu harem ($mma+s)")}</option><option value="wishlist">{T_("La wishlist ($wl)")}</option><option value="serie">{T_("Una sèrie ($imaso)")}</option></select>
+  <select id="updKind" aria-label="{T_("Què enganxes:")}"><option value="harem">{T_("El teu harem ($mma+s)")}</option><option value="wishlist">{T_("La wishlist ($wl)")}</option><option value="totes">{T_("Totes les teves sèries")}</option><option value="serie">{T_("Una sèrie ($imaso)")}</option></select>
   <span id="updSerieBox" hidden>{T_("Sèrie:")} <select id="updSerie" aria-label="{T_("Sèrie:")}">{serie_opts}<option value="__new__">{T_("Sèrie nova…")}</option></select>
   <input type="text" id="updNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de la sèrie, com surt a Mudae")}" placeholder="{T_("Nom de la sèrie, com surt a Mudae")}" hidden></span>
   <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mma+s">$mma+s</button></span></div>
@@ -1672,11 +1799,67 @@ def update_special(name, text):
     touch_meta(name)
 
 
+def update_all(text):
+    """$imaa+os S1 $ S2 $ …: totes les teves sèries d'una vegada. Cada línia és com al $imaso amb la sèrie al final:
+    «Kate Beckett  💞 => pep - Castle» o «Kevin Ryan - Castle». El títol («Castle + Pingu + ABBA   12/19») diu quants n'hi ha.
+
+    Una sèrie de la qual surten menys personatges dels que ja tenies no es toca (falta un tros del missatge).
+    Les col·leccions especials s'agafen pel nom dels seus personatges, siguin de la sèrie que siguin.
+    Torna un avís amb el que no s'ha posat al dia, o "".
+    """
+    spec = specials()
+    files = {f.stem.translate(FROM_FILE): f for f in (DADES / "series").glob("*.txt")}
+    normal = sorted((s for s in files if s not in spec), key=len, reverse=True)  # la més llarga primer: «Castle» no es menja «Richard Castle»
+    spec_names = sorted({n.casefold() for s in spec if s in files for n in parse_owners(files[s].read_text(encoding="utf-8-sig"))},
+                        key=len, reverse=True)
+    rows = text.splitlines()
+    title = next((r for r in rows[:6] if IMASO_TITLE.match(r.strip())), None)
+    got, extra = {}, []
+    for raw in rows:
+        line = re.sub(r"^\d+\.\s+", "", raw.replace("⭐", "").strip())
+        low = line.casefold()
+        s = next((s for s in normal if low.endswith(" - " + s.casefold())), None)
+        if s:
+            got.setdefault(s, []).append(line[:-len(s) - 3].strip())  # el que queda és una línia del $imaso de sempre
+        elif " - " in line and any(low.startswith(n + " ") for n in spec_names):
+            extra.append(line.rsplit(" - ", 1)[0].strip())
+    read = sum(map(len, got.values())) + len(extra)
+    done, short = 0, []
+    for s, found in got.items():
+        old = len(lines(files[s]))
+        if len(found) < old:
+            short.append(t("{serie} ({n} de {old})", serie=s, n=len(found), old=old))
+            continue
+        save_paste("serie", s, "\n".join(found))
+        done += 1
+    for s in spec:
+        if s in files and extra:
+            try:
+                update_special(s, "\n".join(extra))
+                done += 1
+            except ValueError:  # cap personatge d'aquesta especial al text: no la toquem
+                pass
+    if not done and not short:
+        raise ValueError(t("No he trobat cap personatge de les teves sèries. Copia tots els missatges que t'ha enviat Mudae."))
+    missing = [s for s in normal if s not in got]
+    warn = []
+    total = int(re.search(r"(\d+)\s*$", title).group(1)) if title else read
+    if read < total:
+        warn.append(t("Mudae diu {total} personatges i n'he llegit {n}.", total=total, n=read))
+    if short:
+        warn.append(t("No he tocat {series}: en falten. Copia tots els missatges de Mudae.", series=", ".join(short)))
+    if missing:
+        warn.append(t("No hi surten: {series}.", series=", ".join(sorted(missing))))
+    return " ".join(warn)
+
+
 def save_paste(kind, serie, text):
     """Desa el que has enganxat al tauler al fitxer de dades/ que toca. Si no s'hi troba cap nom, no toca res."""
     if kind == "harem":
         classify_harem(text)  # els que no s'han pogut llegir surten a «Sèrie dels teus personatges»
         return
+    elif kind == "totes":
+        return update_all(text)
     elif kind == "wishlist":
         path = DADES / "wishlist.txt"
     elif kind == "serie":
@@ -1730,6 +1913,15 @@ def classify_harem(text):
     if not got:
         raise ValueError(t("No he trobat cap «Personatge - Sèrie». Copia el missatge del $mma+s sencer."))
     (DADES / "harem.txt").write_text("\n".join(got) + "\n", encoding="utf-8")
+    for f in (DADES / "series").glob("*.txt"):  # els que eren teus i ja no hi són: els has donat o te n'has divorciat
+        rows = f.read_text(encoding="utf-8-sig").splitlines()
+        new = []
+        for r in rows:
+            m = CLAIM.match(re.sub(r"^\d+\.\s+", "", r.strip()))
+            gone = m and m.group(2).casefold() == ME.casefold() and m.group(1).strip() not in got
+            new.append(f"{m.group(1).strip()} 💞 => algú" if gone else r)  # de qui és ara, ho dirà el pròxim $imaso
+        if new != rows:
+            f.write_text("\n".join(new) + "\n", encoding="utf-8")
     path = DADES / "series-sobrants.json"
     old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     by_name = {n: sr for sr, ns in old.items() for n in ns if sr != ALTRES}  # el que ja sabíem i ara no surt, es queda
@@ -1807,6 +1999,20 @@ def mark_received(name):
     raise ValueError(t("No trobo «{name}» a cap de les teves sèries.", name=name))
 
 
+def delete_series(name):
+    """Ja no fas aquesta col·lecció: fora el seu fitxer (i de les especials). Els personatges del harem no es toquen."""
+    path = series_path(name)
+    if not path.exists():
+        raise ValueError(t("No trobo la col·lecció «{name}».", name=name))
+    path.unlink()
+    spec = specials()
+    if name in spec:
+        (DADES / "especials.json").write_text(json.dumps([s for s in spec if s != name], ensure_ascii=False, indent=1), encoding="utf-8")
+    meta = read_meta()
+    if meta.get("series", {}).pop(name, None):
+        (DADES / "actualitzat.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 def mark_free(name):
     """Algú s'ha divorciat de `name`: queda lliure al fitxer de la seva sèrie, com si ho hagués dit el $imaso."""
     found = False
@@ -1870,6 +2076,8 @@ def do_action(action, body):
     if action == "rebut":
         for n in body["names"]:
             mark_received(str(n))
+    elif action == "esborra":
+        delete_series(str(body["name"]))
     elif action == "lliure":
         for n in body["names"]:
             mark_free(str(n))
@@ -1880,7 +2088,7 @@ def do_action(action, body):
     elif action == "dressera":
         make_shortcut()
     elif action == "dades":
-        save_paste(str(body["kind"]), str(body.get("serie") or ""), str(body["text"]))
+        return save_paste(str(body["kind"]), str(body.get("serie") or ""), str(body["text"]))
     elif action == "especial":
         save_special(str(body["name"]), str(body["text"]))
     else:
@@ -1970,7 +2178,8 @@ def serve(port=PORT):
                                    input=raw, capture_output=True, text=True, encoding="utf-8",
                                    env={**os.environ, "PYTHONIOENCODING": "utf-8"}, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                 err = (r.stderr.strip().splitlines() or ["Error desconegut"])[-1]
-                res = {"ok": True} if r.returncode == 0 else {"ok": False, "error": err}
+                warn = next((l[6:] for l in r.stdout.splitlines() if l.startswith("AVIS: ")), "")
+                res = {"ok": True, "warn": warn} if r.returncode == 0 else {"ok": False, "error": err}
             except Exception as ex:
                 res = {"ok": False, "error": str(ex)}
             self.reply(res)
@@ -2012,10 +2221,11 @@ def main():
     if args[:1] == ["tauler"]:  # només el servidor (Actualitza.bat el llança en segon pla)
         return serve()
     try:
+        warn = None
         if args[:1] == ["accio"]:  # el servidor: python mudae.py accio <nom> < JSON
             if sys.stdin and hasattr(sys.stdin, "reconfigure"):
                 sys.stdin.reconfigure(encoding="utf-8")
-            do_action(args[1], json.loads(sys.stdin.read() or "{}"))
+            warn = do_action(args[1], json.loads(sys.stdin.read() or "{}"))
         if args[:1] == ["rebut"]:  # python mudae.py rebut "Nom 1" "Nom 2"
             for n in args[1:]:
                 mark_received(n)
@@ -2024,6 +2234,8 @@ def main():
         if args[:1] == ["classifica"]:  # python mudae.py classifica "Personatge" "Sèrie"
             classify(args[1], args[2])
         run()
+        if warn:
+            print("AVIS: " + warn)  # el servidor el passa al tauler
     except (RuntimeError, ValueError, KeyError) as ex:
         sys.exit(str(ex))
     if args[:1] == ["serve"]:

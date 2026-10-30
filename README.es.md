@@ -36,6 +36,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
    - **Tu harem**: escribe `$mma+s` en Discord, copia el mensaje que te llega por privado y pégalo eligiendo «Tu harem».
    - **Tu wishlist**: `$wl`, eligiendo «La wishlist».
    - **Cada serie que coleccionas**: `$imaso <serie>` (por ejemplo, `$imaso Harry Potter`), eligiendo «Una serie» → «Serie nueva…» y escribiendo su nombre tal como sale en Mudae.
+   - **Después, todas de golpe**: elige «Todas tus series», copia el comando que sale (`$imaa+os Serie 1 $ Serie 2 $ …`) y pega todos los mensajes que te devuelve Mudae. No hace falta elegir qué pegas: el panel lo adivina.
 
 A partir de aquí, abre el panel con el acceso directo **Mudae** del escritorio.
 

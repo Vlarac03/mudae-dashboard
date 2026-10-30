@@ -54,4 +54,12 @@ assert.deepEqual(towerNext({ f: [11, 8], tv: 5000 }), { tw: 0, built: 2, cost: 1
 assert.deepEqual(towerNext({ t: 1, f: [], tv: 5000 }), { tw: 1, built: 12, cost: 65000, rec: 11 });  // torre 2: torna a començar per l'11
 assert.deepEqual(towerFromKt({ f: [11, 8] }, 14), { t: 1, f: [] });  // 14 pisos: torre 2, els marcats eren de la 1
 assert.deepEqual(towerFromKt({ t: 1, f: [11, 8] }, 14), { t: 1, f: [11, 8] });
+// «Posar al dia» endevina què has enganxat
+const upd = py.match(/JS_UPD = r"""([\s\S]*?)"""/)[1];
+const detect = new Function(upd.match(/function detect[\s\S]*?\n}\n/)[0] + 'return detect;')();
+assert.deepEqual(detect("jo's Wishlist - 2/15\nSnape\n"), { kind: 'wishlist' });
+assert.deepEqual(detect('Castle + Pingu   3/7\n(bundle)\nKate Beckett  💞 => jo - Castle\nKevin Ryan - Castle\nPingu - Pingu\n'), { kind: 'totes' });
+assert.deepEqual(detect('Kate Beckett - Castle\nPingu - Pingu\n'), { kind: 'harem' });
+assert.deepEqual(detect('1. Harry Potter 2/4\n\nHP\n\nDobby  💞 => pep\nWinky\n'), { kind: 'serie', serie: 'Harry Potter' });
+assert.deepEqual(detect('Hola'), {});
 console.log('millores: totes les proves passen');

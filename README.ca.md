@@ -36,6 +36,7 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
    - **El teu harem**: escriu `$mma+s` a Discord, copia el missatge que t'arriba per privat i enganxa'l triant «El teu harem».
    - **La teva wishlist**: `$wl`, triant «La wishlist».
    - **Cada sèrie que col·lecciones**: `$imaso <sèrie>` (per exemple, `$imaso Harry Potter`), triant «Una sèrie» → «Sèrie nova…» i escrivint-ne el nom tal com surt a Mudae.
+   - **Després, totes de cop**: tria «Totes les teves sèries», copia l'ordre que surt (`$imaa+os Sèrie 1 $ Sèrie 2 $ …`) i enganxa tots els missatges que et torna Mudae. No cal triar què enganxes: el tauler ho endevina.
 
 A partir d'aquí, obre el tauler amb l'accés directe **Mudae** de l'escriptori.
 

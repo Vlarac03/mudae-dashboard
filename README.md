@@ -36,6 +36,7 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
    - **Your harem**: type `$mma+s` in Discord, copy the message Mudae sends you by DM and paste it choosing «Your harem».
    - **Your wishlist**: `$wl`, choosing «Your wishlist».
    - **Each series you collect**: `$imaso <series>` (for example `$imaso Harry Potter`), choosing «A series» → «New series…» and typing its name as Mudae shows it.
+   - **Then, all at once**: choose «All your series», copy the command it shows (`$imaa+os Series 1 $ Series 2 $ …`) and paste every message Mudae sends back. No need to pick what you're pasting: the dashboard works it out.
 
 From then on, open the dashboard with the **Mudae** shortcut on your desktop.
 
