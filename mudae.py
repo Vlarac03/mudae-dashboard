@@ -1057,6 +1057,9 @@ const fa = n => n === null ? T('mai') : n === 0 ? T('avui') : n === 1 ? T('ahir'
 const serieName = () => serieSel.value === '__new__' ? newIn.value.trim() : serieSel.value;
 // totes les sèries d'una vegada: a+ diu la sèrie de cada personatge, o els propietaris, s per privat
 const ALL = [...serieSel.options].map(o => o.value).filter(v => v !== '__new__' && !SPECIALS.includes(v));
+const allNew = document.getElementById('updAllNew');
+const newSeries = () => allNew.value.split('$').map(x => x.trim()).filter(x => x && !ALL.some(a => a.toLowerCase() === x.toLowerCase()));
+const allList = () => [...ALL, ...newSeries()];
 // Què has enganxat, mirant el text: la wishlist, moltes sèries o el harem («Nom - Sèrie»), o una sèrie (títol «Sèrie 12/34»)
 function detect(text) {
   const ls = text.split(/\r?\n/).map(l => l.replace(/^\d+\.\s+/, '').trim()).filter(Boolean);
@@ -1070,16 +1073,16 @@ function syncUpd() {
   newIn.hidden = serieSel.value !== '__new__';
   const esp = kindSel.value === 'serie' && SPECIALS.includes(serieName());
   document.getElementById('updEsp').hidden = !esp;
-  const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : kindSel.value === 'totes' ? '$imaa+os ' + ALL.join(' $ ')
+  const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : kindSel.value === 'totes' ? '$imaa+os ' + allList().join(' $ ')
     : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
   updCmd.textContent = cmd; updCmd.dataset.copy = cmd;
   const all = kindSel.value === 'totes', allCopy = document.getElementById('updAllCopy');  // l'ordre sencera ben a la vista, amb les sèries
   document.getElementById('updAll').hidden = !all;
-  document.getElementById('updAllCmd').textContent = ALL.length ? cmd : T('Encara no tens cap sèrie a la llista.');
-  allCopy.dataset.copy = cmd; allCopy.hidden = !ALL.length;
+  document.getElementById('updAllCmd').textContent = allList().length ? cmd : T('Encara no tens cap sèrie: escriu-les a «Sèries noves».');
+  allCopy.dataset.copy = cmd; allCopy.hidden = !allList().length;
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
-[kindSel, serieSel, newIn, txt].forEach(el => el.addEventListener('input', syncUpd));
+[kindSel, serieSel, newIn, txt, allNew].forEach(el => el.addEventListener('input', syncUpd));
 txt.addEventListener('paste', () => setTimeout(() => {  // tria sol «Què enganxes» (i la sèrie, si la tens)
   const d = detect(txt.value); if (!d.kind) return;
   kindSel.value = d.kind;
@@ -1101,7 +1104,7 @@ try {  // el que no s'ha pogut posar al dia la vegada anterior (es desa abans de
 updBtn.onclick = async () => {
   updBtn.disabled = true; updMsg.textContent = T('Desant…');
   try {
-    const j = await postJSON('/dades', { kind: kindSel.value, serie: serieName(), text: txt.value });
+    const j = await postJSON('/dades', { kind: kindSel.value, serie: serieName(), text: txt.value, noves: kindSel.value === 'totes' ? newSeries() : [] });
     if (j.ok) { try { if (j.warn) sessionStorage.setItem('mudae-avis', j.warn); } catch (e) {} location.reload(); }
     else { updMsg.innerHTML = ERR_MSG(j.error); syncUpd(); }
   } catch (err) { updMsg.innerHTML = NET_MSG(); syncUpd(); }
@@ -1694,7 +1697,8 @@ def write_dashboard(d, hist):
  <p class="muted" id="updEsp" style="margin:0;font-size:13px" hidden>{T_("Col·lecció especial: enganxa el $imaso de la sèrie d'on surten els personatges (totes les pàgines). Només se n'agafaran els d'aquesta col·lecció.")}</p>
  <div class="give" id="updAll" hidden><div class="give-row"><b>{T_("Ordre amb totes les teves sèries")}</b><button class="copybtn" id="updAllCopy" data-copy="">{T_("Copiar ordre")}</button></div><code id="updAllCmd"></code>
   <span class="muted" style="font-size:13px">{T_("1. Copia l'ordre: són les teves sèries separades amb $. 2. Envia-la a Mudae. 3. Enganxa a sota tot el que et contesti per privat (tots els missatges).")}</span>
-  <span class="muted" style="font-size:13px">{T_("Per afegir una sèrie a la llista: tria «Una sèrie ($imaso)» → «Sèrie nova…» i enganxa'n el $imaso.")}</span></div>
+  <label class="give-row">{T_("Sèries noves:")} <input type="text" id="updAllNew" spellcheck="false" autocomplete="off" style="flex:1;min-width:220px;width:auto" placeholder="{T_("Harry Potter $ Pingu $ ABBA")}"></label>
+  <span class="muted" style="font-size:13px">{T_("Escriu les que vulguis afegir, separades amb $ i com surten a Mudae: entren a l'ordre i es creen soles quan enganxes la resposta.")}</span></div>
  <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
  <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
 </section>
@@ -1912,38 +1916,50 @@ def update_special(name, text):
     touch_meta(name)
 
 
-def update_all(text):
+def update_all(text, new=()):
     """$imaa+os S1 $ S2 $ …: totes les teves sèries d'una vegada. Cada línia és com al $imaso amb la sèrie al final:
     «Kate Beckett  💞 => pep - Castle» o «Kevin Ryan - Castle». El títol («Castle + Pingu + ABBA   12/19») diu quants n'hi ha.
 
     Una sèrie de la qual surten menys personatges dels que ja tenies no es toca (falta un tros del missatge).
     Les col·leccions especials s'agafen pel nom dels seus personatges, siguin de la sèrie que siguin.
+    new: sèries noves escrites al tauler; es creen amb el nom que surt a Mudae (si hi surten).
     Torna un avís amb el que no s'ha posat al dia, o "".
     """
     spec = specials()
     files = {f.stem.translate(FROM_FILE): f for f in (DADES / "series").glob("*.txt")}
-    normal = sorted((s for s in files if s not in spec), key=len, reverse=True)  # la més llarga primer: «Castle» no es menja «Richard Castle»
+    known = {x.casefold() for x in files}
+    new = list(dict.fromkeys(n.strip() for n in new if n.strip() and n.strip().casefold() not in known))
+    normal = sorted([s for s in files if s not in spec] + new, key=len, reverse=True)  # la més llarga primer: «Castle» no es menja «Richard Castle»
     spec_names = sorted({n.casefold() for s in spec if s in files for n in parse_owners(files[s].read_text(encoding="utf-8-sig"))},
                         key=len, reverse=True)
+    # «Pers. sin serie principal en este paquete»: Mudae hi posa una altra sèrie («Meemaw - Young Sheldon»), però ja és a la teva
+    name_of = lambda body: re.split(r"\s*(?:💞|=>)", body)[0].strip().casefold()
+    member = {n.casefold(): s for s in files if s not in spec for n in parse_owners(files[s].read_text(encoding="utf-8-sig"))}
     rows = text.splitlines()
     title = next((r for r in rows[:6] if IMASO_TITLE.match(r.strip())), None)
-    got, extra = {}, []
+    got, extra, real, lost = {}, [], {}, []
     for raw in rows:
         line = re.sub(r"^\d+\.\s+", "", raw.replace("⭐", "").strip())
         low = line.casefold()
         s = next((s for s in normal if low.endswith(" - " + s.casefold())), None)
         if s:
+            if s in new:  # el nom com el diu Mudae, no com l'has escrit
+                real.setdefault(s, line[-len(s):])
             got.setdefault(s, []).append(line[:-len(s) - 3].strip())  # el que queda és una línia del $imaso de sempre
+        elif " - " in line and (body := line.rsplit(" - ", 1)[0].strip()) and name_of(body) in member:
+            got.setdefault(member[name_of(body)], []).append(body)
         elif " - " in line and any(low.startswith(n + " ") for n in spec_names):
             extra.append(line.rsplit(" - ", 1)[0].strip())
+        elif " - " in line:  # de la llista «sin serie principal» i encara no és a cap sèrie teva: no sabem de quina és
+            lost.append(re.split(r"\s*(?:💞|=>)", line.rsplit(" - ", 1)[0])[0].strip())
     read = sum(map(len, got.values())) + len(extra)
     done, short = 0, []
     for s, found in got.items():
-        old = len(lines(files[s]))
+        old = len(lines(files[s])) if s in files else 0
         if len(found) < old:
             short.append(t("{serie} ({n} de {old})", serie=s, n=len(found), old=old))
             continue
-        save_paste("serie", s, "\n".join(found))
+        save_paste("serie", real.get(s, s), "\n".join(found))
         done += 1
     for s in spec:
         if s in files and extra:
@@ -1959,6 +1975,8 @@ def update_all(text):
     total = int(re.search(r"(\d+)\s*$", title).group(1)) if title else read
     if read < total:
         warn.append(t("Mudae diu {total} personatges i n'he llegit {n}.", total=total, n=read))
+    if lost:
+        warn.append(t("No sé de quina de les teves sèries són {names}: posa al dia aquella sèrie amb «Una sèrie ($imaso)».", names=", ".join(lost[:10])))
     if short:
         warn.append(t("No he tocat {series}: en falten. Copia tots els missatges de Mudae.", series=", ".join(short)))
     if missing:
@@ -1966,13 +1984,13 @@ def update_all(text):
     return " ".join(warn)
 
 
-def save_paste(kind, serie, text):
+def save_paste(kind, serie, text, new=()):
     """Desa el que has enganxat al tauler al fitxer de dades/ que toca. Si no s'hi troba cap nom, no toca res."""
     if kind == "harem":
         classify_harem(text)  # els que no s'han pogut llegir surten a «Sèrie dels teus personatges»
         return
     elif kind == "totes":
-        return update_all(text)
+        return update_all(text, new)
     elif kind == "wishlist":
         path = DADES / "wishlist.txt"
     elif kind == "serie":
@@ -2201,7 +2219,7 @@ def do_action(action, body):
     elif action == "dressera":
         make_shortcut()
     elif action == "dades":
-        return save_paste(str(body["kind"]), str(body.get("serie") or ""), str(body["text"]))
+        return save_paste(str(body["kind"]), str(body.get("serie") or ""), str(body["text"]), [str(n) for n in body.get("noves") or []])
     elif action == "especial":
         save_special(str(body["name"]), str(body["text"]))
     elif action == "refa":

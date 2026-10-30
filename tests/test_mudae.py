@@ -155,6 +155,22 @@ class Desar(Base):
         self.assertEqual(got[("Pingu", "Pinga")], "")  # Pingu: n'hi havia 3 i n'han sortit 2, no es toca
         self.assertIn("Pingu (2 de 3)", warn)
 
+    def test_totes_les_series_de_zero(self):  # el $imaa+os de Victor (30/10/2026), retallat
+        paste = ("-----\nThe Big Bang Theory + ABBA 3/6\n(bundle)\n\nAgnetha Fältskog => jo - ABBA\nBenny Andersson - ABBA\n"
+                 "2. Sheldon Cooper - The Big Bang Theory\n\nPers. sin serie principal en este paquete:\n\n"
+                 "Gellert Grindelwald - Fantastic Beasts\nMeemaw => pep - Young Sheldon\n")
+        warn = mudae.save_paste("totes", "", paste, ["abba", "The Big Bang Theory", "Pingu"])  # sense cap sèrie desada abans
+        got = {(r["serie"], r["name"]): r["owner"] for r in mudae.read_series()}
+        self.assertEqual(got[("ABBA", "Agnetha Fältskog")], "jo")  # amb el nom de Mudae, no «abba»
+        self.assertIn(("The Big Bang Theory", "Sheldon Cooper"), got)
+        self.assertIn("Gellert Grindelwald, Meemaw", warn)  # no sabem de quina sèrie són
+        self.assertIn("No hi surten: Pingu", warn)
+        # la segona vegada, el Meemaw ja és a la teva sèrie (l'has posat amb el $imaso) i hi compta
+        self.write("series/The Big Bang Theory.txt", "Sheldon Cooper\nMeemaw\n")
+        mudae.save_paste("totes", "", paste)
+        got = {(r["serie"], r["name"]): r["owner"] for r in mudae.read_series()}
+        self.assertEqual(got[("The Big Bang Theory", "Meemaw")], "pep")
+
     def test_harem_treu_els_que_ja_no_tens(self):
         self.write("harem.txt", "Hedwig\nDobby\n")
         self.write("series/HP.txt", "Hedwig 💞 => jo\nDobby 💞 => jo\nWinky 💞 => pep\n")
