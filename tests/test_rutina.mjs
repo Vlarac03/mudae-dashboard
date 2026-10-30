@@ -49,4 +49,9 @@ You may vote again in 3h 05 min.
 assert.deepEqual(readTu(tuEn), { claim: 0, rolls: 0, daily: 0, kakera: 41, vote: 185, oh: 0, oc: 0, tu: true });
 assert.deepEqual(readTu("You have 0 rolls left.\n$rt is not ready"), { rolls: true, rt: true, tu: true });  // sense minuts: com si ho marquessis a mà
 assert.deepEqual(readTu('Hola'), {});
+// el poder de kakera, per a la notificació de les tirades
+const readPower = new Function(js.match(/function readPower[\s\S]*?\n}\n/)[0].replaceAll('\\\\', '\\') + 'return readPower;')();
+assert.deepEqual(readPower(tuEs), { p: 110, c: 36 });
+assert.deepEqual(readPower('Power: 85%\nEach kakera button consumes 36% of your reaction power.'), { p: 85, c: 36 });
+assert.equal(readPower(tuEn), null);
 console.log('rutina: totes les proves passen');

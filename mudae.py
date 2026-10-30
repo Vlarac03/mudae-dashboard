@@ -539,12 +539,19 @@ function applyTu(r, now) {
   });
   save(s); tick();
 }
+// El poder de kakera del $tu («Poder: 110%», «consume 36% de su poder»): {p, c}, o null si no hi surt
+function readPower(text) {
+  const p = text.match(/(?:^|\\n)\\s*(?:poder|power)\\s*:\\s*(\\d+)\\s*%/i), c = text.match(/(\\d+)\\s*%[^\\n]*(?:poder|power)/i);
+  return p && c ? { p: +p[1], c: +c[1] } : null;
+}
 function load() { try { return JSON.parse(localStorage.getItem('mudae-fet') || '{}'); } catch (e) { return {}; } }
 function save(s) { try { localStorage.setItem('mudae-fet', JSON.stringify(s)); } catch (e) {} }
+const backOf = (i, s) => { const t = s[i.dataset.id]; return typeof t === 'number' ? until(i.dataset.torna, t) : (t && t.b) || 0; };  // {b}: l'hora que deia el $tu
+let rollsWas;
 function tick() {
   const now = new Date(), s = load(), m = now.getHours() * 60 + now.getMinutes();
   document.querySelectorAll('input[data-torna]').forEach(i => {
-    const t = s[i.dataset.id], back = typeof t === 'number' ? until(i.dataset.torna, t) : (t && t.b) || 0;  // {b}: l'hora que deia el $tu
+    const back = backOf(i, s);
     i.checked = back > +now;
     const when = i.closest('.task').querySelector('.when');
     if (when) when.textContent = i.checked ? T('Torna a les {h} ({rest})', { h: hm(new Date(back)), rest: fmt(Math.ceil((back - now) / 60000)) }) : '';
@@ -558,6 +565,40 @@ function tick() {
   clock.innerHTML = T('Ara <b>{now}</b> · tirades noves a les <b>{roll}</b> ({rollIn}) · pròxim reclam a les <b>{claim}</b> ({claimIn})',
     { now: hm(now), roll: pad(nr) + ':02', rollIn: fmt(toRoll), claim: pad(nc % 24) + ':02', claimIn: fmt(nc * 60 + 2 - m) })
     + (fresh ? '<br><span class="claim-now">' + esc(T('Pots reclamar des de les {h}: fes els passos de «Moment bo»', { h: pad(last) + ':02' })) + '</span>' : '');
+  // les tirades acaben de tornar soles (no les has desmarcat tu, que n'esborra l'hora): avisa
+  const r = document.querySelector('input[data-tu="rolls"]');
+  if (r) { if (rollsWas && !r.checked && s[r.dataset.id] && notiOn()) notify(); rollsWas = r.checked; }
+}
+// Notificacions: només mentre el tauler és obert. Diuen que tornes a tenir tirades i com tens el reclam i la kakera.
+const notiBtn = document.getElementById('notiBtn'), HAS_NOTI = 'Notification' in window;
+const notiOn = () => { try { return HAS_NOTI && Notification.permission === 'granted' && localStorage.getItem('mudae-noti') === '1'; } catch (e) { return false; } };
+function notiBody() {
+  const s = load(), box = k => document.querySelector(`input[data-tu="${k}"]`), at = i => hm(new Date(backOf(i, s)));
+  const c = box('claim'), k = box('kakera'), out = [];
+  if (c) out.push(c.checked ? T('Reclam: a les {h}', { h: at(c) }) : T('Pots reclamar personatge.'));
+  if (k) out.push(k.checked ? T('Kakera: a les {h}', { h: at(k) }) : T('Pots reaccionar a kakera.'));
+  let P = null; try { P = JSON.parse(localStorage.getItem('mudae-poder')); } catch (e) {}
+  if (P) out.push(T('Poder al $tu de les {h}: {p}% ({n} botons de kakera)', { h: hm(new Date(P.t)), p: P.p, n: Math.floor(P.p / P.c) }));
+  return out.join('\\n');
+}
+function notify() { try { new Notification(T('Ja pots fer $m'), { body: notiBody(), tag: 'mudae-m' }); } catch (e) {} }
+function notiDraw() {
+  const on = notiOn();
+  notiBtn.setAttribute('aria-pressed', on); notiBtn.querySelector('.dot').className = 'dot' + (on ? ' ok' : '');
+  notiBtn.lastChild.textContent = on ? T('Notificacions: sí') : T('Notificacions: no');
+}
+if (notiBtn && HAS_NOTI) {
+  notiBtn.hidden = false; notiDraw();
+  notiBtn.onclick = async () => {
+    if (notiOn()) { try { localStorage.removeItem('mudae-noti'); } catch (e) {} return notiDraw(); }
+    if (await Notification.requestPermission() !== 'granted') {
+      toolMsg.innerHTML = '<span class="tag bad">' + esc(T('Notificacions bloquejades')) + '</span> ' + esc(T("Permet-les al navegador: el cadenat de la barra d'adreces."));
+      return notiDraw();
+    }
+    try { localStorage.setItem('mudae-noti', '1'); } catch (e) {}
+    notiDraw();
+    try { new Notification(T('Notificacions activades'), { body: T("T'avisaré quan tornis a tenir tirades, mentre el tauler sigui obert.") }); } catch (e) {}
+  };
 }
 document.addEventListener('change', ev => {
   const i = ev.target; if (!i.dataset || !i.dataset.torna) return;
@@ -569,6 +610,8 @@ const tuText = document.getElementById('tuText'), tuMsg = document.getElementByI
 tuText.addEventListener('input', () => {  // en enganxar el $tu, es marca sol
   const r = readTu(tuText.value); if (!Object.keys(r).length) return;
   if (window.millTu) window.millTu(tuText.value);
+  const P = readPower(tuText.value);
+  if (P) try { localStorage.setItem('mudae-poder', JSON.stringify({ ...P, t: Date.now() })); } catch (e) {}
   applyTu(r, Date.now()); tuText.value = '';
   tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
 });
@@ -1572,6 +1615,7 @@ def write_dashboard(d, hist):
  </div>
  <div class="hdr-r">
   <span class="pill" id="toolMsg" role="status"></span>
+  <button type="button" class="pill" id="notiBtn" aria-pressed="false" hidden><span class="dot"></span><span>{T_("Notificacions: no")}</span></button>
   <button type="button" class="pill" id="refaBtn">{T_("Actualitzar el tauler")}</button>
   <button type="button" class="pill" id="lnkBtn">{T_("Crear accés directe a l'escriptori")}</button>
   <button type="button" class="pill" id="stopBtn"><span class="dot ok"></span>{T_("Tancar el servidor")}</button>
