@@ -126,6 +126,7 @@ def lines(path):
     for raw in path.read_text(encoding="utf-8-sig").splitlines():
         star = "⭐" in raw
         line = re.sub(r"^\d+\.\s+", "", raw.replace("⭐", "").strip())  # numeració de Discord: "2. Remus Lupin"
+        line = re.sub(r"(?:\s*(?:✅|❌|✔️?|☑️?)|\s+\+\d+\s*%)+\s*$", "", line)  # marques del $wl: "Albedo ✅ +100%"
         if line and not SKIP.search(line):
             out.append((line.strip(), star))
     return out

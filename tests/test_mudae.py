@@ -33,6 +33,12 @@ class Llegir(Base):
         self.write("harem.txt", "1. MudaeAPP — 18:02\nHarem de jo\n2. Remus Lupin\nPage 1 / 21\n$mms\nHedwig ⭐\n")
         self.assertEqual(mudae.lines(self.tmp / "harem.txt"), [("Remus Lupin", False), ("Hedwig", True)])
 
+    def test_wishlist_amb_marques(self):
+        self.write("wishlist.txt", "ggezw's Wishlist - 15/15 $wl, 1/1 $sw\nAlbedo ✅ ⭐ +100%\nNero ✅ +200%\nRukia Kuchiki ✅\n"
+                                   "Yoruichi Shihōin ✅ +30%\nRemus Lupin\n")
+        self.assertEqual(mudae.lines(self.tmp / "wishlist.txt"), [("Albedo", True), ("Nero", False), ("Rukia Kuchiki", False),
+                                                                  ("Yoruichi Shihōin", False), ("Remus Lupin", False)])
+
     def test_fitxer_que_no_existeix(self):
         self.assertEqual(mudae.lines(self.tmp / "no.txt"), [])
 
