@@ -747,7 +747,7 @@ STYLE = """
 }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
-html { background:var(--bg); -webkit-tap-highlight-color:transparent; }
+html { background:var(--bg); -webkit-tap-highlight-color:transparent; scroll-padding-top:80px; }  /* que la barra fixa no tapi el camp on ets */
 body { margin:0; min-height:100vh; color:var(--ink); font:14.5px/1.5 var(--sans); background:var(--bg-grad) fixed;
   overflow-x:hidden; -webkit-font-smoothing:antialiased; }
 /* fons: dues llums suaus i una trama de punts que s'esvaeix cap avall */
@@ -908,11 +908,11 @@ button.ch.sel { background:var(--good-soft); color:var(--good); border:1px solid
 .tab:hover { background:rgba(255,255,255,.12); color:var(--ink); }
 .toggle { font-size:13px; color:var(--ink-2); display:flex; gap:6px; align-items:center; cursor:pointer; }
 .toggle input { accent-color:var(--accent); }
-textarea, select, input[type=text] { font:14px var(--sans); color:var(--ink); background:rgba(0,0,0,.22); border:1px solid var(--glass-b); border-radius:10px; }
+textarea, select, input[type=text], input[type=search] { font:14px var(--sans); color:var(--ink); background:rgba(0,0,0,.22); border:1px solid var(--glass-b); border-radius:10px; }
 textarea { padding:10px 12px; resize:vertical; width:100%; }
-select, input[type=text] { padding:6px 10px; border-radius:8px; }
+select, input[type=text], input[type=search] { padding:6px 10px; border-radius:8px; }
 select option { background:var(--surface); }
-textarea:focus, input[type=text]:focus, select:focus { outline:2px solid var(--accent); outline-offset:0; border-color:transparent; }
+textarea:focus, input[type=text]:focus, input[type=search]:focus, select:focus { outline:2px solid var(--accent); outline-offset:0; border-color:transparent; }
 #mineOut { display:grid; gap:14px; }
 .mg { display:grid; gap:6px; }
 .mg-head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:14px; }
@@ -931,7 +931,12 @@ textarea:focus, input[type=text]:focus, select:focus { outline:2px solid var(--a
 #cls input[type=text] { min-width:0; width:220px; }
 #wlBuild { display:grid; gap:10px; }
 #wlBuild .ch { cursor:pointer; }
-.ogrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:10px 28px; }
+.ogrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:10px 28px; align-items:start; }
+#ordres .og > summary { padding:6px 0; border-bottom:1px solid var(--line); }
+#ordres .og > summary h3 { margin:0; }
+#ordres .og > summary .muted { font-size:12px; }
+#ordres .fold-body { gap:0; margin-top:6px; }
+#ordQ { width:280px; max-width:100%; }
 .oline { display:flex; gap:10px; align-items:baseline; padding:4px 0; font-size:13.5px; color:var(--ink-2); }
 .oline .cmd { flex:none; }
 .steps { list-style:none; margin:0; padding:0; display:grid; gap:6px; font-size:13.5px; color:var(--ink-2); }
@@ -1049,6 +1054,14 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
                             ("$imaso <sèrie>", "Una sèrie sencera amb propietaris, per privat"), ("$im <personatge>", "Fitxa d'un personatge"),
                             ("$wl", "La teva wishlist"), ("$wish <nom>", "Afegeix a la wishlist (diversos: separa'ls amb $)"),
                             ("$wishremove <nom>", "Treu de la wishlist"), ("$sw <nom>", "Desig estrella")]),
+    # de la wiki de Mudae («List of Commands»), 31/10/2026
+    ("Harem i perfil", [("$mm", "El teu harem"), ("$fm <personatge>", "El teu preferit: surt primer al $mm i al $pr"),
+                        ("$sm <personatge>", "Ordena el harem: $sm Nom 1 $ Nom 2…"), ("$note <personatge>", "Una nota al harem: $note Nom $ text"),
+                        ("$fn <text>", "Busca les teves notes"), ("$c <personatge>", "Tria quina imatge surt primer: $c Nom $ número"),
+                        ("$a <personatge>", "Canvia el nom pel d'un àlies"), ("$pr", "El teu perfil"),
+                        ("$divorce <personatge>", "Te'n divorcies i et dona la seva kakera"), ("$like <personatge>", "L'afegeix a la llista de m'agrada"),
+                        ("$ll", "La llista de m'agrada: amb 5, desbloqueges el $daily"), ("$left", "Quants personatges queden per reclamar al servidor"),
+                        ("$top", "Els 1.000 personatges més reclamats"), ("$ts", "Rànquing del servidor")]),
     ("Intercanvis", [("$give @persona", "Regala personatges (separa'ls amb $)"), ("$trade @persona", "Intercanvi amb confirmació dels dos")]),
     ("Esferes", [("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"), ("$oq", "Joc d'esferes"), ("$ot", "Joc d'esferes"),
                  ("$opp <personatge>", "Millora un personatge amb esferes"), ("$os", "Botiga d'esferes: millores per a tots")]),
@@ -1059,6 +1072,9 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
                      ("$infokl", "Què donen els kakeraloots"), ("$quantity <número>", "Puja nivells de quantitat"), ("$quality <número>", "Puja nivells de qualitat")]),
     ("Kakera, insígnies i claus", [("$kakerareward", "Recompenses de la kakera"), ("$badges", "Les teves insígnies"), ("$bronze", "Insígnia de bronze (i $silver, $gold…)"),
                                    ("$bku", "Bonus de les claus daurades"), ("$infokeys", "Com funcionen les claus"), ("$givekakera @persona <número>", "Regala kakera")]),
+    ("Pokéslot", [("$p", "Tirada de Pokémon: cada 2 h, per a tots els servidors"), ("$pd", "La teva Pokédex"),
+                  ("$arl", "Allibera els repetits i et dona tirades"), ("$r <pokémon>", "N'allibera un i et dona tirades"),
+                  ("$sh <pokémon>", "Cacera de shiny d'aquest Pokémon"), ("$pl <pokémon>", "El protegeix perquè l'$arl no l'alliberi")]),
     ("Admin del servidor", [("$forcedivorce <nom>", "Allibera un personatge"), ("$restorelist", "Personatges alliberats per admins"),
                             ("$restore <nom>", "Torna un personatge alliberat")]),
 ]
@@ -1442,6 +1458,23 @@ clsSync();
 """
 
 
+JS_ORD = r"""
+// «Ordres d'ús habitual»: el cercador filtra per ordre, pel que fa o pel nom del grup, i obre els grups on n'hi ha
+const ordQ = document.getElementById('ordQ'), ordGroups = [...document.querySelectorAll('#ordres details.og')];
+ordQ.addEventListener('input', () => {
+  const k = ordQ.value.trim().toLowerCase();
+  let any = false;
+  ordGroups.forEach(g => {
+    const all = g.querySelector('h3').textContent.toLowerCase().includes(k);
+    let n = 0;
+    g.querySelectorAll('.oline').forEach(l => { l.hidden = !!k && !all && !l.textContent.toLowerCase().includes(k); n += !l.hidden; });
+    g.hidden = !n; g.open = !!k && !!n; any = any || !!n;
+  });
+  document.getElementById('ordNone').hidden = any;
+});
+"""
+
+
 JS_WL = r"""
 // Muntador de wishlist: què treure (ja és teu o d'algú altre) i què posar-hi (lliures de prioritat alta, per ordre)
 const WL = __WL__, MAX = 15;
@@ -1651,8 +1684,9 @@ def write_dashboard(d, hist):
     datalists = ('<datalist id="dlNames">' + "".join(f'<option value="{e(x["name"])}">' for x in d["sobrants"]) + '</datalist>'
                  + '<datalist id="dlSeries">' + "".join(f'<option value="{e(x)}">' for x in all_series) + '</datalist>')
     serie_opts = "".join(f'<option value="{e(x["name"])}">{e(x["name"])}</option>' for x in series)
-    ordres = "".join(
-        f'<div class="og"><h3>{e(t(g))}</h3>' + "".join(f'<div class="oline">{cmd_html(c)}<span>{e(t(desc))}</span></div>' for c, desc in items) + "</div>"
+    ordres = "".join(  # un grup plegable per tema: tancats d'entrada, el cercador els obre
+        f'<details class="og fold"><summary><h3>{e(t(g))}</h3><span class="muted">{len(items)}</span></summary><div class="fold-body">'
+        + "".join(f'<div class="oline">{cmd_html(c)}<span>{e(t(desc))}</span></div>' for c, desc in items) + "</div></details>"
         for g, items in ORDRES)
     oc = f"oc.html?lang={LANG}"
     roman = ["0", "I", "II", "III", "IV"]
@@ -1841,7 +1875,9 @@ def write_dashboard(d, hist):
  <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
  <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
 </section>
-<section class="panel"><h2>{T_("Ordres d'ús habitual")}</h2><div class="ogrid">{ordres}</div></section>
+<section class="panel" id="ordres"><div class="panel-head"><h2>{T_("Ordres d'ús habitual")}</h2>
+ <input type="search" id="ordQ" spellcheck="false" autocomplete="off" aria-label="{T_("Busca una ordre")}" placeholder="{T_("Busca una ordre: wish, kakera, $tu…")}"></div>
+ <div class="ogrid">{ordres}</div><p class="muted" id="ordNone" style="margin:0;font-size:14px" hidden>{T_("Cap ordre amb aquest text.")}</p></section>
 </div>
 <footer class="foot glass">Developed by <a href="https://github.com/Vlarac03">Vlarac</a> · {T_("Tauler de Mudae")} · {T_("Projecte de fans, no afiliat amb Mudae")}</footer>
 </main><div id="tip"></div>
@@ -1957,6 +1993,7 @@ ocFold.addEventListener('toggle', () => {{ try {{ localStorage.setItem('mudae-oc
 <script>{JS_ESP}</script>
 <script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
 <script>{JS_CLS}</script>
+<script>{JS_ORD}</script>
 <script>{JS_WL.replace("__WL__", wl_json)}</script>
 <script>{JS_MINE.replace("__MINE__", js(mine)).replace("__COLLS__", js([x["name"] for x in series])).replace("__ALTRES__", js(ALTRES))}</script></body></html>"""
     DASH.write_text(page, encoding="utf-8")
