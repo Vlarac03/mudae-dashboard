@@ -13,7 +13,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 ## Qué hace
 
 - **Qué toca ahora**: reloj de tiradas y reclamos, y una lista donde cada tarea queda marcada hasta que la puedes volver a hacer (`$daily` y `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a medianoche UTC, tiradas cada hora…).
-- **Notificaciones**: mientras el panel está abierto, te avisa cuando vuelves a tener tiradas, y te dice si puedes reclamar y reaccionar a kakera. Se activan y se desactivan con el botón **Notificaciones** de arriba.
+- **Notificaciones**: mientras el panel está abierto, te avisa cuando vuelves a tener tiradas, y te dice si puedes reclamar y reaccionar a kakera. Suenan y se quedan en pantalla hasta que las cierras. Se activan y se desactivan con el botón **Notificaciones** de arriba.
 - **Ayudante del `$oc`**: marcas los colores que salen y te dice en qué casilla hacer clic para encontrar la roja.
 - **Colecciones**: un álbum por serie con tus personajes, los libres, los de la wishlist y los de otros jugadores (y de quién son). Haces clic en los que consigues para marcarlos como tuyos.
 - **Colecciones especiales**: un grupo que eliges tú, aunque no sea una serie de Mudae (por ejemplo, los Eevee de la Pokédex). Escribes el nombre y los personajes, y el `$imaso` de la serie de la que salen te pone de quién es cada uno.

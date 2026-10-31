@@ -539,10 +539,18 @@ function applyTu(r, now) {
   });
   save(s); tick();
 }
-// El poder de kakera del $tu («Poder: 110%», «consume 36% de su poder»): {p, c}, o null si no hi surt
+// El poder de kakera del $tu («Poder: 110%», «consume 36% de su poder», «10+ llaves … (18%)»): {p, c, h}, o null si no hi surt
 function readPower(text) {
   const p = text.match(/(?:^|\\n)\\s*(?:poder|power)\\s*:\\s*(\\d+)\\s*%/i), c = text.match(/(\\d+)\\s*%[^\\n]*(?:poder|power)/i);
-  return p && c ? { p: +p[1], c: +c[1] } : null;
+  const h = text.match(/10\\+[^\\n]*?(\\d+)\\s*%/);
+  return p && c ? { p: +p[1], c: +c[1], h: h ? +h[1] : Math.round(c[1] / 2) } : null;
+}
+// Què gasta cada reacció a kakera: canvia amb les millores, així que surt del darrer $tu enganxat
+function powerDraw() {
+  let P = null; try { P = JSON.parse(localStorage.getItem('mudae-poder')); } catch (e) {}
+  const d = document.querySelector('input[data-tu="kakera"]')?.closest('.task').querySelector('.desc');
+  if (P && d) d.textContent = T('Cada reacció gasta {c} % de poder ({h} % amb personatges de 10+ claus). Al $tu de les {t} tenies {p} %.',
+    { c: P.c, h: P.h ?? Math.round(P.c / 2), t: hm(new Date(P.t)), p: P.p });
 }
 function load() { try { return JSON.parse(localStorage.getItem('mudae-fet') || '{}'); } catch (e) { return {}; } }
 function save(s) { try { localStorage.setItem('mudae-fet', JSON.stringify(s)); } catch (e) {} }
@@ -581,8 +589,27 @@ function notiBody() {
   if (P) out.push(T('Poder al $tu de les {h}: {p}% ({n} botons de kakera)', { h: hm(new Date(P.t)), p: P.p, n: Math.floor(P.p / P.c) }));
   return out.join('\\n');
 }
+// Un so curt al tauler: Windows sovint no en fa. El navegador només deixa sonar si ja has clicat la pàgina.
+let audio;
+const audioOn = () => { try { audio = audio || new AudioContext(); audio.resume(); } catch (e) {} };
+document.addEventListener('pointerdown', audioOn, { once: true });
+function beep() {
+  audioOn(); if (!audio) return;
+  try {
+    [0, 0.3].forEach(d => {
+      const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + d;
+      o.frequency.value = 880; g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + 0.25);
+    });
+  } catch (e) {}
+}
+const TITLE = document.title;  // la pestanya avisa fins que hi tornes
+document.addEventListener('visibilitychange', () => { if (!document.hidden) document.title = TITLE; });
 function notify() {
-  try { const n = new Notification(T('Ja pots fer $m'), { body: notiBody(), tag: 'mudae-m' }); n.onclick = () => { window.focus(); n.close(); }; } catch (e) {}
+  beep();
+  if (document.hidden) document.title = '🔔 ' + T('Ja pots fer $m');
+  // renotify: amb la mateixa etiqueta, si no, la segona surt sense avisar; requireInteraction: es queda fins que la tanques
+  try { const n = new Notification(T('Ja pots fer $m'), { body: notiBody(), tag: 'mudae-m', renotify: true, requireInteraction: true }); n.onclick = () => { window.focus(); n.close(); }; } catch (e) {}
 }
 function notiDraw() {
   const on = notiOn();
@@ -598,7 +625,7 @@ if (notiBtn && HAS_NOTI) {
       return notiDraw();
     }
     try { localStorage.setItem('mudae-noti', '1'); } catch (e) {}
-    notiDraw();
+    notiDraw(); beep();
     try { new Notification(T('Notificacions activades'), { body: T("T'avisaré quan tornis a tenir tirades, mentre el tauler sigui obert.") }); } catch (e) {}
   };
 }
@@ -614,10 +641,10 @@ tuText.addEventListener('input', () => {  // en enganxar el $tu, es marca sol
   if (window.millTu) window.millTu(tuText.value);
   const P = readPower(tuText.value);
   if (P) try { localStorage.setItem('mudae-poder', JSON.stringify({ ...P, t: Date.now() })); } catch (e) {}
-  applyTu(r, Date.now()); tuText.value = '';
+  powerDraw(); applyTu(r, Date.now()); tuText.value = '';
   tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
 });
-tick(); setInterval(tick, 30000);
+powerDraw(); tick(); setInterval(tick, 30000);
 
 // mentre la pestanya és oberta, diu al servidor que continua aquí; si es tanca, el servidor plega sol
 if (location.protocol.startsWith('http')) setInterval(() => fetch('/ping', { cache: 'no-store' }).catch(() => {}), 20000);

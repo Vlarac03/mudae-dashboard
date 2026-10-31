@@ -51,7 +51,8 @@ assert.deepEqual(readTu("You have 0 rolls left.\n$rt is not ready"), { rolls: tr
 assert.deepEqual(readTu('Hola'), {});
 // el poder de kakera, per a la notificació de les tirades
 const readPower = new Function(js.match(/function readPower[\s\S]*?\n}\n/)[0].replaceAll('\\\\', '\\') + 'return readPower;')();
-assert.deepEqual(readPower(tuEs), { p: 110, c: 36 });
-assert.deepEqual(readPower('Power: 85%\nEach kakera button consumes 36% of your reaction power.'), { p: 85, c: 36 });
+assert.deepEqual(readPower(tuEs), { p: 110, c: 36, h: 18 });
+assert.deepEqual(readPower(tuEs.replace('(18%)', '(15%)')), { p: 110, c: 36, h: 15 });  // el 10+ es llegeix, no es calcula
+assert.deepEqual(readPower('Power: 85%\nEach kakera button consumes 36% of your reaction power.'), { p: 85, c: 36, h: 18 });  // sense la línia 10+: la meitat
 assert.equal(readPower(tuEn), null);
 console.log('rutina: totes les proves passen');

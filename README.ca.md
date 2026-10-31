@@ -13,7 +13,7 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 ## Què fa
 
 - **Què toca ara**: rellotge de tirades i reclams, i una llista on cada tasca queda marcada fins que la pots tornar a fer (`$daily` i `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a mitjanit UTC, tirades cada hora…).
-- **Notificacions**: mentre el tauler és obert, t'avisa quan tornes a tenir tirades, i et diu si pots reclamar i reaccionar a kakera. S'activen i es desactiven amb el botó **Notificacions** de dalt.
+- **Notificacions**: mentre el tauler és obert, t'avisa quan tornes a tenir tirades, i et diu si pots reclamar i reaccionar a kakera. Fan un so i es queden a la pantalla fins que les tanques. S'activen i es desactiven amb el botó **Notificacions** de dalt.
 - **Ajudant del `$oc`**: marques els colors que surten i et diu quina casella clicar per trobar la vermella.
 - **Col·leccions**: un àlbum per sèrie amb els teus personatges, els lliures, els de la wishlist i els d'altres jugadors (i de qui són). Cliques els que aconsegueixes per marcar-los com a teus.
 - **Col·leccions especials**: un grup que tries tu, encara que no sigui una sèrie de Mudae (per exemple, els Eevee de la Pokédex). Escrius el nom i els personatges, i el `$imaso` de la sèrie d'on surten t'hi posa de qui és cada un.
