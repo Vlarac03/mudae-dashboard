@@ -53,6 +53,7 @@ A partir d'aquí, obre el tauler amb l'accés directe **Mudae** de l'escriptori.
 - **Tanca l'Excel** abans de fer servir els botons del tauler: si és obert, no es pot desar.
 - Els botons fan servir un servidor petit que només escolta al teu ordinador (`127.0.0.1`) i només accepta peticions del tauler. Es tanca sol un parell de minuts després de tancar la pestanya, o amb el botó **Tancar el servidor**.
 - Pots enganxar els missatges tal qual: les capçaleres de Discord, «Page 1 / 21» i la numeració s'ignoren.
+- **Versions noves**: el botó **Actualitzar el tauler** mira si n'hi ha una a GitHub i, si li dius que sí, la posa sola. La carpeta `dades/` no es toca. (Si tens una versió d'abans d'aquest botó, baixa el ZIP un cop i copia'n els fitxers damunt dels teus.)
 - **No esborris la carpeta `lib`**: hi ha el que necessita el programa per escriure l'Excel.
 
 ## Les teves dades

@@ -274,6 +274,19 @@ class Seguretat(unittest.TestCase):
         quit_req = urllib.request.Request(base + "/quit", data=b"{}", headers={"Content-Type": "application/json"})
         urllib.request.urlopen(quit_req, timeout=3)
 
+    def test_actualitzar_no_surt_de_la_carpeta_ni_toca_dades(self):
+        import io
+        import zipfile
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for n in ("mudae-dashboard-main/", "mudae-dashboard-main/mudae.py", "mudae-dashboard-main/lib/x.py",
+                      "mudae-dashboard-main/dades/config.json", "mudae-dashboard-main/../fora.py", "mudae-dashboard-main/C:/x.py"):
+                z.writestr(n, "")
+            z.writestr("mudae-dashboard-main/Actualitza.bat", "@echo off\necho hola\n")
+        files = mudae.zip_files(zipfile.ZipFile(buf))
+        self.assertEqual(sorted(files), ["Actualitza.bat", "lib/x.py", "mudae.py"])
+        self.assertEqual(files["Actualitza.bat"], b"@echo off\r\necho hola\r\n")  # cmd vol CRLF
+
 
 class Ordres(unittest.TestCase):
     def test_botons_de_copiar(self):

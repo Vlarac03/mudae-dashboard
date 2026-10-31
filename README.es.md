@@ -53,6 +53,7 @@ A partir de aquí, abre el panel con el acceso directo **Mudae** del escritorio.
 - **Cierra el Excel** antes de usar los botones del panel: si está abierto, no se puede guardar.
 - Los botones usan un servidor pequeño que solo escucha en tu ordenador (`127.0.0.1`) y solo acepta peticiones del panel. Se cierra solo un par de minutos después de cerrar la pestaña, o con el botón **Cerrar el servidor**.
 - Puedes pegar los mensajes tal cual: las cabeceras de Discord, «Page 1 / 21» y la numeración se ignoran.
+- **Versiones nuevas**: el botón **Actualizar el panel** mira si hay una en GitHub y, si le dices que sí, la pone sola. La carpeta `dades/` no se toca. (Si tienes una versión de antes de este botón, descarga el ZIP una vez y copia sus archivos encima de los tuyos.)
 - **No borres la carpeta `lib`**: tiene lo que necesita el programa para escribir el Excel.
 
 ## Tus datos

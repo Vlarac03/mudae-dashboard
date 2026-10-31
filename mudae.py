@@ -1822,10 +1822,20 @@ document.addEventListener('click', async ev => {{
 const toolMsg = document.getElementById('toolMsg'), lnkBtn = document.getElementById('lnkBtn'), stopBtn = document.getElementById('stopBtn');
 const refaBtn = document.getElementById('refaBtn');
 if (location.protocol === 'file:') {{ lnkBtn.disabled = stopBtn.disabled = refaBtn.disabled = true; }}
-refaBtn.onclick = async () => {{  // torna a fer el tauler i l'Excel amb el codi d'ara, com l'Actualitza.bat
+// Torna a fer el tauler i l'Excel, com l'Actualitza.bat, i mira si hi ha una versió nova a GitHub: si n'hi ha, pregunta i la posa
+const wait = ms => new Promise(r => setTimeout(r, ms));
+refaBtn.onclick = async () => {{
   refaBtn.disabled = true; toolMsg.textContent = T('Actualitzant…');
-  try {{ const j = await postJSON('/refa'); if (j.ok) return location.reload(); toolMsg.innerHTML = ERR_MSG(j.error); }}
-  catch (err) {{ toolMsg.innerHTML = NET_MSG(); }}
+  try {{
+    const j = await postJSON('/novetats'); if (!j.ok) throw j.error;
+    if (j.warn && confirm(T('Hi ha una versió nova del tauler a GitHub. La poso ara? Les teves dades no es toquen.'))) {{
+      toolMsg.textContent = T('Posant la versió nova…');
+      const u = await postJSON('/actualitza'); if (!u.ok) throw u.error;
+      await wait(3000);  // el servidor nou substitueix el vell: esperem que respongui
+      for (let k = 0; k < 15; k++) try {{ await fetch('/ping', {{ cache: 'no-store' }}); break; }} catch (e) {{ await wait(1000); }}
+    }}
+    return location.reload();
+  }} catch (err) {{ toolMsg.innerHTML = typeof err === 'string' ? ERR_MSG(err) : NET_MSG(); }}
   refaBtn.disabled = false;
 }};
 lnkBtn.onclick = async () => {{
@@ -2275,6 +2285,37 @@ def make_shortcut():
         raise RuntimeError(t("No he pogut crear l'accés directe a l'escriptori."))
 
 
+REPO_ZIP = "https://github.com/Vlarac03/mudae-dashboard/archive/refs/heads/main.zip"
+
+
+def github_files():
+    """La darrera versió de GitHub: {camí: bytes}. Mai res de dades/ ni camins que surtin de la carpeta."""
+    import io
+    import urllib.request
+    import zipfile
+    with urllib.request.urlopen(REPO_ZIP, timeout=30) as r:
+        return zip_files(zipfile.ZipFile(io.BytesIO(r.read())))
+
+
+def zip_files(z):
+    out = {}
+    for n in z.namelist():
+        p = n.split("/", 1)[1] if "/" in n else ""  # treu la carpeta «mudae-dashboard-main/»
+        if not p or p.endswith("/") or p.startswith(("dades/", "/")) or ".." in p.split("/") or ":" in p or "\\" in p:
+            continue
+        data = z.read(n)
+        if p.endswith(".bat"):  # cmd llegeix malament els .bat sense CRLF
+            data = data.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+        out[p] = data
+    return out
+
+
+def changed_files(files):
+    """Els fitxers de GitHub que aquí falten o són diferents (sense comptar els salts de línia: el ZIP i Git els poden canviar)."""
+    norm = lambda b: b.replace(b"\r\n", b"\n")
+    return [p for p, data in files.items() if not (DIR / p).is_file() or norm((DIR / p).read_bytes()) != norm(data)]
+
+
 def do_action(action, body):
     """El que fan els botons del tauler. S'executa en un procés nou, sempre amb la versió actual del codi."""
     if action == "rebut":
@@ -2297,6 +2338,24 @@ def do_action(action, body):
         save_special(str(body["name"]), str(body["text"]))
     elif action == "refa":
         pass  # només tornar a fer el tauler i l'Excel (main() ho fa després de cada acció)
+    elif action == "novetats":  # «Actualitzar el tauler»: quants fitxers han canviat a GitHub ("" si cap); el tauler es refà igualment
+        if (DIR / ".git").exists():
+            return ""  # una còpia de git (la de Victor) es posa al dia amb git pull, no aquí
+        try:
+            n = len(changed_files(github_files()))
+        except OSError:
+            return ""  # shortcut: sense internet, com si no n'hi hagués; si cal, avisar-ne al tauler
+        return str(n) if n else ""
+    elif action == "actualitza":  # posa la versió de GitHub; dades/ no es toca mai, i no s'esborra res
+        if (DIR / ".git").exists():
+            raise ValueError(t("Aquesta carpeta és una còpia de git: posa-la al dia amb git pull."))
+        files = github_files()
+        for p in changed_files(files):
+            (DIR / p).parent.mkdir(parents=True, exist_ok=True)
+            (DIR / p).write_bytes(files[p])
+        import subprocess
+        # aquest procés encara té el codi vell carregat: el tauler i l'Excel els fa el nou
+        raise SystemExit(subprocess.run([sys.executable, str(DIR / "mudae.py")]).returncode)
     else:
         raise ValueError(t("No sé fer «{action}».", action=action))
 
@@ -2389,6 +2448,10 @@ def serve(port=PORT):
             except Exception as ex:
                 res = {"ok": False, "error": str(ex)}
             self.reply(res)
+            if self.path == "/actualitza" and res["ok"] and str((DIR / "mudae.py").stat().st_mtime_ns) != VERSION:
+                # aquest servidor és codi vell: n'engega un de nou, que li demanarà que plegui (com fa Actualitza.bat)
+                subprocess.Popen([sys.executable, str(DIR / "mudae.py"), "tauler"], env={**os.environ, "MUDAE_SENSE_NAVEGADOR": "1"},
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
     base = f"http://127.0.0.1:{port}"
     last_seen = [time.monotonic()]
@@ -2406,7 +2469,8 @@ def serve(port=PORT):
                 time.sleep(1.5)
             except OSError:
                 time.sleep(1.5)
-    webbrowser.open(base + "/dashboard.html")
+    if not os.environ.pop("MUDAE_SENSE_NAVEGADOR", None):  # el servidor nou d'una actualització: el tauler ja és obert
+        webbrowser.open(base + "/dashboard.html")
     if httpd:
         def watchdog():  # sense notícies del tauler (pestanya tancada), el servidor plega sol
             while True:
