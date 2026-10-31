@@ -6,27 +6,28 @@
 <b>Download:</b> green <b>Code → Download ZIP</b> button at the top of this page.<br>
 <b>English</b> · <a href="README.ca.md">Català</a> · <a href="README.es.md">Español</a></p>
 
-![The dashboard: collection stats, what to do now and the $oc helper](assets/tauler.png)
+![The Today tab: collection stats, the roll and claim clock, and what to do now](assets/tauler.png)
 
 A dashboard that runs on your own computer for the Mudae Discord bot. You paste what Mudae sends you and it tracks your collections, wishlist and trades, tells you what to do each hour, helps you with the `$oc` sphere game and keeps an Excel workbook up to date. Available in English, Catalan and Spanish.
 
 ## Features
 
-- **What to do now**: a clock for rolls and claims, and a checklist where each task stays ticked until you can do it again (`$daily` and `$dk` every 20 h, `$vote` every 12 h, `$oh` at midnight UTC, rolls every hour…).
+- **Tabs in the order you use them**: Today, Collections, Wishlist, Trades, Upgrades and Update. The roll and claim clock stays above the tabs, alerts take you to the tab where you fix them, and long sections fold away and stay open or closed the way you left them.
+- **What to do now**: paste your `$tu` and the checklist ticks itself. Three cards (every hour, claim time, start of the day) where each task stays ticked until you can do it again (`$daily` and `$dk` every 20 h, `$vote` every 12 h, `$oh` at midnight UTC, rolls every hour…).
 - **Notifications**: while the dashboard is open, it tells you when your rolls are back, and whether you can claim and react to kakera. They beep and stay on screen until you close them. Turn them on and off with the **Notifications** button at the top.
-- **`$oc` helper**: mark the colors that appear and it tells you which square to click to find the red sphere.
+- **`$oc` helper**: mark the colors that appear and it tells you which square to click to find the red sphere. It's folded on the Today tab: open it with a click.
 - **Collections**: one album per series with your characters, the free ones, the ones on your wishlist and the ones other players own (and who). Click the ones you get to mark them as yours.
 - **Custom collections**: a group you pick, even if it isn't a Mudae series (for example, the Eevees from the Pokédex). Type its name and characters, and the `$imaso` of the series they come from fills in who owns each one.
 - **Upgrades**: paste your `$k`, `$kt`, `$opp <character>`, `$os` or `$mmy=` and it tells you which badge, tower floor, sphere perk and sphere shop upgrade to get next, and how much kakera you still need.
 - **Wishlist**: warns you about characters you already own or someone else claimed, and builds the `$wishremove` and `$wish` commands for you.
 - **Trades and gifts**: the `$give` command for each player, and a search box that understands misspelled series lists («full metal alchimist», «Rezero»…).
 - **Update**: paste your `$mma+s` (your harem, with each character's series), `$wl` or an `$imaso` and click a button. It reminds you if your harem is more than a week old.
-- **Common commands**: all of them, with what they do and a copy button.
+- **Common commands**: grouped by topic (rolls, claims, your collection, harem and profile, trades, spheres, tower, kakera, Pokéslot…), each group folded, with a search box («wish», «kakera»…), what each command does and a copy button.
 - **Excel**: the same in a spreadsheet, which keeps what you type in it (priorities, notes, trade status).
 
-| Collections | Search for gifts |
+| Collections | Trades and gifts |
 |---|---|
-| ![A collection album](assets/col-leccions.png) | ![Series search](assets/cercador.png) |
+| ![A collection album](assets/col-leccions.png) | ![Who to ask and the gift search](assets/cercador.png) |
 
 ## Install (5 minutes)
 
@@ -45,7 +46,7 @@ From then on, open the dashboard with the **Mudae** shortcut on your desktop.
 
 - **What to do now** tells you what to do and when. Tick things as you do them.
 - **When you get a character**: in «Collections», choose the series, click it and click **They're mine**.
-- **When you give characters away**: in «Search my characters», find them, copy the `$give` command and, once Mudae confirms it, click **I've given them**.
+- **When you give characters away**: in «Trades» → «Search my characters», find them, copy the `$give` command and, once Mudae confirms it, click **I've given them**.
 - **Once a week**: paste your `$mma+s` again in «Update» (the dashboard reminds you).
 
 ## Good to know
@@ -54,6 +55,7 @@ From then on, open the dashboard with the **Mudae** shortcut on your desktop.
 - The buttons use a small server that only listens on your own computer (`127.0.0.1`) and only accepts requests from the dashboard. It stops by itself a couple of minutes after you close the tab, or with **Stop the server** in the **···** menu at the top.
 - You can paste messages as they are: Discord headers, «Page 1 / 21» and numbering are ignored.
 - **New versions**: the **Refresh dashboard** button checks GitHub for a new version and, if you say yes, installs it. The `dades/` folder is not touched. (If your version is older than this button, download the ZIP once and copy its files over yours.)
+- **Lost the desktop shortcut?** The **···** menu at the top has **Create desktop shortcut**.
 - **Don't delete the `lib` folder**: it has what the program needs to write the Excel file.
 
 ## Your data

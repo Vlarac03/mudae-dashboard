@@ -6,27 +6,28 @@
 <b>Descárgalo:</b> botón verde <b>Code → Download ZIP</b>, arriba de esta página.<br>
 <a href="README.md">English</a> · <a href="README.ca.md">Català</a> · <b>Español</b></p>
 
-![El panel: cifras de la colección, qué toca ahora y el ayudante del $oc](assets/tauler.png)
+![La pestaña Hoy: cifras de la colección, el reloj de tiradas y reclamo, y qué toca ahora](assets/tauler.png)
 
 Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que te envía Mudae y te lleva las colecciones, la wishlist y los intercambios, te dice qué toca hacer cada hora, te ayuda con el juego de esferas `$oc` y te mantiene al día un Excel. En español, catalán e inglés.
 
 ## Qué hace
 
-- **Qué toca ahora**: reloj de tiradas y reclamos, y una lista donde cada tarea queda marcada hasta que la puedes volver a hacer (`$daily` y `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a medianoche UTC, tiradas cada hora…).
+- **Pestañas por orden de uso**: Hoy, Colecciones, Wishlist, Intercambios, Mejoras y Poner al día. El reloj de tiradas y reclamo se ve desde todas, los avisos te llevan a la pestaña donde se arreglan, y los bloques largos se pliegan y se quedan abiertos o cerrados como los dejaste.
+- **Qué toca ahora**: pegas el `$tu` y la lista se marca sola. Tres tarjetas (cada hora, momento de reclamar, al empezar el día) donde cada tarea queda marcada hasta que la puedes volver a hacer (`$daily` y `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a medianoche UTC, tiradas cada hora…).
 - **Notificaciones**: mientras el panel está abierto, te avisa cuando vuelves a tener tiradas, y te dice si puedes reclamar y reaccionar a kakera. Suenan y se quedan en pantalla hasta que las cierras. Se activan y se desactivan con el botón **Notificaciones** de arriba.
-- **Ayudante del `$oc`**: marcas los colores que salen y te dice en qué casilla hacer clic para encontrar la roja.
+- **Ayudante del `$oc`**: marcas los colores que salen y te dice en qué casilla hacer clic para encontrar la roja. Está plegado en la pestaña Hoy: se abre con un clic.
 - **Colecciones**: un álbum por serie con tus personajes, los libres, los de la wishlist y los de otros jugadores (y de quién son). Haces clic en los que consigues para marcarlos como tuyos.
 - **Colecciones especiales**: un grupo que eliges tú, aunque no sea una serie de Mudae (por ejemplo, los Eevee de la Pokédex). Escribes el nombre y los personajes, y el `$imaso` de la serie de la que salen te pone de quién es cada uno.
 - **Mejoras**: pegas el `$k`, el `$kt`, un `$opp <personaje>`, el `$os` o el `$mmy=` y te dice qué insignia, qué piso de la torre, qué mejora de esferas y qué mejora de la tienda de esferas te toca, y cuánta kakera te falta.
 - **Wishlist**: te avisa de los que ya son tuyos o que ha reclamado alguien, y te prepara los comandos `$wishremove` y `$wish`.
 - **Intercambios y regalos**: el comando `$give` para cada jugador, y un buscador que entiende listas de series mal escritas («full metal alchimist», «Rezero»…).
 - **Poner al día**: pegas el `$mma+s` (tu harem, con la serie de cada personaje), el `$wl` o un `$imaso` y haces clic en un botón. Te avisa si hace más de una semana que no pones al día el harem.
-- **Comandos de uso habitual**: todos, con lo que hacen y un botón de copiar.
+- **Comandos de uso habitual**: por temas (tiradas, reclamar, tu colección, harén y perfil, intercambios, esferas, torre, kakera, Pokéslot…), cada grupo plegado, con un buscador («wish», «kakera»…), lo que hace cada comando y un botón de copiar.
 - **Excel**: lo mismo en una hoja de cálculo, que respeta lo que escribes en ella (prioridades, notas, estado de los intercambios).
 
-| Colecciones | Buscador para regalos |
+| Colecciones | Intercambios y regalos |
 |---|---|
-| ![Álbum de una colección](assets/col-leccions.png) | ![Buscador de series](assets/cercador.png) |
+| ![Álbum de una colección](assets/col-leccions.png) | ![A quién pedir y el buscador para regalos](assets/cercador.png) |
 
 ## Instalación (5 minutos)
 
@@ -45,7 +46,7 @@ A partir de aquí, abre el panel con el acceso directo **Mudae** del escritorio.
 
 - **Qué toca ahora** te dice qué hacer y cuándo. Ve marcando lo que haces.
 - **Cuando consigas un personaje**: en «Colecciones», elige la serie, haz clic en él y en **Ya son míos**.
-- **Cuando regales**: en «Buscar entre los míos», búscalos, copia el `$give` y, cuando Mudae lo confirme, haz clic en **Ya los he dado**.
+- **Cuando regales**: en «Intercambios» → «Buscar entre los míos», búscalos, copia el `$give` y, cuando Mudae lo confirme, haz clic en **Ya los he dado**.
 - **Una vez por semana**: vuelve a pegar el `$mma+s` en «Poner al día» (el panel te avisa).
 
 ## Bueno saber
@@ -54,6 +55,7 @@ A partir de aquí, abre el panel con el acceso directo **Mudae** del escritorio.
 - Los botones usan un servidor pequeño que solo escucha en tu ordenador (`127.0.0.1`) y solo acepta peticiones del panel. Se cierra solo un par de minutos después de cerrar la pestaña, o con **Cerrar el servidor**, en el menú **···** de arriba.
 - Puedes pegar los mensajes tal cual: las cabeceras de Discord, «Page 1 / 21» y la numeración se ignoran.
 - **Versiones nuevas**: el botón **Actualizar el panel** mira si hay una en GitHub y, si le dices que sí, la pone sola. La carpeta `dades/` no se toca. (Si tienes una versión de antes de este botón, descarga el ZIP una vez y copia sus archivos encima de los tuyos.)
+- **¿Has perdido el acceso directo?** En el menú **···** de arriba está **Crear acceso directo en el escritorio**.
 - **No borres la carpeta `lib`**: tiene lo que necesita el programa para escribir el Excel.
 
 ## Tus datos
