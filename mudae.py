@@ -92,6 +92,8 @@ RUTINA = [
     ("aconseguit", "Obrir el tauler", "Mudae", "Accés directe de l'escriptori: posa al dia l'Excel i obre el tauler", None),
     ("temps", "Intercanvis", "$trade @persona", "Full Intercanvis: a qui demanar què. Ofereix dels Sobrants", None),
     ("temps", "Kakera estalviada", "$build 8", "Quan arribis als 35.000: pis [8] de la torre (o l'[11])", None),
+    # al final perquè els data-id (r0, r1…) de les tasques que ja tenies marcades no canviïn; al tauler surt a «Cada hora»
+    ("hora", "Pokéslot", "$p", "Tirada de Pokémon: cada 2 h, per a tots els servidors", 2),
 ]
 
 SKIP = re.compile(r"Harem de|Wishlist|^Page\b|\bAPP\b|—\s*\d{1,2}:\d{2}|^\$|^Mudae$|^\d+\s*/\s*\d+$", re.I)
@@ -486,7 +488,7 @@ document.addEventListener('toggle', ev => {  // toggle no puja: l'escoltem en la
 
 # Tasques de RUTINA que es marquen soles en enganxar el $tu (per ordre, o per grup i ordre)
 TU_KEY = {"$tu": "tu", "$vote": "vote", "$daily": "daily", "$oh (×4)": "oh", "$oc": "oc", ("hora", "$m"): "rolls",
-          "clic al botó": "kakera", "clic al cor": "claim", "$rt": "rt", "$dk": "dk"}
+          "clic al botó": "kakera", "clic al cor": "claim", "$rt": "rt", "$dk": "dk", "$p": "p"}
 
 JS_TODAY = """
 const CLAIM = __CLAIM__, clock = document.getElementById('clock'), claimNow = document.getElementById('claimNow');
@@ -524,6 +526,7 @@ function readTu(text) {
     else if (/kakera/.test(low) && /reacc|react/.test(low)) set('kakera', no(l) ? mins(l) || true : 0);
     else if (/\\$rt\\b/.test(low)) set('rt', wait(l));
     else if (/\\$dk\\b/.test(low)) set('dk', wait(l));
+    else if (/\\$p\\b|pok[eé]mon/.test(low)) set('p', wait(l));  // shortcut: format suposat (no tenim cap $tu amb la línia del Pokéslot); mirar-ho amb un de real
     else if (/\\bvot|\\bvote/.test(low)) set('vote', mins(l));
     else if (/\\$oh\\b/.test(low)) {
       const next = mins(l) || mins(ls.slice(k + 1).find(x => x.trim()) || '') || true;  // «14h 16 min hasta la recarga.»
@@ -563,7 +566,8 @@ function powerDraw() {
 function load() { try { return JSON.parse(localStorage.getItem('mudae-fet') || '{}'); } catch (e) { return {}; } }
 function save(s) { try { localStorage.setItem('mudae-fet', JSON.stringify(s)); } catch (e) {} }
 const backOf = (i, s) => { const t = s[i.dataset.id]; return typeof t === 'number' ? until(i.dataset.torna, t) : (t && t.b) || 0; };  // {b}: l'hora que deia el $tu
-let rollsWas;
+// Tasques que avisen quan tornen soles. El $oh i el $oc no: tornen a mitjanit UTC (la 1 de la matinada).
+const NOTI = ['rolls', 'claim', 'daily', 'vote', 'dk', 'rt', 'p'], was = {};
 function tick() {
   const now = new Date(), s = load(), m = now.getHours() * 60 + now.getMinutes();
   document.querySelectorAll('input[data-torna]').forEach(i => {
@@ -584,9 +588,13 @@ function tick() {
     + (fresh ? ' <span class="tag good">' + esc(T('Pots reclamar')) + '</span>' : '');
   claimNow.hidden = !fresh;
   if (fresh) claimNow.textContent = T('Pots reclamar des de les {h}: fes els passos de «Moment bo»', { h: pad(last) + ':02' });
-  // les tirades acaben de tornar soles (no les has desmarcat tu, que n'esborra l'hora): avisa
-  const r = document.querySelector('input[data-tu="rolls"]');
-  if (r) { if (rollsWas && !r.checked && s[r.dataset.id] && notiOn()) notify(); rollsWas = r.checked; }
+  // tasques que acaben de tornar soles (no les has desmarcat tu, que n'esborra l'hora): avisa
+  const back = [];
+  NOTI.forEach(k => document.querySelectorAll(`input[data-tu="${k}"]`).forEach(i => {
+    if (was[i.dataset.id] && !i.checked && s[i.dataset.id]) back.push(i);
+    was[i.dataset.id] = i.checked;
+  }));
+  if (back.length && notiOn()) notify(back);
 }
 // Notificacions: només mentre el tauler és obert. Diuen que tornes a tenir tirades i com tens el reclam i la kakera.
 const notiBtn = document.getElementById('notiBtn'), HAS_NOTI = 'Notification' in window;
@@ -616,11 +624,17 @@ function beep() {
 }
 const TITLE = document.title;  // la pestanya avisa fins que hi tornes
 document.addEventListener('visibilitychange', () => { if (!document.hidden) document.title = TITLE; });
-function notify() {
+// Les tirades, amb el reclam i la kakera; la resta de tasques que han tornat, per la seva ordre («$daily, $vote»)
+function notify(back) {
   beep();
-  if (document.hidden) document.title = '🔔 ' + T('Ja pots fer $m');
+  const rolls = back.some(i => i.dataset.tu === 'rolls');
+  const names = back.filter(i => i.dataset.tu !== 'rolls' && !(rolls && i.dataset.tu === 'claim'))  // el reclam ja surt al text de les tirades
+    .map(i => { const t = i.closest('.task'); return (t.querySelector('.cmd') || t.querySelector('b')).textContent.replace(/^\\d+\\.\\s*/, ''); }).join(', ');  // l'ordre ($daily); si no en té, el nom (Reclamar)
+  const title = rolls ? T('Ja pots fer $m') : T('Ja pots: {list}', { list: names });
+  const body = rolls ? notiBody() + (names ? '\\n' + T('També: {list}', { list: names }) : '') : '';
+  if (document.hidden) document.title = '🔔 ' + title;
   // renotify: amb la mateixa etiqueta, si no, la segona surt sense avisar; requireInteraction: es queda fins que la tanques
-  try { const n = new Notification(T('Ja pots fer $m'), { body: notiBody(), tag: 'mudae-m', renotify: true, requireInteraction: true }); n.onclick = () => { window.focus(); n.close(); }; } catch (e) {}
+  try { const n = new Notification(title, { body, tag: 'mudae-m', renotify: true, requireInteraction: true }); n.onclick = () => { window.focus(); n.close(); }; } catch (e) {}
 }
 function notiDraw() {
   const on = notiOn();
@@ -637,7 +651,7 @@ if (notiBtn && HAS_NOTI) {
     }
     try { localStorage.setItem('mudae-noti', '1'); } catch (e) {}
     notiDraw(); beep();
-    try { new Notification(T('Notificacions activades'), { body: T("T'avisaré quan tornis a tenir tirades, mentre el tauler sigui obert.") }); } catch (e) {}
+    try { new Notification(T('Notificacions activades'), { body: T("T'avisaré quan tornis a tenir tirades, el reclam, el $daily, el $vote, el $dk, el $rt o el $p, mentre el tauler sigui obert.") }); } catch (e) {}
   };
 }
 document.addEventListener('change', ev => {
@@ -645,15 +659,6 @@ document.addEventListener('change', ev => {
   const s = load();
   if (i.checked) s[i.dataset.id] = Date.now(); else delete s[i.dataset.id];
   save(s); tick();
-});
-const tuText = document.getElementById('tuText'), tuMsg = document.getElementById('tuMsg');
-tuText.addEventListener('input', () => {  // en enganxar el $tu, es marca sol
-  const r = readTu(tuText.value); if (!Object.keys(r).length) return;
-  if (window.millTu) window.millTu(tuText.value);
-  const P = readPower(tuText.value);
-  if (P) try { localStorage.setItem('mudae-poder', JSON.stringify({ ...P, t: Date.now() })); } catch (e) {}
-  powerDraw(); applyTu(r, Date.now()); tuText.value = '';
-  tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
 });
 powerDraw(); tick(); setInterval(tick, 30000);
 
@@ -866,7 +871,9 @@ details.panel { display:block; }
 /* avui: llista + $oc */
 .today { gap:16px; }
 .today-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; }
-.today-head textarea { flex:1; min-width:240px; max-width:520px; height:38px; min-height:38px; padding:8px 12px; resize:none; overflow:hidden; }
+.paste { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+.paste textarea { flex:1; min-width:240px; height:40px; min-height:40px; padding:9px 12px; resize:none; overflow:hidden; }
+#tuMsg:empty { display:none; }
 .groups { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; align-items:start; }
 .grp { display:grid; padding:14px 16px 4px; border-radius:14px; background:rgba(255,255,255,.035); border:1px solid var(--line); transition:border-color .3s, background .3s; }
 .grp h3 { margin:0 0 4px; font-size:14px; font-weight:650; display:grid; gap:1px; }
@@ -1073,6 +1080,11 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
                         ("$divorce <personatge>", "Te'n divorcies i et dona la seva kakera"), ("$like <personatge>", "L'afegeix a la llista de m'agrada"),
                         ("$ll", "La llista de m'agrada: amb 5, desbloqueges el $daily"), ("$left", "Quants personatges queden per reclamar al servidor"),
                         ("$top", "Els 1.000 personatges més reclamats"), ("$ts", "Rànquing del servidor")]),
+    ("Wishlist i tirades", [("$wishl <nom>", "Desig bloquejat: el $wishpurge no el treu"), ("$wishpurge", "Treu de la wishlist els reclamats i els repetits"),
+                            ("$wishsort", "Ordena la wishlist per ordre alfabètic"), ("$wishdm y y y", "Wishlist privada i avís per privat"),
+                            ("$ru", "Tirades que et queden"), ("$ku", "Quan pots tornar a reaccionar a kakera"),
+                            ("$d <sèrie>", "Treu una sèrie de les teves tirades"), ("$dl", "Les sèries que has tret de les tirades"),
+                            ("$ad <sèrie>", "Torna a les teves tirades una sèrie que havies tret"), ("$qs full", "Desa una còpia de la wishlist i de les llistes")]),
     ("Intercanvis", [("$give @persona", "Regala personatges (separa'ls amb $)"), ("$trade @persona", "Intercanvi amb confirmació dels dos")]),
     ("Esferes", [("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"), ("$oq", "Joc d'esferes"), ("$ot", "Joc d'esferes"),
                  ("$opp <personatge>", "Millora un personatge amb esferes"), ("$os", "Botiga d'esferes: millores per a tots")]),
@@ -1086,6 +1098,10 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
     ("Pokéslot", [("$p", "Tirada de Pokémon: cada 2 h, per a tots els servidors"), ("$pd", "La teva Pokédex"),
                   ("$arl", "Allibera els repetits i et dona tirades"), ("$r <pokémon>", "N'allibera un i et dona tirades"),
                   ("$sh <pokémon>", "Cacera de shiny d'aquest Pokémon"), ("$pl <pokémon>", "El protegeix perquè l'$arl no l'alliberi")]),
+    ("Jocs i ajuda", [("$quiz", "Preguntes per a tothom"), ("$jankenpon @persona", "Pedra, paper, tisora"),
+                      ("$greentea", "Joc de paraules: troba'n una, ràpid"), ("$blacktea", "Joc de paraules per torns"),
+                      ("$s <paraula>", "Busca qualsevol ordre de Mudae"), ("$overview", "La teva configuració de Mudae"), ("$bonus", "Els bonus que tens"),
+                      ("$sl", "Ànimes bessones: personatges amb 10 claus o més"), ("$me @persona <personatge>", "Intercanvi: pots afegir-hi kakera ($ número)")]),
     ("Admin del servidor", [("$forcedivorce <nom>", "Allibera un personatge"), ("$restorelist", "Personatges alliberats per admins"),
                             ("$restore <nom>", "Torna un personatge alliberat")]),
 ]
@@ -1226,14 +1242,19 @@ function syncUpd() {
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
 [kindSel, serieSel, newIn, txt, allNew].forEach(el => el.addEventListener('input', syncUpd));
-txt.addEventListener('paste', () => setTimeout(() => {  // tria sol «Què enganxes» (i la sèrie, si la tens)
-  const d = detect(txt.value); if (!d.kind) return;
+// Tria sol «Què enganxes» (i la sèrie, si la tens). newIfMissing: una sèrie que no tens passa a «Sèrie nova…» amb el seu nom
+// (des de la casella d'Avui; aquí no, perquè per a una col·lecció especial enganxes el $imaso d'una altra sèrie)
+function autoKind(newIfMissing) {
+  const d = detect(txt.value); if (!d.kind) return false;
   kindSel.value = d.kind;
   const opt = d.serie && [...serieSel.options].find(o => o.value.toLowerCase() === d.serie.toLowerCase());
   if (opt) serieSel.value = opt.value;
+  else if (d.serie && newIfMissing) { serieSel.value = '__new__'; newIn.value = d.serie; }
   [kindSel, serieSel].forEach(el => { try { localStorage.setItem('mudae-' + el.id, el.value); } catch (e) {} });
   syncUpd(); updMsg.innerHTML = '<span class="tag">' + esc(T('Detectat: {k}', { k: kindSel.selectedOptions[0].textContent })) + '</span>';
-}));
+  return true;
+}
+txt.addEventListener('paste', () => setTimeout(() => autoKind(false)));
 // el que vas triar l'última vegada (què enganxes i quina sèrie), per no haver-ho de canviar cada cop
 [kindSel, serieSel].forEach(el => {
   try { const v = localStorage.getItem('mudae-' + el.id); if ([...el.options].some(o => o.value === v)) el.value = v; } catch (e) {}
@@ -1370,7 +1391,7 @@ function millDraw() {
     return `<li><button class="cmd" data-copy="${esc(cmd)}">${esc(cmd)}</button> <b>${esc(T('Millora {n}', { n: b.n }))} · LVL ${b.l}</b> · ${fmtK(b.cost)}`
       + (M.sp != null ? ` <span class="tag ${M.sp >= sum ? 'good' : ''}">${esc(M.sp >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - M.sp) }))}</span>` : '')
       + (d ? `<br><span class="muted" style="font-size:13px">${esc(d)}</span>` : '') + '</li>'; }).join(''); };
-  let perkHtml = !M.opp ? '' : buyList(nextBuys(M.opp.levels, PORD, perkMax, perkCost), ('$opp ' + M.opp.name).trim(), PDESC)
+  let perkHtml = !M.opp ? '<li>' + esc(T('Enganxa un $opp <personatge> per veure-hi els nivells')) + '</li>' : buyList(nextBuys(M.opp.levels, PORD, perkMax, perkCost), ('$opp ' + M.opp.name).trim(), PDESC)
     || '<li>' + esc(T('Aquest personatge ja el tens millorat del tot.')) + '</li>';
   // les claus diuen quant et surt cada personatge ($mmy=): les 1-5 només funcionen quan et surt, la 10 se suma cada dia
   const keyOf = Object.fromEntries(M.keys || []), kOpp = M.opp ? keyOf[M.opp.name] || 0 : 0;
@@ -1399,13 +1420,19 @@ function millDraw() {
 }
 const millText = $id('millText'), millBtn = $id('millBtn'), millMsg = $id('millMsg');
 millText.addEventListener('input', () => { millBtn.disabled = !millText.value.trim(); });
-millBtn.onclick = () => {
-  const got = readMudae(millText.value, M.tv);
-  if (!Object.keys(got).length) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt, el $opp, el $os, el $mmy= o el $tu.')); return; }
+// Desa el que diu el text ($k, $kt, $opp, $os, $mmy= o $tu); false si no és res d'això. També el fa servir la casella d'Avui.
+function millRead(text) {
+  const got = readMudae(text, M.tv);
+  if (!Object.keys(got).length) return false;
   if (got.nf != null) Object.assign(got, towerFromKt(M, got.nf));
   if (got.opp && got.opp.name) got.opps = Object.assign({}, M.opps, { [got.opp.name]: got.opp.levels });
-  Object.assign(M, got); millSave(); millText.value = ''; millBtn.disabled = true;
-  millMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit')) + '</span>'; millDraw();
+  Object.assign(M, got); millSave(); millDraw();
+  return true;
+}
+millBtn.onclick = () => {
+  if (!millRead(millText.value)) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt, el $opp, el $os, el $mmy= o el $tu.')); return; }
+  millText.value = ''; millBtn.disabled = true;
+  millMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit')) + '</span>';
 };
 document.addEventListener('change', ev => {
   const el = ev.target;
@@ -1484,6 +1511,40 @@ ordQ.addEventListener('input', () => {
   });
   document.getElementById('ordNone').hidden = any;
 });
+"""
+
+
+JS_PASTE = r"""
+// La casella d'Avui: hi enganxes qualsevol missatge de Mudae i el tauler l'envia on toca
+const tuText = document.getElementById('tuText'), tuMsg = document.getElementById('tuMsg');
+const goTo = (v, name) => `<button type="button" class="go" data-goto="${v}">${esc(name)} →</button>`;
+function pasteAll(text) {
+  if (!text.trim()) return;
+  const tu = readTu(text), prev = txt.value;
+  if (('claim' in tu || 'rolls' in tu) && Object.keys(tu).length > 2) {  // el $tu: marca les caselles (i la kakera i les esferes de Millores)
+    window.millTu(text);
+    const P = readPower(text);
+    if (P) try { localStorage.setItem('mudae-poder', JSON.stringify({ ...P, t: Date.now() })); } catch (e) {}
+    powerDraw(); applyTu(tu, Date.now()); tuText.value = '';
+    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
+    return;
+  }
+  if (millRead(text)) {  // $k, $kt, $opp, $os o $mmy=
+    tuText.value = '';
+    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit a Millores')) + '</span> ' + goTo('mill', T('Millores'));
+    return;
+  }
+  txt.value = text;
+  if (autoKind(true)) {  // el harem, la wishlist o sèries: es desen des de «Posar al dia», on ho revises abans
+    tuText.value = ''; tuMsg.innerHTML = '';
+    go('eines'); document.getElementById('upd').scrollIntoView({ block: 'start' });
+    updMsg.innerHTML += ' ' + esc(T('Revisa-ho i clica «Desar i actualitzar».'));
+    return;
+  }
+  txt.value = prev; syncUpd();
+  tuMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer de Mudae.'));
+}
+tuText.addEventListener('paste', () => setTimeout(() => pasteAll(tuText.value)));
 """
 
 
@@ -1764,11 +1825,11 @@ def write_dashboard(d, hist):
   <button type="button" class="fet" data-goto="wl"><span class="fet-l">{T_("Wishlist")}</span><span class="fet-v">{len(d["wishlist"])}/15</span><span class="fet-s">{T_("tot bé") if not wl_bad else T_("{n} per arreglar", n=len(wl_bad))}</span></button>
   <button type="button" class="fet" data-goto="trades"><span class="fet-l">{T_("Intercanvis")}</span><span class="fet-v">{len(d["trades"])}</span><span class="fet-s">{T_("{n} oberts", n=pend)}</span></button>
  </div>
+ <div class="paste"><textarea id="tuText" rows="1" spellcheck="false" aria-label="{T_("Enganxa un missatge de Mudae")}" placeholder="{T_("Enganxa aquí qualsevol missatge de Mudae: $tu, $k, $kt, $opp, $os, $mma+s, $wl, $imaso…")}"></textarea>
+  <span id="tuMsg" role="status"></span></div>
 </section>
 <section class="panel today">
- <div class="today-head"><h2>{T_("Què toca ara")}</h2>
-  <textarea id="tuText" rows="1" spellcheck="false" aria-label="$tu" placeholder="{T_("Enganxa aquí el teu $tu i les caselles es marquen soles…")}"></textarea>
-  <span id="tuMsg" role="status"></span></div>
+ <div class="today-head"><h2>{T_("Què toca ara")}</h2></div>
  <p class="claim-now" id="claimNow" hidden></p>
  {checklist}
 </section>
@@ -2005,6 +2066,7 @@ document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.op
 <script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
 <script>{JS_CLS}</script>
 <script>{JS_ORD}</script>
+<script>{JS_PASTE}</script>
 <script>{JS_WL.replace("__WL__", wl_json)}</script>
 <script>{JS_MINE.replace("__MINE__", js(mine)).replace("__COLLS__", js([x["name"] for x in series])).replace("__ALTRES__", js(ALTRES))}</script></body></html>"""
     DASH.write_text(page, encoding="utf-8")
