@@ -873,7 +873,13 @@ details.panel { display:block; }
 .today-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; }
 .paste { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
 .paste textarea { flex:1; min-width:240px; height:40px; min-height:40px; padding:9px 12px; resize:none; overflow:hidden; }
-#tuMsg:empty { display:none; }
+#tuMsg:empty, #pdMsg:empty { display:none; }
+/* els botons de copiar, dins d'un requadre igual que la casella de text */
+.paste-cmds { flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:40px; padding:6px 12px; font-size:12.5px;
+  background:rgba(0,0,0,.22); border:1px solid var(--glass-b); border-radius:10px; }
+#pdSum { display:grid; gap:8px; }
+.pdrow { display:grid; grid-template-columns:minmax(0,200px) 1fr 120px; gap:14px; align-items:center; font-size:13.5px; }
+.pdrow .val { font-size:13px; }
 .groups { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; align-items:start; }
 .grp { display:grid; padding:14px 16px 4px; border-radius:14px; background:rgba(255,255,255,.035); border:1px solid var(--line); transition:border-color .3s, background .3s; }
 .grp h3 { margin:0 0 4px; font-size:14px; font-weight:650; display:grid; gap:1px; }
@@ -1514,6 +1520,40 @@ ordQ.addEventListener('input', () => {
 """
 
 
+JS_PD = r"""
+// Pokédex: només el recompte del $pd sumrare. La llista sencera, Mudae només la dona de 10 en 10 (més de 100 pàgines): no val la pena.
+const RARE = [T('Comú'), T('Poc comú'), T('Rar'), T('Molt rar'), T('Llegendari'), T('Ultraentitat o paradoxa')];
+const pdNum = t => +String(t).replace(/\D/g, '');
+// «5 (1/90)» per raresa i «100 / 1.025» al final: {rare: {raresa: [tens, total]}, have, total}, o null si no n'és un
+function pdSumrare(text) {
+  const ls = [...text.matchAll(/^\s*([1-6])[^\d(\n]{0,8}\(\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)\s*\)\s*$/gm)];  // «5🌟 (1/90)»: l'emoji pot ser-hi o no
+  const tot = text.match(/^\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)\s*$/m);
+  if (ls.length < 2 || !tot || pdNum(tot[2]) < 1000) return null;  // el total és el de la Pokédex, no el d'una sèrie
+  const rare = {}; ls.forEach(m => { rare[m[1]] = [pdNum(m[2]), pdNum(m[3])]; });  // només les que diu Mudae (no posa les que no en tens cap)
+  return { rare, have: pdNum(tot[1]), total: pdNum(tot[2]) };
+}
+let PDS = null; try { PDS = JSON.parse(localStorage.getItem('mudae-pd-sumrare')); } catch (e) {}
+const bar = (a, b) => `<div class="track"><div class="seg mine" style="width:${b ? (100 * a / b).toFixed(2) : 0}%"></div></div>`;
+function pdDraw() {
+  document.getElementById('pdHead').textContent = PDS ? T('{a} de {b}', { a: fmtK(PDS.have), b: fmtK(PDS.total) }) : '$pd sumrare';
+  document.getElementById('pdSum').innerHTML = !PDS ? '<p class="muted" style="margin:0;font-size:14px">' + esc(T('Encara no has enganxat el $pd sumrare.')) + '</p>'
+    : Object.keys(PDS.rare).sort().map(r => { const [a, b] = PDS.rare[r];
+        return `<div class="pdrow"><span>${esc(RARE[r - 1] || r)}</span>${bar(a, b)}<span class="val">${fmtK(a)}/${fmtK(b)} · <b>${b ? Math.round(100 * a / b) : 0}%</b></span></div>`; }).join('');
+}
+function pdRead(text) {  // true si era un $pd sumrare
+  const r = pdSumrare(text); if (!r) return false;
+  PDS = r; try { localStorage.setItem('mudae-pd-sumrare', JSON.stringify(PDS)); } catch (e) {}
+  pdDraw(); return true;
+}
+const pdText = document.getElementById('pdText'), pdMsg = document.getElementById('pdMsg');
+pdText.addEventListener('paste', () => setTimeout(() => {
+  if (!pdRead(pdText.value)) { pdMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $pd sumrare.')); return; }
+  pdText.value = ''; pdMsg.innerHTML = '<span class="tag good">' + esc(T('Pokédex al dia')) + '</span>';
+}));
+pdDraw();
+"""
+
+
 JS_PASTE = r"""
 // La casella d'Avui: hi enganxes qualsevol missatge de Mudae i el tauler l'envia on toca
 const tuText = document.getElementById('tuText'), tuMsg = document.getElementById('tuMsg');
@@ -1527,6 +1567,20 @@ function pasteAll(text) {
     if (P) try { localStorage.setItem('mudae-poder', JSON.stringify({ ...P, t: Date.now() })); } catch (e) {}
     powerDraw(); applyTu(tu, Date.now()); tuText.value = '';
     tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
+    return;
+  }
+  if ('p' in tu && Object.keys(tu).length === 2) {  // «Tiempo restante antes de su próximo $p: 42 min.»
+    applyTu({ p: tu.p }, Date.now()); tuText.value = '';
+    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Pokéslot marcat')) + '</span>';
+    return;
+  }
+  if (pdRead(text)) {  // abans que «Posar al dia»: «100 / 1.025» sembla el títol d'una sèrie
+    tuText.value = '';
+    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Pokédex al dia')) + '</span> ' + goTo('coll', T('Col·leccions'));
+    return;
+  }
+  if (/\/\s*1[.,]?\d{3}\s*-\s*\S+\s+\d+\s*\/\s*\d+/.test(text)) {  // una pàgina del $pd («100 / 1.025 - Page 1 / 10»): no és una sèrie
+    tuMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Per a la Pokédex, enganxa el $pd sumrare (un sol missatge), no les pàgines del $pd.'));
     return;
   }
   if (millRead(text)) {  // $k, $kt, $opp, $os o $mmy=
@@ -1762,6 +1816,11 @@ def write_dashboard(d, hist):
         + "".join(f'<div class="oline">{cmd_html(c)}<span>{e(t(desc))}</span></div>' for c, desc in items) + "</div></details>"
         for g, items in ORDRES)
     oc = f"oc.html?lang={LANG}"
+    # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
+    all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
+    paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$p", "$k", "$kt", "$opp <personatge>", "$os", "$mmy=", "$mma+s", "$wl", "$imaso <sèrie>"))
+                  + (f' <button class="cmd" data-copy="{e(all_cmd)}" data-tip="{e(t("Totes les teves sèries"))}">$imaa+os</button>' if len(all_cmd) > 9 else "")
+                  + " " + cmd_html("$pd sumrare"))
     roman = ["0", "I", "II", "III", "IV"]
     badge_rows = "".join(
         f'<tr><td><b>{n}</b><br><span class="muted" style="font-size:12.5px">{e(t(desc))}</span></td>'
@@ -1825,8 +1884,9 @@ def write_dashboard(d, hist):
   <button type="button" class="fet" data-goto="wl"><span class="fet-l">{T_("Wishlist")}</span><span class="fet-v">{len(d["wishlist"])}/15</span><span class="fet-s">{T_("tot bé") if not wl_bad else T_("{n} per arreglar", n=len(wl_bad))}</span></button>
   <button type="button" class="fet" data-goto="trades"><span class="fet-l">{T_("Intercanvis")}</span><span class="fet-v">{len(d["trades"])}</span><span class="fet-s">{T_("{n} oberts", n=pend)}</span></button>
  </div>
- <div class="paste"><textarea id="tuText" rows="1" spellcheck="false" aria-label="{T_("Enganxa un missatge de Mudae")}" placeholder="{T_("Enganxa aquí qualsevol missatge de Mudae: $tu, $k, $kt, $opp, $os, $mma+s, $wl, $imaso…")}"></textarea>
-  <span id="tuMsg" role="status"></span></div>
+ <div class="paste"><textarea id="tuText" rows="1" spellcheck="false" aria-label="{T_("Enganxa un missatge de Mudae")}" placeholder="{T_("Enganxa aquí la resposta de Mudae a qualsevol d'aquestes ordres…")}"></textarea>
+  <span id="tuMsg" role="status"></span>
+  <div class="paste-cmds"><span class="muted">{T_("Copia l'ordre:")}</span> {paste_cmds}</div></div>
 </section>
 <section class="panel today">
  <div class="today-head"><h2>{T_("Què toca ara")}</h2></div>
@@ -1864,6 +1924,13 @@ def write_dashboard(d, hist):
  <div class="give-row"><button class="primary" id="espBtn" disabled>{T_("Desar la col·lecció")}</button><span id="espMsg" role="status"></span></div>
  <p class="muted" style="margin:0;font-size:13px">{T_("Els teus es marquen sols. Per saber de qui són els altres, ves a «Posar al dia», tria la col·lecció i enganxa el $imaso de la sèrie d'on surten. Per canviar-la, escriu el nom d'una que ja tens: s'hi carreguen els seus personatges.")}</p>
 </div></details>
+<details class="panel fold" id="pd" data-fold="pokedex">
+ <summary><h2>{T_("Pokédex")}</h2><span class="muted" id="pdHead" style="font-size:13px">$pd sumrare</span></summary>
+ <div class="fold-body">
+  <textarea id="pdText" rows="2" spellcheck="false" aria-label="$pd sumrare" placeholder="{T_("Enganxa el $pd sumrare de Mudae: quants en tens de cada raresa, en un sol missatge…")}"></textarea>
+  <span id="pdMsg" role="status"></span>
+  <div id="pdSum"></div>
+ </div></details>
 </div>
 <div class="view g2" id="v-wl" role="tabpanel" hidden>
  <section class="panel"><div class="panel-head"><h2>{T_("Què has de fer")}</h2></div><div id="wlBuild"></div></section>
@@ -2066,6 +2133,7 @@ document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.op
 <script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
 <script>{JS_CLS}</script>
 <script>{JS_ORD}</script>
+<script>{JS_PD}</script>
 <script>{JS_PASTE}</script>
 <script>{JS_WL.replace("__WL__", wl_json)}</script>
 <script>{JS_MINE.replace("__MINE__", js(mine)).replace("__COLLS__", js([x["name"] for x in series])).replace("__ALTRES__", js(ALTRES))}</script></body></html>"""

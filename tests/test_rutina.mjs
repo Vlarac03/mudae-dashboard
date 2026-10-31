@@ -51,6 +51,7 @@ assert.deepEqual(readTu("You have 0 rolls left.\n$rt is not ready"), { rolls: tr
 assert.deepEqual(readTu('Hola'), {});
 // el Pokéslot ($p): format suposat, sense cap $tu real que en parli
 assert.deepEqual(readTu('You can use $p in 1h 10 min.\nYou have 0 rolls left.'), { p: 70, rolls: true, tu: true });
+assert.deepEqual(readTu('Tiempo restante antes de su próximo $p: 42 min.'), { p: 42, tu: true });  // el $p en espera (de Victor, 31/10/2026)
 // el poder de kakera, per a la notificació de les tirades
 const readPower = new Function(js.match(/function readPower[\s\S]*?\n}\n/)[0].replaceAll('\\\\', '\\') + 'return readPower;')();
 assert.deepEqual(readPower(tuEs), { p: 110, c: 36, h: 18 });

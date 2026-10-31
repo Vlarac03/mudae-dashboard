@@ -120,4 +120,15 @@ assert.deepEqual(detect('Castle + Pingu   3/7\n(bundle)\nKate Beckett  💞 => j
 assert.deepEqual(detect('Kate Beckett - Castle\nPingu - Pingu\n'), { kind: 'harem' });
 assert.deepEqual(detect('1. Harry Potter 2/4\n\nHP\n\nDobby  💞 => pep\nWinky\n'), { kind: 'serie', serie: 'Harry Potter' });
 assert.deepEqual(detect('Hola'), {});
+
+// Pokédex: el $pd sumrare de Victor (31/10/2026), quants en té de cada raresa en un sol missatge
+const pdJs = py.match(/JS_PD = r"""([\s\S]*?)"""/)[1];
+const pdSumrare = new Function([pdJs.match(/const pdNum[^\n]*/)[0], pdJs.match(/function pdSumrare[\s\S]*?\n}\n/)[0]].join('\n') + 'return pdSumrare;')();
+assert.deepEqual(pdSumrare('vlarac\n\n5 (1/90)\n\n4 (1/165)\n\n3 (8/337)\n\n2 (15/225)\n\n1 (75/177)\n100 / 1.025'),
+  { rare: { 1: [75, 177], 2: [15, 225], 3: [8, 337], 4: [1, 165], 5: [1, 90] }, have: 100, total: 1025 });
+// tal com surt copiat de Discord, amb l'emoji 🌟 i la línia «Imagen» (de Victor, 31/10/2026)
+assert.deepEqual(pdSumrare('Mudae\nAPP\n — 12:33\n\nvlarac\n\n5🌟 (1/90)\n\n4🌟 (1/165)\n\n3🌟 (8/337)\n\n2🌟 (15/225)\n\n1🌟 (75/177)\nImagen\n100 / 1.025'),
+  { rare: { 1: [75, 177], 2: [15, 225], 3: [8, 337], 4: [1, 165], 5: [1, 90] }, have: 100, total: 1025 });
+assert.equal(pdSumrare('vlarac\n Krabby x2\n100 / 1.025 - Page 1 / 10'), null);  // una pàgina del $pd no és el sumrare
+assert.equal(pdSumrare('Castle 5/8'), null);
 console.log('millores: totes les proves passen');

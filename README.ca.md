@@ -13,12 +13,13 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 ## Què fa
 
 - **Pestanyes per ordre d'ús**: Avui, Col·leccions, Wishlist, Intercanvis, Millores i Posar al dia. El rellotge de tirades i reclam es veu des de totes, els avisos et porten a la pestanya on s'arreglen, i els blocs llargs es pleguen i es queden oberts o tancats com els vas deixar.
-- **Una sola casella per a tot**: a dalt de la pestanya Avui hi enganxes qualsevol missatge de Mudae (`$tu`, `$k`, `$kt`, `$opp`, `$os`, `$mmy=`, `$mma+s`, `$wl`, `$imaso`…) i el tauler l'envia on toca. El harem, la wishlist i les sèries van a «Posar al dia» perquè ho revisis abans de desar-ho.
+- **Una sola casella per a tot**: a dalt de la pestanya Avui hi enganxes qualsevol missatge de Mudae (`$tu`, `$k`, `$kt`, `$opp`, `$os`, `$mmy=`, `$mma+s`, `$wl`, `$imaso`…) i el tauler l'envia on toca. A sota hi ha un botó per copiar cada ordre que entén. El harem, la wishlist i les sèries van a «Posar al dia» perquè ho revisis abans de desar-ho.
 - **Què toca ara**: enganxes el `$tu` i la llista es marca sola, Pokéslot (`$p`) inclòs. Tres targetes (cada hora, moment de reclamar, en començar el dia) on cada tasca queda marcada fins que la pots tornar a fer (`$daily` i `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a mitjanit UTC, tirades cada hora…).
 - **Notificacions**: mentre el tauler és obert, t'avisa quan tornes a tenir tirades (i et diu si pots reclamar i reaccionar a kakera), i quan tornes a tenir el reclam, el `$daily`, el `$vote`, el `$dk`, el `$rt` o el `$p`. Fan un so i es queden a la pantalla fins que les tanques. S'activen i es desactiven amb el botó **Notificacions** de dalt.
 - **Ajudant del `$oc`**: marques els colors que surten i et diu quina casella clicar per trobar la vermella. És plegat a la pestanya Avui: s'obre amb un clic.
 - **Col·leccions**: un àlbum per sèrie amb els teus personatges, els lliures, els de la wishlist i els d'altres jugadors (i de qui són). Cliques els que aconsegueixes per marcar-los com a teus.
 - **Col·leccions especials**: un grup que tries tu, encara que no sigui una sèrie de Mudae (per exemple, els Eevee de la Pokédex). Escrius el nom i els personatges, i el `$imaso` de la sèrie d'on surten t'hi posa de qui és cada un.
+- **Pokédex**: enganxes el `$pd sumrare` (un sol missatge) i veus quants Pokémon tens de cada raresa. Si enganxes el missatge del temps que falta per al pròxim `$p`, es marca la tasca del Pokéslot.
 - **Millores**: enganxes el `$k`, el `$kt`, un `$opp <personatge>`, el `$os` o el `$mmy=` i et diu quina insígnia, quin pis de la torre, quina millora d'esferes i quina de la botiga d'esferes et toca, i quanta kakera et falta.
 - **Wishlist**: t'avisa dels que ja són teus o que ha reclamat algú, i et prepara les ordres `$wishremove` i `$wish`.
 - **Intercanvis i regals**: l'ordre `$give` per a cada jugador, i un cercador que entén llistes de sèries mal escrites («full metal alchimist», «Rezero»…).
