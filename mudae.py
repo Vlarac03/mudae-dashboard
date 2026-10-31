@@ -768,7 +768,8 @@ button { font:inherit; color:inherit; }
 :focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
 .muted { color:var(--muted); }
 code { font:12.5px var(--mono); background:var(--sunk); color:var(--ink-2); padding:1px 6px; border-radius:5px; white-space:nowrap; }
-.glass, .panel { background:var(--glass); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+/* sense backdrop-filter a les targetes: a sota només hi ha el fons, i Chrome hi pintava franges en repintar (en obrir el $oc o passar-hi el ratolí) */
+.glass, .panel { background:var(--glass);
   border:1px solid var(--glass-b); border-radius:18px; box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.08); }
 .panel { padding:20px 22px; min-width:0; display:grid; gap:14px; align-content:start; }
 .panel-head { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px; }
