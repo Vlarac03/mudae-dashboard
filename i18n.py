@@ -479,6 +479,7 @@ ES = {
     "Busca una ordre": "Busca un comando",
     "Busca una ordre: wish, kakera, $tu…": "Busca un comando: wish, kakera, $tu…",
     "Cap ordre amb aquest text.": "Ningún comando con este texto.",
+    "Totes les millores": "Todas las mejoras",
 }
 
 EN = {
@@ -956,6 +957,7 @@ EN = {
     "Busca una ordre": "Search a command",
     "Busca una ordre: wish, kakera, $tu…": "Search a command: wish, kakera, $tu…",
     "Cap ordre amb aquest text.": "No command matches that text.",
+    "Totes les millores": "All upgrades",
 }
 
 STRINGS = {"es": ES, "en": EN}

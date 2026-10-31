@@ -473,6 +473,14 @@ const OFF_MSG = () => '<span class="tag bad">' + esc(T('Botó apagat')) + '</spa
 const NET_MSG = () => '<span class="tag bad">' + esc(T('Sense connexió')) + '</span> ' + esc(T("Obre Mudae a l'escriptori."));
 const ERR_MSG = e => '<span class="tag bad">' + esc(T("No s'ha desat")) + '</span> ' + esc(e);
 const postJSON = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(r => r.json());
+// Plegables (details[data-fold]): cada un es queda obert o tancat com el vas deixar, també d'un dia per l'altre (en aquest navegador)
+const foldOpen = k => { try { return localStorage.getItem('mudae-fold-' + k) === '1'; } catch (e) { return false; } };
+document.querySelectorAll('details[data-fold]').forEach(d => { d.open = foldOpen(d.dataset.fold); });
+document.addEventListener('toggle', ev => {  // toggle no puja: l'escoltem en la fase de captura
+  const d = ev.target; if (!d.dataset || !d.dataset.fold) return;
+  if (d.closest('#ordres') && document.getElementById('ordQ').value.trim()) return;  // el cercador els obre: no és teu
+  try { localStorage.setItem('mudae-fold-' + d.dataset.fold, d.open ? '1' : '0'); } catch (e) {}
+}, true);
 """
 
 
@@ -836,6 +844,9 @@ details.panel { display:block; }
 .fold[open] > summary::before { transform:rotate(90deg); }
 .fold > summary:hover h2 { color:var(--accent-ink); }
 .fold-body { display:grid; gap:14px; margin-top:14px; }
+.fold > summary .og-h { margin:0; }
+.fold > summary .muted { font-size:12px; }
+.serieslist.fold-body { display:flex; gap:6px; margin-top:10px; }
 .tag { font-size:11px; font-weight:650; padding:2px 9px; border-radius:20px; white-space:nowrap; flex:none; background:rgba(255,255,255,.08); color:var(--ink-2); }
 .tag.good { background:var(--good-soft); color:var(--good); }
 .tag.bad { background:var(--bad-soft); color:var(--bad); }
@@ -1107,8 +1118,9 @@ function render() {
   const terms = q.value.split(/[\/,;\n]+/).map(t => t.trim()).filter(Boolean);
   if (!terms.length) {
     const counts = SERIES.map(s => [s, MINE.filter(c => c.s === s).length]).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-    out.innerHTML = '<p class="eyebrow" style="margin:0">' + esc(T('Les teves sèries · clica per afegir-la')) + '</p><div class="serieslist">'
-      + counts.map(([s, n]) => `<button type="button" data-add="${esc(s)}">${esc(label(s))} <span>${n}</span></button>`).join('') + '</div>';
+    out.innerHTML = `<details class="fold" data-fold="mine-series"${foldOpen('mine-series') ? ' open' : ''}><summary><h3 class="og-h">`
+      + esc(T('Les teves sèries · clica per afegir-la')) + `</h3><span class="muted">${counts.length}</span></summary><div class="serieslist fold-body">`
+      + counts.map(([s, n]) => `<button type="button" data-add="${esc(s)}">${esc(label(s))} <span>${n}</span></button>`).join('') + '</div></details>';
     return;
   }
   const groups = new Map(), byName = [], missing = [];
@@ -1468,7 +1480,7 @@ ordQ.addEventListener('input', () => {
     const all = g.querySelector('h3').textContent.toLowerCase().includes(k);
     let n = 0;
     g.querySelectorAll('.oline').forEach(l => { l.hidden = !!k && !all && !l.textContent.toLowerCase().includes(k); n += !l.hidden; });
-    g.hidden = !n; g.open = !!k && !!n; any = any || !!n;
+    g.hidden = !n; g.open = k ? !!n : foldOpen(g.dataset.fold); any = any || !!n;
   });
   document.getElementById('ordNone').hidden = any;
 });
@@ -1662,7 +1674,7 @@ def write_dashboard(d, hist):
                          f'<span class="desc">{e(t(com, rt=RT_HORES))}</span><span class="when"></span></span></label>')
     card = lambda g: "".join(groups[g]) + "</div>"
     checklist = ('<div class="groups">' + "".join(card(g) for g in ("hora", "reclam", "dia")) + "</div>"
-                 + f'<details class="fold"><summary><h3>{e(t("Altres moments"))}</h3></summary><div class="groups fold-body">'
+                 + f'<details class="fold" data-fold="altres"><summary><h3>{e(t("Altres moments"))}</h3></summary><div class="groups fold-body">'
                  + "".join(card(g) for g in groups if g not in ("hora", "reclam", "dia")) + "</div></details>")
 
     wl_names = {w["name"] for w in d["wishlist"]}
@@ -1685,7 +1697,7 @@ def write_dashboard(d, hist):
                  + '<datalist id="dlSeries">' + "".join(f'<option value="{e(x)}">' for x in all_series) + '</datalist>')
     serie_opts = "".join(f'<option value="{e(x["name"])}">{e(x["name"])}</option>' for x in series)
     ordres = "".join(  # un grup plegable per tema: tancats d'entrada, el cercador els obre
-        f'<details class="og fold"><summary><h3>{e(t(g))}</h3><span class="muted">{len(items)}</span></summary><div class="fold-body">'
+        f'<details class="og fold" data-fold="ord-{e(g)}"><summary><h3>{e(t(g))}</h3><span class="muted">{len(items)}</span></summary><div class="fold-body">'
         + "".join(f'<div class="oline">{cmd_html(c)}<span>{e(t(desc))}</span></div>' for c, desc in items) + "</div></details>"
         for g, items in ORDRES)
     oc = f"oc.html?lang={LANG}"
@@ -1762,7 +1774,7 @@ def write_dashboard(d, hist):
 </section>
 <div class="g2">
  {f'<section class="panel"><div class="panel-head"><h2>{T_("Avisos")}</h2><span class="muted" style="font-size:13px">{len(alerts)}</span></div><ul class="alerts">{"".join(alerts)}</ul></section>' if alerts else ""}
- <details class="panel fold ocbox" id="ocFold"><summary><h2>{T_("Ajudant del $oc")}</h2><span class="muted" style="font-size:13px">{T_("Troba la vermella: fes servir l'ajudant")}</span></summary>
+ <details class="panel fold ocbox" id="ocFold" data-fold="oc"><summary><h2>{T_("Ajudant del $oc")}</h2><span class="muted" style="font-size:13px">{T_("Troba la vermella: fes servir l'ajudant")}</span></summary>
   <div class="fold-body"><a href="{oc}" style="font-size:13px">{T_("Obrir a part")}</a><iframe src="{oc}" title="{T_("Ajudant del $oc")}"></iframe></div></details>
 </div>
 </div>
@@ -1783,7 +1795,7 @@ def write_dashboard(d, hist):
    <button type="button" class="tab" id="gotClear">{T_("Desmarca")}</button><span id="gotMsg" role="status"></span></div>
  </div>
 </section>
-<details class="panel fold" id="esp">
+<details class="panel fold" id="esp" data-fold="esp">
  <summary><h2>{T_("Col·lecció especial")}</h2><span class="muted" style="font-size:13px">{T_("Un grup triat per tu: per exemple, els Eevee de la Pokédex")}</span></summary>
  <div class="fold-body"><div class="give-row"><input type="text" id="espName" list="dlEsp" spellcheck="false" autocomplete="off" placeholder="{T_("Nom del grup")}" aria-label="{T_("Nom del grup")}">
   <datalist id="dlEsp">{"".join(f'<option value="{e(x)}">' for x in spec)}</datalist></div>
@@ -1850,13 +1862,15 @@ def write_dashboard(d, hist):
   <div><h3 class="og-h">{T_("Personatges que has millorat")}</h3><p id="perkList" style="margin:0;font-size:14px;line-height:1.9"></p>
    <p class="muted" style="margin:6px 0 0;font-size:13px">{T_("Mudae no té cap llista dels personatges millorats: el tauler recorda els que enganxes amb el $opp. El $op sol només et mostra el primer.")}</p></div>
  </div>
+ <details class="fold" data-fold="perks"><summary><h3 class="og-h">{T_("Totes les millores")}</h3></summary><div class="fold-body">
  <div class="ogrid">{perk_rows}</div>
- <p class="muted" style="margin:0;font-size:13px">{T_("Les 5 primeres tenen 6 nivells i les altres 5, un. Si millores un personatge del tot, les 5 primeres pugen un nivell més. Fes-les servir en personatges que no regalaràs: si te'n divorcies, perds el 10 %.")}</p>
+ <p class="muted" style="margin:0;font-size:13px">{T_("Les 5 primeres tenen 6 nivells i les altres 5, un. Si millores un personatge del tot, les 5 primeres pugen un nivell més. Fes-les servir en personatges que no regalaràs: si te'n divorcies, perds el 10 %.")}</p></div></details>
 </section>
 <section class="panel"><div class="panel-head"><h2>{T_("Botiga d'esferes")}</h2><span class="muted" style="font-size:13px">$os</span></div>
  <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="shopNext"></ul>
+ <details class="fold" data-fold="shop"><summary><h3 class="og-h">{T_("Totes les millores")}</h3></summary><div class="fold-body">
  <div class="og">{shop_rows}</div>
- <p class="muted" style="margin:0;font-size:13px">{T_("Valen per a tots els personatges, però gairebé totes fan més forta una millora dels personatges: primer gasta les esferes amb el $opp. Cada nivell costa 4.000 més que l'anterior, i amb $shoprefund et tornen les esferes.")}</p>
+ <p class="muted" style="margin:0;font-size:13px">{T_("Valen per a tots els personatges, però gairebé totes fan més forta una millora dels personatges: primer gasta les esferes amb el $opp. Cada nivell costa 4.000 més que l'anterior, i amb $shoprefund et tornen les esferes.")}</p></div></details>
 </section>
 </div>
 <div class="view" id="v-eines" role="tabpanel" hidden>
@@ -1983,10 +1997,7 @@ document.addEventListener('click', ev => {{
 const more = document.getElementById('more');
 document.addEventListener('click', ev => {{ if (more.open && (!more.contains(ev.target) || ev.target.closest('.menu button'))) more.open = false; }});
 document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.open) {{ more.open = false; more.querySelector('summary').focus(); }} }});
-// l'ajudant del $oc es queda obert o plegat com el vas deixar
-const ocFold = document.getElementById('ocFold');
-try {{ ocFold.open = localStorage.getItem('mudae-oc') === '1'; }} catch (err) {{}}
-ocFold.addEventListener('toggle', () => {{ try {{ localStorage.setItem('mudae-oc', ocFold.open ? '1' : '0'); }} catch (err) {{}} }});
+
 </script><script>{JS_TODAY.replace("__CLAIM__", json.dumps(CLAIM_HOURS))}</script>
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
 <script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec))}</script>
