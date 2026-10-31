@@ -51,7 +51,7 @@ From then on, open the dashboard with the **Mudae** shortcut on your desktop.
 ## Good to know
 
 - **Close the Excel file** before using the dashboard buttons: it can't be saved while it's open.
-- The buttons use a small server that only listens on your own computer (`127.0.0.1`) and only accepts requests from the dashboard. It stops by itself a couple of minutes after you close the tab, or with the **Stop the server** button.
+- The buttons use a small server that only listens on your own computer (`127.0.0.1`) and only accepts requests from the dashboard. It stops by itself a couple of minutes after you close the tab, or with **Stop the server** in the **···** menu at the top.
 - You can paste messages as they are: Discord headers, «Page 1 / 21» and numbering are ignored.
 - **New versions**: the **Refresh dashboard** button checks GitHub for a new version and, if you say yes, installs it. The `dades/` folder is not touched. (If your version is older than this button, download the ZIP once and copy its files over yours.)
 - **Don't delete the `lib` folder**: it has what the program needs to write the Excel file.

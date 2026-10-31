@@ -481,7 +481,7 @@ TU_KEY = {"$tu": "tu", "$vote": "vote", "$daily": "daily", "$oh (×4)": "oh", "$
           "clic al botó": "kakera", "clic al cor": "claim", "$rt": "rt", "$dk": "dk"}
 
 JS_TODAY = """
-const CLAIM = __CLAIM__, clock = document.getElementById('clock');
+const CLAIM = __CLAIM__, clock = document.getElementById('clock'), claimNow = document.getElementById('claimNow');
 const pad = n => String(n).padStart(2, '0');
 const fmt = m => m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
 const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -570,9 +570,12 @@ function tick() {
   const last = [...CLAIM].reverse().find(h => h * 60 + 2 <= m);
   const fresh = last !== undefined && m - (last * 60 + 2) < 60;
   document.querySelector('.grp[data-period="reclam"]')?.classList.toggle('now', fresh);
-  clock.innerHTML = T('Ara <b>{now}</b> · tirades noves a les <b>{roll}</b> ({rollIn}) · pròxim reclam a les <b>{claim}</b> ({claimIn})',
-    { now: hm(now), roll: pad(nr) + ':02', rollIn: fmt(toRoll), claim: pad(nc % 24) + ':02', claimIn: fmt(nc * 60 + 2 - m) })
-    + (fresh ? '<br><span class="claim-now">' + esc(T('Pots reclamar des de les {h}: fes els passos de «Moment bo»', { h: pad(last) + ':02' })) + '</span>' : '');
+  // a la barra de pestanyes (es veu des de totes) i, si és moment de reclamar, també a «Què toca ara»
+  clock.innerHTML = T('Tirades a les <b>{roll}</b> ({rollIn}) · reclam a les <b>{claim}</b> ({claimIn})',
+    { roll: pad(nr) + ':02', rollIn: fmt(toRoll), claim: pad(nc % 24) + ':02', claimIn: fmt(nc * 60 + 2 - m) })
+    + (fresh ? ' <span class="tag good">' + esc(T('Pots reclamar')) + '</span>' : '');
+  claimNow.hidden = !fresh;
+  if (fresh) claimNow.textContent = T('Pots reclamar des de les {h}: fes els passos de «Moment bo»', { h: pad(last) + ':02' });
   // les tirades acaben de tornar soles (no les has desmarcat tu, que n'esborra l'hora): avisa
   const r = document.querySelector('input[data-tu="rolls"]');
   if (r) { if (rollsWas && !r.checked && s[r.dataset.id] && notiOn()) notify(); rollsWas = r.checked; }
@@ -728,9 +731,9 @@ STYLE = """
 /* Fosc grafit, targetes de vidre i un sol accent blau.
    El color només marca estat: blau = teu, taronja = d'algú altre, puntejat = lliure, verd/vermell = avisos */
 :root {
-  --bg:#141417; --bg-grad:linear-gradient(160deg,#1b1b1f 0%,#141417 50%,#111114 100%);
-  --glow1:rgba(88,166,255,.08); --glow2:rgba(255,255,255,.035);
-  --glass:rgba(255,255,255,.05); --glass-b:rgba(255,255,255,.09); --line:rgba(255,255,255,.08);
+  --bg:#0e0f15; --bg-grad:linear-gradient(160deg,#161a28 0%,#0f1017 45%,#0c0d12 100%);
+  --glow1:rgba(88,166,255,.16); --glow2:rgba(167,139,250,.11);
+  --glass:rgba(255,255,255,.045); --glass-b:rgba(255,255,255,.085); --line:rgba(255,255,255,.075);
   --surface:#1c1c20; --sunk:rgba(255,255,255,.06);
   --ink:#f4f4f5; --ink-2:#c8c8d0; --muted:#a1a1ab;
   --accent:#58a6ff; --acc-rgb:88,166,255; --accent-soft:rgba(88,166,255,.13); --accent-ink:#a5d0ff;
@@ -759,7 +762,7 @@ main::before { content:''; position:fixed; inset:0; pointer-events:none;
   background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px); background-size:24px 24px;
   -webkit-mask-image:linear-gradient(180deg,#000,transparent 65%); mask-image:linear-gradient(180deg,#000,transparent 65%); }
 h1, h2 { text-wrap:balance; margin:0; }
-h2 { font-size:15px; font-weight:650; letter-spacing:-.2px; }
+h2 { font-size:16.5px; font-weight:650; letter-spacing:-.3px; }
 a { color:var(--accent-ink); }
 button { font:inherit; color:inherit; }
 :focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
@@ -788,27 +791,57 @@ button.pill:disabled { opacity:.45; cursor:default; }
 .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; background:var(--muted); }
 .dot.ok { background:var(--good); } .dot.err { background:var(--bad); }
 #toolMsg:empty { display:none; }
+/* menú «···»: les opcions que es fan servir poc */
+.more { position:relative; }
+.more > summary { list-style:none; cursor:pointer; letter-spacing:2px; font-weight:700; }
+.more > summary::-webkit-details-marker { display:none; }
+.more > summary:hover, .more[open] > summary { color:var(--ink); border-color:rgba(255,255,255,.2); }
+.menu { position:absolute; right:0; top:calc(100% + 6px); z-index:10; display:grid; gap:2px; padding:6px; min-width:250px; border-radius:14px;
+  background:rgba(28,28,32,.96); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); border:1px solid var(--glass-b); box-shadow:var(--sh); }
+.menu button { display:flex; align-items:center; gap:8px; text-align:left; padding:9px 12px; border:0; border-radius:9px; background:transparent;
+  color:var(--ink-2); font-size:13px; cursor:pointer; }
+.menu button:hover:not(:disabled) { background:rgba(255,255,255,.07); color:var(--ink); }
+.menu button:disabled { opacity:.45; cursor:default; }
 
-/* resum: salutació, rellotge i avisos; a la dreta, les xifres */
-.resum { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:22px; align-items:center; padding:26px 28px 24px; }
-.hola { font-size:30px; font-weight:650; letter-spacing:-.8px; line-height:1.1; }
-.clock { margin:8px 0 0; color:var(--ink-2); font-variant-numeric:tabular-nums; max-width:62ch; }
+/* barra fixa: pestanyes i, a la dreta, quan tornen les tirades i el reclam (es veu des de totes les pestanyes) */
+.bar { position:sticky; top:10px; z-index:4; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.clock { margin:0; padding:8px 14px; border-radius:50px; font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums;
+  background:rgba(28,28,32,.75); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); border:1px solid var(--glass-b); box-shadow:var(--sh); }
+.clock:empty { display:none; }
 .clock b { color:var(--ink); }
-.claim-now { display:inline-block; margin-top:8px; padding:3px 11px; border-radius:999px; background:var(--good-soft); color:var(--good); font-size:13px; font-weight:650; }
-.alerts { list-style:none; padding:16px 0 0; margin:16px 0 0; border-top:1px solid var(--line); display:grid; gap:6px; max-height:260px; overflow:auto; }
+.claim-now { margin:0; padding:8px 12px; border-radius:10px; background:var(--good-soft); color:var(--good); font-size:13.5px; font-weight:650; }
+
+/* resum (només a Avui): salutació i quatre xifres que porten a la seva pestanya */
+.resum { display:grid; grid-template-columns:auto minmax(0,1fr); gap:28px; align-items:center; padding:20px 26px;
+  background:linear-gradient(115deg,rgba(88,166,255,.13),rgba(167,139,250,.08) 55%,rgba(255,255,255,.03)); }
+.hola { font-size:26px; font-weight:650; letter-spacing:-.7px; line-height:1.1; }
+.alerts { list-style:none; padding:0; margin:0; display:grid; gap:6px; max-height:340px; overflow:auto; }
 .alerts li { display:flex; gap:10px; align-items:baseline; padding:8px 12px; border-radius:10px; background:rgba(255,255,255,.04); border:1px solid var(--line); font-size:13.5px; }
-.fets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-content:center; }
-.fet { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid var(--line); min-width:0; }
-.fet-l { font-size:11.5px; color:var(--ink-2); }
-.fet-v { font-size:24px; font-weight:650; letter-spacing:-.6px; margin-top:2px; font-variant-numeric:tabular-nums; }
+.alerts li > span:nth-child(2) { flex:1; min-width:0; }
+.go { flex:none; border:0; background:transparent; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; padding:0; white-space:nowrap; }
+.go:hover { color:var(--accent-ink); }
+.fets { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.fet { display:grid; text-align:left; padding:4px 18px; border:0; border-left:1px solid var(--line); border-radius:0; background:transparent; min-width:0; cursor:pointer; }
+.fet-l { font-size:12px; color:var(--ink-2); }
+.fet-v { font-size:24px; font-weight:650; letter-spacing:-.6px; font-variant-numeric:tabular-nums; transition:color .2s; }
+.fet:hover .fet-v { color:var(--accent-ink); }
 .fet-s { font-size:12px; color:var(--muted); }
+.col { display:grid; gap:14px; align-content:start; min-width:0; }
+/* targetes plegables: el que es fa servir poc s'obre amb un clic */
+details.panel { display:block; }
+.fold > summary { list-style:none; cursor:pointer; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; }
+.fold > summary::-webkit-details-marker { display:none; }
+.fold > summary::before { content:'›'; display:inline-block; width:10px; color:var(--muted); font-weight:700; transition:transform .2s; }
+.fold[open] > summary::before { transform:rotate(90deg); }
+.fold > summary:hover h2 { color:var(--accent-ink); }
+.fold-body { display:grid; gap:14px; margin-top:14px; }
 .tag { font-size:11px; font-weight:650; padding:2px 9px; border-radius:20px; white-space:nowrap; flex:none; background:rgba(255,255,255,.08); color:var(--ink-2); }
 .tag.good { background:var(--good-soft); color:var(--good); }
 .tag.bad { background:var(--bad-soft); color:var(--bad); }
 .tag.accent { background:var(--accent-soft); color:var(--accent); }
 
 /* pestanyes: una vista cada vegada */
-.nav { position:sticky; top:10px; z-index:4; display:flex; gap:4px; padding:5px; border-radius:50px; width:fit-content; max-width:100%; overflow-x:auto;
+.nav { display:flex; gap:4px; padding:5px; border-radius:50px; width:fit-content; max-width:100%; overflow-x:auto;
   background:rgba(28,28,32,.75); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); border:1px solid var(--glass-b); box-shadow:var(--sh); }
 .nav button { padding:8px 16px; border-radius:50px; border:0; background:transparent; color:var(--muted); font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap;
   transition:background .2s, color .2s; }
@@ -819,9 +852,17 @@ button.pill:disabled { opacity:.45; cursor:default; }
 .g2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:14px; align-items:start; }
 
 /* avui: llista + $oc */
-.grp { display:grid; }
-.grp h3, .og h3 { margin:10px 0 2px; font-size:11.5px; font-weight:650; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
+.today { gap:16px; }
+.today-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; }
+.today-head textarea { flex:1; min-width:240px; max-width:520px; height:38px; min-height:38px; padding:8px 12px; resize:none; overflow:hidden; }
+.groups { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; align-items:start; }
+.grp { display:grid; padding:14px 16px 4px; border-radius:14px; background:rgba(255,255,255,.035); border:1px solid var(--line); transition:border-color .3s, background .3s; }
+.grp h3 { margin:0 0 4px; font-size:14px; font-weight:650; display:grid; gap:1px; }
+.grp h3 small { font-size:11.5px; font-weight:500; color:var(--muted); }
+.grp.now { border-color:rgba(62,207,142,.45); background:rgba(62,207,142,.06); }
 .grp.now h3 { color:var(--good); }
+.today .fold > summary h3 { margin:0; font-size:13.5px; font-weight:600; color:var(--ink-2); }
+.og h3 { margin:10px 0 2px; font-size:11.5px; font-weight:650; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
 .task { display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer; }
 .task:last-child { border-bottom:0; }
 .task input { width:17px; height:17px; margin-top:3px; accent-color:var(--accent); flex:none; }
@@ -830,8 +871,8 @@ button.pill:disabled { opacity:.45; cursor:default; }
 .task .desc { display:block; color:var(--muted); font-size:13px; }
 .task .when { display:block; font-size:12.5px; font-weight:650; color:var(--good); }
 .bullet { width:17px; text-align:center; color:var(--muted); flex:none; }
-details summary { cursor:pointer; color:var(--ink-2); font-size:13.5px; margin-top:6px; }
-details[open] summary { margin-bottom:6px; }
+details:not(.fold, .more) summary { cursor:pointer; color:var(--ink-2); font-size:13.5px; margin-top:6px; }
+details:not(.fold, .more)[open] summary { margin-bottom:6px; }
 .ocbox iframe { width:100%; height:880px; border:0; display:block; }
 
 /* col·leccions: barres + àlbum */
@@ -936,10 +977,11 @@ button, a, label, .row, .task { touch-action:manipulation; }
     background:radial-gradient(280px circle at var(--mx,50%) var(--my,50%),rgba(var(--acc-rgb),.07),transparent 70%); }
   .panel:hover::after, .resum:hover::after { opacity:1; }
 }
-@media (max-width:900px) { .resum { grid-template-columns:1fr; } }
+@media (max-width:900px) { .resum { grid-template-columns:1fr; gap:14px; } }
 @media (max-width:640px) {
   main { padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
-  .resum { padding:20px 18px; } .hola { font-size:26px; } .panel { padding:16px; }
+  .resum { padding:18px; } .hola { font-size:22px; } .panel { padding:16px; }
+  .fets { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .g2 { grid-template-columns:1fr; }
   .row { grid-template-columns:1fr auto; } .row .track { grid-column:1 / -1; grid-row:2; }
 }
@@ -1508,25 +1550,30 @@ def write_dashboard(d, hist):
     wl_bad = [w for w in d["wishlist"] if not w["ok"]]
     pend = sum(tr["status"] in ("Pendent", "Enviat") for tr in d["trades"])
 
-    def alert(tag, cls, text):
-        return f'<li><span class="tag {cls}">{e(tag)}</span><span>{text}</span></li>'
-    alerts = [alert(t("Wishlist"), "bad", f'<b>{e(w["name"])}</b>: {e(w["todo"])}') for w in wl_bad]
+    # pestanyes, per ordre d'ús: el que fas cada hora primer, el que fas de tant en tant al final
+    tabs = {"avui": t("Avui"), "coll": t("Col·leccions"), "wl": t("Wishlist"), "trades": t("Intercanvis"),
+            "mill": t("Millores"), "eines": t("Posar al dia")}
+
+    def alert(tag, cls, text, go):  # cada avís porta a la pestanya on s'arregla
+        return (f'<li><span class="tag {cls}">{e(tag)}</span><span>{text}</span>'
+                f'<button type="button" class="go" data-goto="{go}">{e(tabs[go])} →</button></li>')
+    alerts = [alert(t("Wishlist"), "bad", f'<b>{e(w["name"])}</b>: {e(w["todo"])}', "wl") for w in wl_bad]
     if len(d["wishlist"]) < 15:
-        alerts.append(alert(t("Wishlist"), "accent", e(t("Tens {n} llocs lliures. Mira «Per omplir» a la wishlist.", n=15 - len(d["wishlist"])))))
+        alerts.append(alert(t("Wishlist"), "accent", e(t("Tens {n} llocs lliures. Mira «Per omplir» a la wishlist.", n=15 - len(d["wishlist"]))), "wl"))
     for kind, r, prev in d["changes"]:
         if kind == "nou":
             continue
         if r["owner"] == ME:
-            alerts.append(alert(t("Aconseguit"), "good", f'<b>{e(r["name"])}</b> · {e(r["serie"])}'))
+            alerts.append(alert(t("Aconseguit"), "good", f'<b>{e(r["name"])}</b> · {e(r["serie"])}', "coll"))
         elif not r["owner"]:
-            alerts.append(alert(t("Lliure"), "accent", e(t("{name} ha quedat lliure (era de {prev}): posa'l a la wishlist", name=r["name"], prev=prev))))
+            alerts.append(alert(t("Lliure"), "accent", e(t("{name} ha quedat lliure (era de {prev}): posa'l a la wishlist", name=r["name"], prev=prev)), "wl"))
         else:
-            alerts.append(alert(t("Canvi"), "", e(t("{name} ara és de {owner} (abans: {prev})", name=r["name"], owner=r["owner"], prev=prev or t("lliure")))))
+            alerts.append(alert(t("Canvi"), "", e(t("{name} ara és de {owner} (abans: {prev})", name=r["name"], owner=r["owner"], prev=prev or t("lliure"))), "coll"))
     news = sum(k == "nou" for k, _, _ in d["changes"])
     if news:
-        alerts.append(alert(t("Nous"), "", e(t("{n} personatges nous a les teves sèries", n=news))))
+        alerts.append(alert(t("Nous"), "", e(t("{n} personatges nous a les teves sèries", n=news)), "coll"))
     if d["missing"]:
-        alerts.append(alert(t("Harem"), "", e(t("{n} personatges teus no surten al harem: torna a enganxar el $mma+s a «Posar al dia»", n=len(d["missing"])))))
+        alerts.append(alert(t("Harem"), "", e(t("{n} personatges teus no surten al harem: torna a enganxar el $mma+s a «Posar al dia»", n=len(d["missing"]))), "eines"))
 
     spec = specials()
     esp_tag = f' <span class="tag accent">{e(t("especial"))}</span>'
@@ -1568,19 +1615,21 @@ def write_dashboard(d, hist):
         sob += f"<tr><td class='sub'>{e(t('i {n} sèries més, al full «Sobrants» de l’Excel', n=len(sizes) - 12))}</td><td></td></tr>"
 
     # Llista d'avui: cada tasca marcada queda marcada fins que es pot tornar a fer (data-torna)
-    periodic, other, prev = [], [], None
+    groups = {}  # una targeta per grup; el text entre parèntesis del títol va a sota, més petit
     for i, (g, que, ordre, com, torna) in enumerate(RUTINA):
-        out = periodic if g in ("dia", "hora", "reclam") else other
-        if g != prev:
-            out.append(f'</div><div class="grp" data-period="{g}"><h3>{e(group_title(g))}</h3>')
-            prev = g
+        if g not in groups:
+            title, _, sub = group_title(g).partition(" (")
+            groups[g] = [f'<div class="grp" data-period="{g}"><h3>{e(title[:1] + title[1:].lower())}'
+                         + (f'<small>{e(sub.rstrip(")"))}</small>' if sub else "") + '</h3>']
         tu = TU_KEY.get((g, ordre)) or TU_KEY.get(ordre)  # quina línia del $tu la marca
         box = (f'<input type="checkbox" data-id="r{i}" data-torna="{torna}"' + (f' data-tu="{tu}"' if tu else "") + '>' if torna is not None
                else '<span class="bullet">·</span>')
-        out.append(f'<label class="task">{box}<span><b>{e(t(que))}</b> {cmd_html(ordre)}'
-                   f'<span class="desc">{e(t(com, rt=RT_HORES))}</span><span class="when"></span></span></label>')
-    checklist = ("<div>" + "".join(periodic) + "</div>"
-                 + f'<details><summary>{e(t("Altres moments"))}</summary><div>' + "".join(other) + "</div></details>")
+        groups[g].append(f'<label class="task">{box}<span><b>{e(t(que))}</b> {cmd_html(ordre)}'
+                         f'<span class="desc">{e(t(com, rt=RT_HORES))}</span><span class="when"></span></span></label>')
+    card = lambda g: "".join(groups[g]) + "</div>"
+    checklist = ('<div class="groups">' + "".join(card(g) for g in ("hora", "reclam", "dia")) + "</div>"
+                 + f'<details class="fold"><summary><h3>{e(t("Altres moments"))}</h3></summary><div class="groups fold-body">'
+                 + "".join(card(g) for g in groups if g not in ("hora", "reclam", "dia")) + "</div></details>")
 
     wl_names = {w["name"] for w in d["wishlist"]}
     coll = {s["name"]: [] for s in series}
@@ -1634,7 +1683,7 @@ def write_dashboard(d, hist):
 
     page = f"""<!doctype html>
 <html lang="{LANG}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark"><meta name="theme-color" content="#141417">
+<meta name="color-scheme" content="dark"><meta name="theme-color" content="#0e0f15">
 <title>{e(TITLE_TEXT)}</title>{favicon}
 <style>{STYLE}</style></head><body><main>
 <header class="hdr fu">
@@ -1646,37 +1695,41 @@ def write_dashboard(d, hist):
   <span class="pill" id="toolMsg" role="status"></span>
   <button type="button" class="pill" id="notiBtn" aria-pressed="false" hidden><span class="dot"></span><span>{T_("Notificacions: no")}</span></button>
   <button type="button" class="pill" id="refaBtn">{T_("Actualitzar el tauler")}</button>
-  <button type="button" class="pill" id="lnkBtn">{T_("Crear accés directe a l'escriptori")}</button>
-  <button type="button" class="pill" id="stopBtn"><span class="dot ok"></span>{T_("Tancar el servidor")}</button>
+  <details class="more" id="more"><summary class="pill" aria-label="{T_("Més opcions")}" title="{T_("Més opcions")}">···</summary>
+   <div class="menu">
+    <button type="button" id="lnkBtn">{T_("Crear accés directe a l'escriptori")}</button>
+    <button type="button" id="stopBtn"><span class="dot ok"></span>{T_("Tancar el servidor")}</button>
+   </div></details>
  </div>
 </header>
-<section class="resum glass fu" aria-labelledby="hola">
- <div>
-  <h2 class="hola" id="hola">{T_("Hola, {name}", name=ME) if ME else T_("Hola")}</h2>
-  <p id="clock" class="clock"></p>
-  {f'<ul class="alerts" aria-label="{T_("Avisos")}">{"".join(alerts)}</ul>' if alerts else ""}
- </div>
+<div class="bar">
+ <nav class="nav" role="tablist" aria-label="{T_("Seccions")}">{"".join(
+     f'<button type="button" role="tab" data-go="{k}" aria-controls="v-{k}">{e(v)}'
+     + (f'<span class="n">{len(wl_bad)}</span>' if k == "wl" and wl_bad else "") + '</button>' for k, v in tabs.items())}</nav>
+ <p id="clock" class="clock"></p>
+</div>
+<div class="view" id="v-avui" role="tabpanel">
+<section class="resum glass" aria-labelledby="hola">
+ <h2 class="hola" id="hola">{T_("Hola, {name}", name=ME) if ME else T_("Hola")}</h2>
  <div class="fets">
-  <div class="fet"><div class="fet-l">{T_("Col·lecció")}</div><div class="fet-v">{pct}%</div><div class="fet-s">{T_("{a} de {b}", a=owned, b=total)}</div></div>
-  <div class="fet"><div class="fet-l">{T_("Harem")}</div><div class="fet-v">{len(d["harem"])}</div><div class="fet-s">{T_("{n} sobrants", n=len(d["sobrants"]))}</div></div>
-  <div class="fet"><div class="fet-l">{T_("Wishlist")}</div><div class="fet-v">{len(d["wishlist"])}/15</div><div class="fet-s">{T_("tot bé") if not wl_bad else T_("{n} per arreglar", n=len(wl_bad))}</div></div>
-  <div class="fet"><div class="fet-l">{T_("Intercanvis")}</div><div class="fet-v">{len(d["trades"])}</div><div class="fet-s">{T_("{n} oberts", n=pend)}</div></div>
+  <button type="button" class="fet" data-goto="coll"><span class="fet-l">{T_("Col·lecció")}</span><span class="fet-v">{pct}%</span><span class="fet-s">{T_("{a} de {b}", a=owned, b=total)}</span></button>
+  <button type="button" class="fet" data-goto="trades"><span class="fet-l">{T_("Harem")}</span><span class="fet-v">{len(d["harem"])}</span><span class="fet-s">{T_("{n} sobrants", n=len(d["sobrants"]))}</span></button>
+  <button type="button" class="fet" data-goto="wl"><span class="fet-l">{T_("Wishlist")}</span><span class="fet-v">{len(d["wishlist"])}/15</span><span class="fet-s">{T_("tot bé") if not wl_bad else T_("{n} per arreglar", n=len(wl_bad))}</span></button>
+  <button type="button" class="fet" data-goto="trades"><span class="fet-l">{T_("Intercanvis")}</span><span class="fet-v">{len(d["trades"])}</span><span class="fet-s">{T_("{n} oberts", n=pend)}</span></button>
  </div>
 </section>
-<nav class="nav" role="tablist" aria-label="{T_("Seccions")}">
- <button type="button" role="tab" data-go="avui" aria-controls="v-avui">{T_("Avui")}</button>
- <button type="button" role="tab" data-go="coll" aria-controls="v-coll">{T_("Col·leccions")}</button>
- <button type="button" role="tab" data-go="wl" aria-controls="v-wl">{T_("Wishlist")}{f'<span class="n">{len(wl_bad)}</span>' if wl_bad else ""}</button>
- <button type="button" role="tab" data-go="trades" aria-controls="v-trades">{T_("Intercanvis")}</button>
- <button type="button" role="tab" data-go="mill" aria-controls="v-mill">{T_("Millores")}</button>
- <button type="button" role="tab" data-go="eines" aria-controls="v-eines">{T_("Eines")}</button>
-</nav>
-<div class="view g2" id="v-avui" role="tabpanel">
- <section class="panel"><div class="panel-head"><h2>{T_("Què toca ara")}</h2></div>
-  <textarea id="tuText" rows="2" spellcheck="false" aria-label="$tu" placeholder="{T_("Enganxa aquí el teu $tu i les caselles es marquen soles…")}"></textarea>
-  <span id="tuMsg" role="status"></span>{checklist}</section>
- <section class="panel ocbox"><div class="panel-head"><h2>{T_("Ajudant del $oc")}</h2><a href="{oc}" style="font-size:13px">{T_("Obrir a part")}</a></div>
- <iframe src="{oc}" title="{T_("Ajudant del $oc")}"></iframe></section>
+<section class="panel today">
+ <div class="today-head"><h2>{T_("Què toca ara")}</h2>
+  <textarea id="tuText" rows="1" spellcheck="false" aria-label="$tu" placeholder="{T_("Enganxa aquí el teu $tu i les caselles es marquen soles…")}"></textarea>
+  <span id="tuMsg" role="status"></span></div>
+ <p class="claim-now" id="claimNow" hidden></p>
+ {checklist}
+</section>
+<div class="g2">
+ {f'<section class="panel"><div class="panel-head"><h2>{T_("Avisos")}</h2><span class="muted" style="font-size:13px">{len(alerts)}</span></div><ul class="alerts">{"".join(alerts)}</ul></section>' if alerts else ""}
+ <details class="panel fold ocbox" id="ocFold"><summary><h2>{T_("Ajudant del $oc")}</h2><span class="muted" style="font-size:13px">{T_("Troba la vermella: fes servir l'ajudant")}</span></summary>
+  <div class="fold-body"><a href="{oc}" style="font-size:13px">{T_("Obrir a part")}</a><iframe src="{oc}" title="{T_("Ajudant del $oc")}"></iframe></div></details>
+</div>
 </div>
 <div class="view" id="v-coll" role="tabpanel" hidden>
 <section class="panel" id="coll">
@@ -1695,25 +1748,24 @@ def write_dashboard(d, hist):
    <button type="button" class="tab" id="gotClear">{T_("Desmarca")}</button><span id="gotMsg" role="status"></span></div>
  </div>
 </section>
-<section class="panel" id="esp">
- <div class="panel-head"><h2>{T_("Col·lecció especial")}</h2><span class="muted" style="font-size:13px">{T_("Un grup triat per tu: per exemple, els Eevee de la Pokédex")}</span></div>
- <div class="give-row"><input type="text" id="espName" list="dlEsp" spellcheck="false" autocomplete="off" placeholder="{T_("Nom del grup")}" aria-label="{T_("Nom del grup")}">
+<details class="panel fold" id="esp">
+ <summary><h2>{T_("Col·lecció especial")}</h2><span class="muted" style="font-size:13px">{T_("Un grup triat per tu: per exemple, els Eevee de la Pokédex")}</span></summary>
+ <div class="fold-body"><div class="give-row"><input type="text" id="espName" list="dlEsp" spellcheck="false" autocomplete="off" placeholder="{T_("Nom del grup")}" aria-label="{T_("Nom del grup")}">
   <datalist id="dlEsp">{"".join(f'<option value="{e(x)}">' for x in spec)}</datalist></div>
  <textarea id="espText" rows="5" spellcheck="false" aria-label="{T_("Personatges")}" placeholder="{T_("Un personatge per línia, com surt a Mudae")}"></textarea>
  <div class="give-row"><button class="primary" id="espBtn" disabled>{T_("Desar la col·lecció")}</button><span id="espMsg" role="status"></span></div>
- <p class="muted" style="margin:0;font-size:13px">{T_("Els teus es marquen sols. Per saber de qui són els altres, ves a Eines → «Posar al dia», tria la col·lecció i enganxa el $imaso de la sèrie d'on surten. Per canviar-la, escriu el nom d'una que ja tens: s'hi carreguen els seus personatges.")}</p>
-</section>
+ <p class="muted" style="margin:0;font-size:13px">{T_("Els teus es marquen sols. Per saber de qui són els altres, ves a «Posar al dia», tria la col·lecció i enganxa el $imaso de la sèrie d'on surten. Per canviar-la, escriu el nom d'una que ja tens: s'hi carreguen els seus personatges.")}</p>
+</div></details>
 </div>
 <div class="view g2" id="v-wl" role="tabpanel" hidden>
+ <section class="panel"><div class="panel-head"><h2>{T_("Què has de fer")}</h2></div><div id="wlBuild"></div></section>
  <section class="panel" id="wlp"><div class="panel-head"><h2>{T_("Wishlist")}</h2><span class="muted" style="font-size:13px">{T_("{n} de 15 llocs (l'estrella també compta)", n=len(d["wishlist"]))}</span></div>
   <table>{wl}</table>
-  <div id="wlBuild"></div>
  </section>
- <section class="panel"><h2>{T_("Sobrants per sèrie")}</h2><table>{sob}</table></section>
 </div>
 <div class="view" id="v-trades" role="tabpanel" hidden>
 <section class="panel">
- <div class="panel-head"><h2>{T_("Intercanvis per persona")}</h2>
+ <div class="panel-head"><h2>{T_("A qui demanar")}</h2>
   <p class="recvbar"><button id="recvBtn" class="primary" disabled>{T_("Ja són meus")}</button><button id="freeBtn" class="tab" disabled title="{T_("Algú se n'ha divorciat: ara són lliures")}">{T_("Alliberar")}</button><span id="recvMsg" role="status">{T_("Marca els que t'han donat o els que algú ha alliberat.")}</span></p></div>
  <div class="owners">{trades}</div>
 </section>
@@ -1723,6 +1775,17 @@ def write_dashboard(d, hist):
  <textarea id="mineQ" rows="3" spellcheck="false" placeholder="Naruto / South Park / full metal alchimist / Rezero"></textarea>
  <div id="mineOut"></div>
 </section>
+<div class="g2">
+<section class="panel" id="cls">
+ <div class="panel-head"><h2>{T_("Sèrie dels teus personatges")}</h2><span class="muted" style="font-size:13px">{T_("dels que no col·lecciones")}</span></div>
+ {cls_html}
+ <div class="give-row"><input type="text" id="clsName" list="dlNames" spellcheck="false" autocomplete="off" placeholder="{T_("Personatge")}" aria-label="{T_("Personatge")}">
+  <span>{T_("és de")}</span><input type="text" id="clsSerie" list="dlSeries" spellcheck="false" autocomplete="off" placeholder="{T_("Sèrie")}" aria-label="{T_("Sèrie")}">
+  <button class="primary" id="clsBtn" disabled>{T_("Desar")}</button><span id="clsMsg" role="status"></span></div>
+ {datalists}
+</section>
+<section class="panel"><h2>{T_("Sobrants per sèrie")}</h2><table>{sob}</table></section>
+</div>
 </div>
 <div class="view" id="v-mill" role="tabpanel" hidden>
 <section class="panel">
@@ -1734,9 +1797,9 @@ def write_dashboard(d, hist):
 </section>
 <div class="g2">
  <section class="panel"><div class="panel-head"><h2>{T_("Insígnies")}</h2><span class="muted" style="font-size:13px">$kakerareward</span></div>
+  <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="badgeNext"></ul>
   <table>{badge_rows}</table>
   <p class="muted" style="margin:0;font-size:13px">{T_("Primer, més tirades (Sapphire) i gastar menys poder (Gold). El Ruby IV abaixa un 25 % el preu de totes les altres.")}</p>
-  <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="badgeNext"></ul>
  </section>
  <section class="panel"><div class="panel-head"><h2>{T_("Torre")}</h2><span class="muted" style="font-size:13px">$kt</span></div>
   <p class="clock" id="towerNext" style="margin:0"></p>
@@ -1746,17 +1809,19 @@ def write_dashboard(d, hist):
  </section>
 </div>
 <section class="panel"><div class="panel-head"><h2>{T_("Esferes")}</h2><span class="muted" id="perkWho" style="font-size:13px"></span></div>
+ <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="perkNext"></ul>
+ <div class="g2">
+  <div><h3 class="og-h">{T_("Els que et surten més (claus, $mmy=)")}</h3><p id="perkKeys" style="margin:0;font-size:14px;line-height:1.9"></p></div>
+  <div><h3 class="og-h">{T_("Personatges que has millorat")}</h3><p id="perkList" style="margin:0;font-size:14px;line-height:1.9"></p>
+   <p class="muted" style="margin:6px 0 0;font-size:13px">{T_("Mudae no té cap llista dels personatges millorats: el tauler recorda els que enganxes amb el $opp. El $op sol només et mostra el primer.")}</p></div>
+ </div>
  <div class="ogrid">{perk_rows}</div>
  <p class="muted" style="margin:0;font-size:13px">{T_("Les 5 primeres tenen 6 nivells i les altres 5, un. Si millores un personatge del tot, les 5 primeres pugen un nivell més. Fes-les servir en personatges que no regalaràs: si te'n divorcies, perds el 10 %.")}</p>
- <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="perkNext"></ul>
- <h3 class="og-h">{T_("Els que et surten més (claus, $mmy=)")}</h3><p id="perkKeys" style="margin:0;font-size:14px;line-height:1.9"></p>
- <h3 class="og-h">{T_("Personatges que has millorat")}</h3><p id="perkList" style="margin:0;font-size:14px;line-height:1.9"></p>
- <p class="muted" style="margin:0;font-size:13px">{T_("Mudae no té cap llista dels personatges millorats: el tauler recorda els que enganxes amb el $opp. El $op sol només et mostra el primer.")}</p>
 </section>
 <section class="panel"><div class="panel-head"><h2>{T_("Botiga d'esferes")}</h2><span class="muted" style="font-size:13px">$os</span></div>
+ <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="shopNext"></ul>
  <div class="og">{shop_rows}</div>
  <p class="muted" style="margin:0;font-size:13px">{T_("Valen per a tots els personatges, però gairebé totes fan més forta una millora dels personatges: primer gasta les esferes amb el $opp. Cada nivell costa 4.000 més que l'anterior, i amb $shoprefund et tornen les esferes.")}</p>
- <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="shopNext"></ul>
 </section>
 </div>
 <div class="view" id="v-eines" role="tabpanel" hidden>
@@ -1774,14 +1839,6 @@ def write_dashboard(d, hist):
   <span class="muted" style="font-size:13px">{T_("Escriu les que vulguis afegir, separades amb $ i com surten a Mudae: entren a l'ordre i es creen soles quan enganxes la resposta.")}</span></div>
  <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
  <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
-</section>
-<section class="panel" id="cls">
- <div class="panel-head"><h2>{T_("Sèrie dels teus personatges")}</h2><span class="muted" style="font-size:13px">{T_("dels que no col·lecciones")}</span></div>
- {cls_html}
- <div class="give-row"><input type="text" id="clsName" list="dlNames" spellcheck="false" autocomplete="off" placeholder="{T_("Personatge")}" aria-label="{T_("Personatge")}">
-  <span>{T_("és de")}</span><input type="text" id="clsSerie" list="dlSeries" spellcheck="false" autocomplete="off" placeholder="{T_("Sèrie")}" aria-label="{T_("Sèrie")}">
-  <button class="primary" id="clsBtn" disabled>{T_("Desar")}</button><span id="clsMsg" role="status"></span></div>
- {datalists}
 </section>
 <section class="panel"><h2>{T_("Ordres d'ús habitual")}</h2><div class="ogrid">{ordres}</div></section>
 </div>
@@ -1880,6 +1937,19 @@ tabs.forEach((b, i) => {{
 }});
 let first = 'avui'; try {{ first = localStorage.getItem('mudae-vista') || 'avui'; }} catch (err) {{}}
 go(first);
+// els avisos i les xifres del resum porten a la pestanya on es fa la feina
+document.addEventListener('click', ev => {{
+  const b = ev.target.closest('[data-goto]'); if (!b) return;
+  go(b.dataset.goto); scrollTo({{ top: 0 }});
+}});
+// menú «···» de la capçalera: es tanca clicant fora, amb Esc o en triar-ne una opció
+const more = document.getElementById('more');
+document.addEventListener('click', ev => {{ if (more.open && (!more.contains(ev.target) || ev.target.closest('.menu button'))) more.open = false; }});
+document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.open) {{ more.open = false; more.querySelector('summary').focus(); }} }});
+// l'ajudant del $oc es queda obert o plegat com el vas deixar
+const ocFold = document.getElementById('ocFold');
+try {{ ocFold.open = localStorage.getItem('mudae-oc') === '1'; }} catch (err) {{}}
+ocFold.addEventListener('toggle', () => {{ try {{ localStorage.setItem('mudae-oc', ocFold.open ? '1' : '0'); }} catch (err) {{}} }});
 </script><script>{JS_TODAY.replace("__CLAIM__", json.dumps(CLAIM_HOURS))}</script>
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
 <script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec))}</script>
