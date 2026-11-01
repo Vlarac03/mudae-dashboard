@@ -13,14 +13,14 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 ## Features
 
 - **Tabs in the order you use them**: Today, Collections, Wishlist, Trades, Upgrades and Update. The roll and claim clock stays above the tabs, alerts take you to the tab where you fix them, and long sections fold away and stay open or closed the way you left them.
-- **One box for everything**: paste any Mudae message at the top of the Today tab (`$tu`, `$k`, `$kt`, `$opp`, `$os`, `$mmy=`, `$mma+s`, `$wl`, `$imaso`…) and the dashboard sends it where it belongs. Under it, a copy button for each command it understands. Harem, wishlist and series go to «Update» so you can check them before saving.
-- **What to do now**: paste your `$tu` and the checklist ticks itself, Pokéslot (`$p`) included. Three cards (every hour, claim time, start of the day) where each task stays ticked until you can do it again (`$daily` and `$dk` every 20 h, `$vote` every 12 h, `$oh` at midnight UTC, rolls every hour…).
+- **One box for everything**: paste any Mudae message at the top of the Today tab (`$tu`, `$settings`, `$bonus`, `$k`, `$kt`, `$opp`, `$os`, `$mmy=`, `$mma+s`, `$wl`, `$imaso`…) and the dashboard sends it where it belongs. Under it, a copy button for each command it understands and a **To do!** box with the commands it still needs: nothing that depends on your server or on you is assumed (roll and claim times, `$rt` hours, wishlist slots, badge and tower prices). Harem, wishlist and series go to «Update» so you can check them before saving.
+- **What to do now**: paste your `$tu` and the checklist ticks itself, Pokéslot (`$p`) included. Three cards (every hour, claim time, start of the day) where each task stays ticked until you can do it again (`$daily` and `$dk` every 20 h, `$vote` every 12 h, `$oh` at midnight UTC, rolls at your server's minute…). The roll minute and the next claim come from your `$tu`, how often claims reset from `$settings`, and the `$rt` hours from `$bonus`.
 - **Notifications**: while the dashboard is open, it tells you when your rolls are back (and whether you can claim and react to kakera), and when your claim, `$daily`, `$vote`, `$dk`, `$rt` or `$p` are ready again. They beep and stay on screen until you close them. Turn them on and off with the **Notifications** button at the top.
 - **`$oc` helper**: mark the colors that appear and it tells you which square to click to find the red sphere. It's folded on the Today tab: open it with a click.
 - **Collections**: one album per series with your characters, the free ones, the ones on your wishlist and the ones other players own (and who). Click the ones you get to mark them as yours.
 - **Custom collections**: a group you pick, even if it isn't a Mudae series (for example, the Eevees from the Pokédex). Type its name and characters, and the `$imaso` of the series they come from fills in who owns each one.
 - **Pokédex**: paste your `$pd sumrare` (one message) and see how many Pokémon you have of each rarity. Pasting the «time left before your next `$p`» message ticks the Pokéslot task.
-- **Upgrades**: paste your `$k`, `$kt`, `$opp <character>`, `$os`, `$mmy=` or `$bonus` and it tells you which badge, tower floor, sphere perk and sphere shop upgrade to get next, and how much kakera you still need. The `$bonus` adds a summary: how many kakera buttons a full power bar covers, the spheres your first `$oh` gives and whether your `$rt` matches the dashboard.
+- **Upgrades**: paste your `$k`, `$kt`, `$opp <character>`, `$os`, `$mmy=` or `$bonus` and it tells you which badge, tower floor, sphere perk and sphere shop upgrade to get next, and how much kakera you still need. The `$bonus` adds a summary: how many kakera buttons a full power bar covers, the spheres your first `$oh` gives, your `$rt` hours and your wishlist slots. Prices only come from what you paste (`$k`, `$kt`), since each server sets its own.
 - **Wishlist**: warns you about characters you already own or someone else claimed, and builds the `$wishremove` and `$wish` commands for you.
 - **Trades and gifts**: the `$give` command for each player, and a search box that understands misspelled series lists («full metal alchimist», «Rezero»…).
 - **Update**: paste your `$mma+s` (your harem, with each character's series), `$wl` or an `$imaso` and click a button. It reminds you if your harem is more than a week old.
@@ -72,8 +72,6 @@ The dashboard doesn't connect to Discord or Mudae and doesn't need an account. I
 | `idioma` | `en`, `es` or `ca`. Run `Configura.bat` again to change it. |
 | `servidor` | Optional: shown in the dashboard and Excel titles. |
 | `discord_id` | Optional: the number `$myid` gives you, so the `$give` commands you copy mention you properly. |
-| `hores_reclam` | Optional: the hours when you can claim on your server. Default `[1, 4, 7, 10, 13, 16, 19, 22]` (every 3 hours, at minute 02). |
-| `rt_hores` | Optional: how often you can use `$rt`. Default `50`; take off 10 hours for each Emerald II, III and IV badge (`20` with all three). |
 | `preferits` | Optional: characters the dashboard suggests first when a wishlist slot frees up, for example `["Fawkes", "Howl"]`. |
 
 ## Troubleshooting

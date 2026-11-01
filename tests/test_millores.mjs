@@ -39,8 +39,9 @@ El siguiente nivel cuesta 40.000
 Tienes 615
 Arma un piso usando $build <numero del beneficio>
  [1]  +2 espacios en la lista de deseos`;
-assert.deepEqual(readMudae(kt, 5000), { nf: 7, k: 615 });
-assert.deepEqual(readMudae(kt.replace('cuesta 40.000', 'costs 80,000'), 10000), { nf: 7, k: 615 });
+assert.deepEqual(readMudae(kt, 5000), { ktCost: 40000, nf: 7, k: 615 });
+assert.deepEqual(readMudae(kt.replace('cuesta 40.000', 'costs 80,000'), 10000), { ktCost: 80000, nf: 7, k: 615 });
+assert.deepEqual(readMudae(kt, null), { ktCost: 40000, k: 615 });  // sense el preu base de la torre, no sabem quants pisos tens
 
 const opp = `Mejora los beneficios del personaje seleccionado.
 Tienes 1.780
@@ -114,13 +115,13 @@ const bonus = `1. Bonos del Jugador
  · Bono adicional para botones de kakera: +0% ($bk)
 2. · Probabilidad de obtener una llave adicional en deseos: +10% ($kt)
  · $oh bono diario: +40 spheres, 2% de obtener 1 $oq ($op) y 0% $ot ($shop)`;
-const B = readMudae(bonus, 5000).bonus;
-assert.equal(B.length, 8);
+const B = readMudae(bonus + '\n · Espacios de lista de deseos: +8 (6 $k + 0 $kl + 2 $kt)\n · Espacios de Starwish: +0 (0 $kl + 0 $sw)', 5000).bonus;
+assert.equal(B.length, 10);
 assert.deepEqual(B[0], ['Rolls por hora', '+8 (6 $k + 1 $kl + 1 $kt)']);
 assert.deepEqual(B[6], ['Probabilidad de obtener una llave adicional en deseos', '+10% ($kt)']);
 const bonusFacts = new Function(fn('bonusFacts') + 'return bonusFacts;')();
-assert.deepEqual(bonusFacts(B), { pmax: 110, pcost: 36, oh: 40, rt: 20 });
-assert.deepEqual(bonusFacts(undefined), { pmax: null, pcost: null, oh: null, rt: null });
+assert.deepEqual(bonusFacts(B), { pmax: 110, pcost: 36, oh: 40, rt: 20, wl: 8 });  // 7 de base + 8 = els 15 de Victor
+assert.deepEqual(bonusFacts(undefined), { pmax: null, pcost: null, oh: null, rt: null, wl: null });
 assert.deepEqual(readMudae('Hola, això no és de Mudae', 5000), {});
 assert.deepEqual(readMudae('Kakera rewards\nBonus Bronze I + Silver I + Gold I\n$bronze', 5000), {});  // el $kakerareward no són els teus nivells
 // torre: 12 pisos per torre; el $kt diu el total i d'aquí surt la torre on ets
@@ -130,6 +131,12 @@ assert.deepEqual(towerNext({ f: [11, 8], tv: 5000 }), { tw: 0, built: 2, cost: 1
 assert.deepEqual(towerNext({ t: 1, f: [], tv: 5000 }), { tw: 1, built: 12, cost: 65000, rec: 11 });  // torre 2: torna a començar per l'11
 assert.deepEqual(towerFromKt({ f: [11, 8] }, 14), { t: 1, f: [] });  // 14 pisos: torre 2, els marcats eren de la 1
 assert.deepEqual(towerFromKt({ t: 1, f: [11, 8] }, 14), { t: 1, f: [11, 8] });
+assert.equal(towerNext({ f: [8], tv: null }).cost, null);  // sense preu base, no s'inventa el preu
+// el preu base surt del $kt si has marcat els pisos: 7 pisos i el següent costa 40.000 → 5.000
+const towerGuess = new Function('TOWER', fn('towerNext') + fn('towerGuess') + 'return towerGuess;')(TOWER);
+assert.equal(towerGuess({ f: [1, 2, 4, 7, 8, 10, 11], ktCost: 40000 }), 5000);
+assert.equal(towerGuess({ f: [], ktCost: 40000 }), null);  // sense pisos marcats no ho sabem
+assert.equal(towerGuess({ f: [8], ktCost: 300000 }), null);  // fora de 5.000-50.000: els pisos marcats no quadren
 // «Posar al dia» endevina què has enganxat
 const upd = py.match(/JS_UPD = r"""([\s\S]*?)"""/)[1];
 const detect = new Function(upd.match(/function detect[\s\S]*?\n}\n/)[0] + 'return detect;')();

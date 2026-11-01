@@ -63,17 +63,16 @@ ALTRES = "Altres (no la sé: mira-la amb $im)"
 # Personatges que vols que el tauler et proposi primer quan s'allibera un lloc a la wishlist (després, la resta de prioritat Alta)
 PREFERITS = CONFIG.get("preferits", [])
 
-CLAIM_HOURS = CONFIG.get("hores_reclam", [1, 4, 7, 10, 13, 16, 19, 22])  # reclams cada 3 h al minut 02
 GRUPS = {
     "dia": "EN COMENÇAR EL DIA",
-    "hora": "CADA HORA (minut 02)",
-    "reclam": "MOMENT BO: pots reclamar ({hours})",
+    "hora": "CADA HORA",
+    "reclam": "MOMENT BO: pots reclamar",
     "aconseguit": "UN COP PER SETMANA (o quan aconsegueixis algú)",
     "temps": "QUAN TINGUIS TEMPS",
 }
-RT_HORES = CONFIG.get("rt_hores", 50)  # $rt: cada 50 h, -10 h per cada insígnia Esmeralda II, III i IV
 # (grup, què, ordre, com, quan es torna a poder fer): surt al full Rutina i al tauler.
-# «hora» = al minut 02 · «reclam» = al pròxim reclam · «utc» = a mitjanit UTC · un número = hores des que la fas
+# «hora» = al reinici de tirades · «reclam» = al pròxim reclam · «rt» = les hores del $rt · «utc» = a mitjanit UTC · un número = hores des que la fas
+# Les hores que depenen del servidor o de tu (reinicis, $rt) surten del que enganxes ($tu, $settings, $bonus), mai d'aquí.
 RUTINA = [
     ("dia", "Mirar què tens", "$tu", "Resum de tot el que tens disponible", "hora"),
     ("dia", "Votar", "$vote", "Et guarda un reinici de tirades: el gastes amb $rolls. Cada 12 h", 12),
@@ -81,17 +80,17 @@ RUTINA = [
     ("dia", "Esferes", "$oh (×4)", "Primer blaves (destapen 3), als últims clics les millors. 2 minuts!", "utc"),
     ("dia", "Trobar la vermella", "$oc", "Si en tens. Fes servir l'ajudant: et diu on clicar", "utc"),
     ("hora", "Tirades", "$m", "Fes-les totes: les que no fas es perden", "hora"),
-    ("hora", "Kakera", "clic al botó", "Cada reacció gasta 40 % de poder (20 % amb personatges de 10+ claus)", "hora"),
+    ("hora", "Kakera", "clic al botó", "Cada reacció gasta poder: enganxa el $tu per saber quant", "hora"),
     ("reclam", "1. Tirades", "$m", "Totes", "reclam"),
     ("reclam", "2. Reclamar", "clic al cor", "El millor: wishlist > les teves sèries > molta kakera", "reclam"),
     ("reclam", "3. Més tirades", "$us · $rolls", "Tirades guardades ($us) i el reinici del vot ($rolls)", "reclam"),
-    ("reclam", "4. Un altre de bo?", "$rt", "Et deixa tornar a reclamar. Cada {rt} h: només per a la wishlist o les teves sèries", RT_HORES),
+    ("reclam", "4. Un altre de bo?", "$rt", "Et deixa tornar a reclamar: només per a la wishlist o les teves sèries", "rt"),
     ("reclam", "5. Sense poder?", "$dk", "Recarrega el poder i dona kakera. Cada 20 h", 20),
     ("aconseguit", "Treure'l de la wishlist", "$wishremove <nom>", "I posa-hi el primer de «Per omplir» (full Wishlist)", None),
     ("aconseguit", "Posar al dia les dades", "$mma+s · $wl · $imaso <sèrie>", "Per privat i sense pàgines. Enganxa-ho a «Posar al dia» del tauler", None),
     ("aconseguit", "Obrir el tauler", "Mudae", "Accés directe de l'escriptori: posa al dia l'Excel i obre el tauler", None),
     ("temps", "Intercanvis", "$trade @persona", "Full Intercanvis: a qui demanar què. Ofereix dels Sobrants", None),
-    ("temps", "Kakera estalviada", "$build 8", "Quan arribis als 35.000: pis [8] de la torre (o l'[11])", None),
+    ("temps", "Kakera estalviada", "$kt", "A la pestanya Millores et diu en què gastar-la: insígnies, torre o kakeraloots", None),
     # al final perquè els data-id (r0, r1…) de les tasques que ja tenies marcades no canviïn; al tauler surt a «Cada hora»
     ("hora", "Pokéslot", "$p", "Tirada de Pokémon: cada 2 h, per a tots els servidors", 2),
 ]
@@ -396,7 +395,7 @@ def write_excel(d):
     k = r0 + 3 + len(d["free_alta"])
     ws.cell(k, 1, t("Ordres")).font = BOLD
     for j, line in enumerate([t("Afegir: $wish <nom> (diversos: separa'ls amb $)   ·   Treure: $wishremove <nom>"),
-                              t("El desig estrella ($sw) també compta dins dels 15.")], start=k + 1):
+                              t("El desig estrella ($sw) també ocupa un lloc de la wishlist.")], start=k + 1):
         ws.cell(j, 1, "• " + line)
     widths(ws, {"A": 34, "B": 22, "C": 12, "D": 44})
 
@@ -425,7 +424,7 @@ def write_excel(d):
     for i, (grup, que, ordre, com, _torna) in enumerate(RUTINA, start=4):
         ws.cell(i, 1, group_title(grup) if grup != prev else None).font = BOLD
         prev = grup
-        for j, v in enumerate((t(que), cmd_text(ordre), t(com, rt=RT_HORES)), start=2):
+        for j, v in enumerate((t(que), cmd_text(ordre), t(com)), start=2):
             ws.cell(i, j, v).alignment = WRAP
     widths(ws, {"A": 30, "B": 24, "C": 24, "D": 66})
 
@@ -491,28 +490,63 @@ TU_KEY = {"$tu": "tu", "$vote": "vote", "$daily": "daily", "$oh (×4)": "oh", "$
           "clic al botó": "kakera", "clic al cor": "claim", "$rt": "rt", "$dk": "dk", "$p": "p"}
 
 JS_TODAY = """
-const CLAIM = __CLAIM__, clock = document.getElementById('clock'), claimNow = document.getElementById('claimNow');
+// Els reinicis del teu servidor: res de suposat. Del $tu, el minut de les tirades (cada hora) i el pròxim reclam;
+// del $settings, cada quant hi ha reclam ($setclaim). Sense aquestes dades, el tauler et diu què has d'enganxar.
+let RS = {}; try { RS = JSON.parse(localStorage.getItem('mudae-reinici')) || {}; } catch (e) {}
+if (RS.c) RS = {};  // el format d'abans (hores fixes de config.json): es torna a aprendre del $tu
+const MIN = 60000, HOUR = 3600000;
+const clock = document.getElementById('clock'), claimNow = document.getElementById('claimNow');
 const pad = n => String(n).padStart(2, '0');
 const fmt = m => m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
 const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-// Quan es pot tornar a fer una tasca marcada a l'hora `t` (ms): al minut 02, al pròxim reclam, a mitjanit UTC o al cap de N hores
+// El pròxim reinici de tirades i de reclam després de `t` (ms), o null si encara no ho sabem
+function nextRoll(t) { if (RS.m == null) return null; const d = new Date(t); d.setMinutes(RS.m, 0, 0); return +d > t ? +d : +d + HOUR; }
+function nextClaim(t) {
+  if (!RS.next) return null;
+  if (!RS.iv) return RS.next > t ? RS.next : null;
+  const iv = RS.iv * MIN; return RS.next + (Math.floor((t - RS.next) / iv) + 1) * iv;
+}
+const lastClaim = t => { const n = nextClaim(t); return n == null ? (RS.next && RS.next <= t ? RS.next : null) : RS.iv ? n - RS.iv * MIN : null; };
+// Quan es pot tornar a fer una tasca marcada a l'hora `t` (ms): al reinici de cada hora, al pròxim reclam, a mitjanit UTC,
+// al cap de les hores del $rt (del $bonus) o al cap de N hores. Infinity: no ho sabem (falta enganxar alguna cosa).
 function until(torna, t) {
-  const d = new Date(t);
-  if (torna === 'hora') { d.setMinutes(2, 0, 0); if (d <= t) d.setHours(d.getHours() + 1); return +d; }
-  if (torna === 'utc') { d.setUTCHours(24, 0, 0, 0); return +d; }
-  if (torna === 'reclam') {
-    for (let k = 0; k < 2; k++) for (const h of CLAIM) {
-      const c = new Date(t); c.setDate(c.getDate() + k); c.setHours(h, 2, 0, 0); if (c > t) return +c;
-    }
+  if (torna === 'hora') return nextRoll(t) ?? Infinity;
+  if (torna === 'reclam') return nextClaim(t) ?? Infinity;
+  if (torna === 'rt') return window.RT_H ? t + window.RT_H * HOUR : Infinity;
+  if (torna === 'utc') { const d = new Date(t); d.setUTCHours(24, 0, 0, 0); return +d; }
+  return t + Number(torna) * HOUR;
+}
+// Del $tu, d'aquí quants minuts es reinicien el reclam i les tirades (0 = no ho diu)
+function readResets(text) {
+  const ls = text.split(/\\r?\\n/), isClaim = l => /reclamar|\\bclaim/i.test(l);
+  const c = ls.find(isClaim), r = ls.find(l => !isClaim(l) && !/\\$daily/i.test(l) && /reinicio|reset/i.test(l));
+  return { claim: c ? tuMins(c) : 0, roll: r ? tuMins(r) : 0 };
+}
+// Aprèn el minut de les tirades i l'hora del pròxim reclam del $tu enganxat a l'hora `now` (Mudae diu minuts sencers: el reinici cau a mig minut)
+function learnResets(R, r, now) {
+  const at = n => { const d = new Date(now + (n + 0.5) * MIN); d.setSeconds(0, 0); return d; };
+  const out = { ...R };
+  if (r.roll) out.m = at(r.roll).getMinutes();
+  if (r.claim) out.next = +at(r.claim);
+  return out;
+}
+// Del $settings, cada quant hi ha reclam en minuts ($setclaim, entre 60 i 600), o null
+// shortcut: format suposat (sense cap $settings de mostra); mirar-lo amb el de Victor
+function readSettings(text) {
+  for (const l of text.split(/\\r?\\n/)) {
+    if (!/setclaim|reclam|claim/i.test(l)) continue;
+    const m = l.match(/(\\d{2,3})\\s*min/i), h = l.match(/(\\d+(?:[.,]\\d+)?)\\s*h/i);
+    const v = m ? +m[1] : h ? Math.round(parseFloat(h[1].replace(',', '.')) * 60) : null;
+    if (v >= 60 && v <= 600) return v;
   }
-  return t + Number(torna) * 3600e3;
+  return null;
 }
 // El $tu enganxat: per a cada tasca, quants minuts falten perquè la puguis tornar a fer (0 = ja la pots fer).
 // Fem servir els minuts que diu Mudae, no les hores fixes: cada servidor reinicia tirades i reclams a una hora diferent.
 // true = no la pots fer però el $tu no diu quan: torna com si l'haguessis marcada a mà.
+const tuMins = l => { const m = l.match(/(\\d+)\\s*h(?:\\s*(\\d+)\\s*min)?|(\\d+)\\s*min/i); return m ? (m[1] ? m[1] * 60 + (+m[2] || 0) : +m[3]) : 0; };
 function readTu(text) {
-  const r = {}, set = (k, v) => { if (!(k in r)) r[k] = v; };  // la primera línia que en parla mana
-  const mins = l => { const m = l.match(/(\\d+)\\s*h(?:\\s*(\\d+)\\s*min)?|(\\d+)\\s*min/i); return m ? (m[1] ? m[1] * 60 + (+m[2] || 0) : +m[3]) : 0; };
+  const r = {}, set = (k, v) => { if (!(k in r)) r[k] = v; }, mins = tuMins;  // la primera línia que en parla mana
   const no = l => /\\bno puedes\\b|\\bno pots\\b|can't|cannot|can not/i.test(l);
   const ready = l => /disponible|available|ready|listo|lista|a punt/i.test(l) && !/\\bnot?\\b/i.test(l);  // «no está disponible», «not ready»
   const wait = l => ready(l) ? 0 : mins(l) || true;
@@ -569,25 +603,24 @@ const backOf = (i, s) => { const t = s[i.dataset.id]; return typeof t === 'numbe
 // Tasques que avisen quan tornen soles. El $oh i el $oc no: tornen a mitjanit UTC (la 1 de la matinada).
 const NOTI = ['rolls', 'claim', 'daily', 'vote', 'dk', 'rt', 'p'], was = {};
 function tick() {
-  const now = new Date(), s = load(), m = now.getHours() * 60 + now.getMinutes();
+  const now = new Date(), s = load();
   document.querySelectorAll('input[data-torna]').forEach(i => {
     const back = backOf(i, s);
     i.checked = back > +now;
     const when = i.closest('.task').querySelector('.when');
-    if (when) when.textContent = i.checked ? T('Torna a les {h} ({rest})', { h: hm(new Date(back)), rest: fmt(Math.ceil((back - now) / 60000)) }) : '';
+    if (when) when.textContent = !i.checked ? '' : isFinite(back) ? T('Torna a les {h} ({rest})', { h: hm(new Date(back)), rest: fmt(Math.ceil((back - now) / 60000)) })
+      : T('No sé quan torna: enganxa el {c}', { c: i.dataset.torna === 'rt' ? '$bonus' : '$tu' });
   });
-  const nr = (now.getMinutes() < 2 ? now.getHours() : now.getHours() + 1) % 24;
-  const toRoll = (nr * 60 + 2 - m + 1440) % 1440;
-  const nc = CLAIM.find(h => h * 60 + 2 > m) ?? CLAIM[0] + 24;
-  const last = [...CLAIM].reverse().find(h => h * 60 + 2 <= m);
-  const fresh = last !== undefined && m - (last * 60 + 2) < 60;
+  // a la barra de pestanyes (es veu des de totes): quan tornen les tirades i el reclam, segons el que has enganxat
+  const nr = nextRoll(+now), nc = nextClaim(+now), lc = lastClaim(+now), mins = x => Math.ceil((x - now) / 60000);
+  // la primera hora després del reinici del reclam, si no has reclamat ja (el $tu ho diu: «no puedes reclamar hasta…»)
+  const fresh = lc != null && now - lc < HOUR && !document.querySelector('input[data-tu="claim"]')?.checked;
   document.querySelector('.grp[data-period="reclam"]')?.classList.toggle('now', fresh);
-  // a la barra de pestanyes (es veu des de totes) i, si és moment de reclamar, també a «Què toca ara»
-  clock.innerHTML = T('Tirades a les <b>{roll}</b> ({rollIn}) · reclam a les <b>{claim}</b> ({claimIn})',
-    { roll: pad(nr) + ':02', rollIn: fmt(toRoll), claim: pad(nc % 24) + ':02', claimIn: fmt(nc * 60 + 2 - m) })
-    + (fresh ? ' <span class="tag good">' + esc(T('Pots reclamar')) + '</span>' : '');
+  const at = x => ({ h: hm(new Date(x)), in: fmt(mins(x)) });
+  clock.innerHTML = (nr == null ? esc(T('Tirades: enganxa el $tu')) : T('Tirades a les <b>{h}</b> ({in})', at(nr))) + ' · '
+    + (nc == null ? esc(RS.next ? T('reclam: enganxa el $tu o el $settings') : T('reclam: enganxa el $tu')) : T('reclam a les <b>{h}</b> ({in})', at(nc))) + (fresh ? ' <span class="tag good">' + esc(T('Pots reclamar')) + '</span>' : '');
   claimNow.hidden = !fresh;
-  if (fresh) claimNow.textContent = T('Pots reclamar des de les {h}: fes els passos de «Moment bo»', { h: pad(last) + ':02' });
+  if (fresh) claimNow.textContent = T('Pots reclamar des de les {h}: fes els passos de «Moment bo»', { h: hm(new Date(lc)) });
   // tasques que acaben de tornar soles (no les has desmarcat tu, que n'esborra l'hora): avisa
   const back = [];
   NOTI.forEach(k => document.querySelectorAll(`input[data-tu="${k}"]`).forEach(i => {
@@ -600,7 +633,7 @@ function tick() {
 const notiBtn = document.getElementById('notiBtn'), HAS_NOTI = 'Notification' in window;
 const notiOn = () => { try { return HAS_NOTI && Notification.permission === 'granted' && localStorage.getItem('mudae-noti') === '1'; } catch (e) { return false; } };
 function notiBody() {
-  const s = load(), box = k => document.querySelector(`input[data-tu="${k}"]`), at = i => hm(new Date(backOf(i, s)));
+  const s = load(), box = k => document.querySelector(`input[data-tu="${k}"]`), at = i => { const b = backOf(i, s); return isFinite(b) ? hm(new Date(b)) : '?'; };
   const c = box('claim'), k = box('kakera'), out = [];
   if (c) out.push(c.checked ? T('Reclam: a les {h}', { h: at(c) }) : T('Pots reclamar personatge.'));
   if (k) out.push(k.checked ? T('Kakera: a les {h}', { h: at(k) }) : T('Pots reaccionar a kakera.'));
@@ -660,7 +693,14 @@ document.addEventListener('change', ev => {
   if (i.checked) s[i.dataset.id] = Date.now(); else delete s[i.dataset.id];
   save(s); tick();
 });
-powerDraw(); tick(); setInterval(tick, 30000);
+// a les targetes «Cada hora» i «Moment bo», el minut de les tirades i les hores dels reclams del teu servidor (o què falta)
+function resetDraw() {
+  const s = p => document.querySelector(`.grp[data-period="${p}"] h3 small`), now = Date.now(), nc = nextClaim(now);
+  if (s('hora')) s('hora').textContent = RS.m == null ? T('enganxa el $tu') : T('minut {m}', { m: pad(RS.m) });
+  if (s('reclam')) s('reclam').textContent = nc == null ? T('enganxa el $tu') : !RS.iv ? T('el pròxim, a les {h}', { h: hm(new Date(nc)) })
+    : Array.from({ length: Math.min(24, Math.floor(1440 / RS.iv)) }, (_, k) => new Date(nc + k * RS.iv * MIN)).sort((a, b) => a.getHours() * 60 + a.getMinutes() - b.getHours() * 60 - b.getMinutes()).map(hm).join(', ');
+}
+powerDraw(); resetDraw(); tick(); setInterval(tick, 30000);
 
 // mentre la pestanya és oberta, diu al servidor que continua aquí; si es tanca, el servidor plega sol
 if (location.protocol.startsWith('http')) setInterval(() => fetch('/ping', { cache: 'no-store' }).catch(() => {}), 20000);
@@ -875,6 +915,9 @@ details.panel { display:block; }
 .paste textarea { flex:1; min-width:240px; height:40px; min-height:40px; padding:9px 12px; resize:none; overflow:hidden; }
 #tuMsg:empty, #pdMsg:empty { display:none; }
 /* els botons de copiar, dins d'un requadre igual que la casella de text */
+.pend { grid-column:1 / -1; padding:10px 14px; border-radius:12px; background:var(--accent-soft); border:1px solid rgba(var(--acc-rgb),.3); font-size:13.5px; }
+.pend > b { color:var(--accent-ink); }
+.pend ul { margin:6px 0 0; padding:0; list-style:none; display:grid; gap:4px; }
 .paste-cmds { flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:40px; padding:6px 12px; font-size:12.5px;
   background:rgba(0,0,0,.22); border:1px solid var(--glass-b); border-radius:10px; }
 #pdSum { display:grid; gap:8px; }
@@ -1029,14 +1072,19 @@ BADGES = [
     ("Emerald", 9000, "Desbloqueja el $rt (tornar a reclamar); cada nivell, 10 h menys d'espera"),
     ("Diamond", 12000, "+1 $oh cada dia; al IV, +1 $oc"),
 ]
-# Ordre recomanat: primer més tirades i menys poder gastat; respecta els desbloquejos (Sapphire: B, S i G a I; Ruby: a II; Emerald: a III)
-BADGE_PLAN = [("Bronze", 1), ("Silver", 1), ("Gold", 1), ("Sapphire", 1), ("Sapphire", 2), ("Gold", 2), ("Bronze", 2), ("Silver", 2),
-              ("Sapphire", 3), ("Sapphire", 4), ("Gold", 3), ("Gold", 4), ("Ruby", 1), ("Ruby", 2), ("Ruby", 3), ("Ruby", 4),
-              ("Bronze", 3), ("Silver", 3), *(("Emerald", n) for n in range(1, 5)), *(("Diamond", n) for n in range(1, 5)),
-              ("Bronze", 4), ("Silver", 4)]
-# Pisos de la torre ($kt), de més a menys recomanat. Cada pis costa més que l'anterior, triïs el que triïs.
-TOWER = [(11, "+1 tirada per hora"), (8, "Clicar kakera gasta un 4 % menys de poder"), (7, "Poder màxim de kakera al 110 %"),
-         (6, "+30 esferes cada vegada que reclames"), (5, "El $oh et destapa 2 botons"), (1, "+2 llocs a la wishlist"),
+# Ordre recomanat (wiki de Mudae, «Kakera Badges», 01/11/2026; l'ordre és proposta de Claude):
+# 1. Gold fins al IV: cada nivell, −10 % del poder per reacció (més kakera de cada tirada), i el IV fa que el $dk et torni tot el poder.
+# 2. Bronze II i Silver II (barats) desbloquegen el Ruby. 3. Ruby I-IV: −20 % de poder, +2 tirades, +2 llocs i +50 % de wishlist,
+#    i el IV abaixa un 25 % totes les insígnies que queden (la ruta més barata de la wiki: B II, S II, G II i Ruby IV).
+# 4. Sapphire (tirades), Emerald ($rt i, al IV, la kakera de cada personatge que reclames), Bronze i Silver al IV, Diamond (esferes).
+# Respecta els desbloquejos: Sapphire, B, S i G a I; Ruby, a II; Emerald, a III o dues insígnies al IV.
+BADGE_PLAN = [("Bronze", 1), ("Silver", 1), ("Gold", 1), ("Gold", 2), ("Gold", 3), ("Gold", 4), ("Bronze", 2), ("Silver", 2),
+              *(("Ruby", n) for n in range(1, 5)), *(("Sapphire", n) for n in range(1, 5)), *(("Emerald", n) for n in range(1, 5)),
+              ("Bronze", 3), ("Silver", 3), ("Bronze", 4), ("Silver", 4), *(("Diamond", n) for n in range(1, 5))]
+# Pisos de la torre ($kt), de més a menys recomanat (proposta de Claude amb la wiki, «Kakera Tower/Perks»). Cada pis costa més que l'anterior,
+# triïs el que triïs. El 8 i el 7 junts: amb el Gold IV i el Ruby III, el poder ple (110 %) dona 3 reaccions de 36 % en lloc de 2 de 40 %.
+TOWER = [(8, "Clicar kakera gasta un 4 % menys de poder"), (7, "Poder màxim de kakera al 110 %"), (11, "+1 tirada per hora"),
+         (6, "+30 esferes cada vegada que reclames"), (1, "+2 llocs a la wishlist"), (5, "El $oh et destapa 2 botons"),
          (4, "+10 % de segona clau si el personatge és a la wishlist"), (2, "El teu $starwish surt un 50 % més"),
          (9, "+500 de kakera cada 3 h a les claus daurades ($bku)"), (10, "La kakera de llum dona +1 kakera"),
          (3, "Menys límit de $limroul (depèn del servidor)"), (12, "Colors per al $mm i el $profile")]
@@ -1047,7 +1095,7 @@ PERKS = {1: "Més probabilitat que surtin els personatges del costat a la teva w
          7: "Els botons de kakera poden passar a kakera del caos",
          8: "El primer cop del dia: 4 botons de kakera a meitat de poder, només per a tu",
          9: "El primer cop del dia: un botó d'esferes", 10: "El primer $oh del dia dona +20 esferes"}
-PERK_GROUPS = [("Funciona cada dia, encara que no et surti el personatge, i se suma: +20 esferes per cada personatge que la té (fins a 100)", [10]),
+PERK_GROUPS = [("Funciona cada dia, encara que no et surti el personatge, i se suma: +20 esferes per cada personatge que la té (fins a 100 personatges; després, menys). Es paga en 50 dies", [10]),
                ("Només quan et surt aquest personatge: posa-les al que et surt més (mira el $mmy)", [4, 5, 2, 3]),
                ("Només el primer cop del dia que te'l treus", [8, 9]),
                ("Les menys útils", [1, 6, 7])]
@@ -1095,7 +1143,7 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
     ("Esferes", [("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"), ("$oq", "Joc d'esferes"), ("$ot", "Joc d'esferes"),
                  ("$opp <personatge>", "Millora un personatge amb esferes"), ("$os", "Botiga d'esferes: millores per a tots")]),
     ("Torre (kakeratower)", [("$kt", "Pisos, beneficis i preu del següent"), ("$towervalue", "Quant costa cada pis"),
-                             ("$build 8", "Pis recomanat: reaccions a kakera −4 % de poder"), ("$build 11", "Pis: +1 tirada per hora"),
+                             ("$build 8", "Pis: reaccions a kakera −4 % de poder"), ("$build 11", "Pis: +1 tirada per hora"),
                              ("$build <número>", "Construeix el pis que triïs"), ("$destroy", "Desfà la torre i et torna la kakera")]),
     ("Kakeraloots", [("$kl", "Un kakeraloot (500 de kakera)"), ("$kl <número>", "Diversos alhora"), ("$lk", "Les teves estadístiques i inventari"),
                      ("$infokl", "Què donen els kakeraloots"), ("$quantity <número>", "Puja nivells de quantitat"), ("$quality <número>", "Puja nivells de qualitat")]),
@@ -1285,7 +1333,7 @@ syncUpd();
 
 JS_MILL = r"""
 // Pestanya «Millores»: llegeix el que enganxes de Mudae ($k, $kt, $opp) i recomana el següent pas. Es guarda al navegador.
-const BADGES = __BADGES__, PLAN = __PLAN__, TOWER = __TOWER__, PORD = __PORD__, SORD = __SORD__, PDESC = __PDESC__, SDESC = __SDESC__, RT = __RT__;
+const BADGES = __BADGES__, PLAN = __PLAN__, TOWER = __TOWER__, PORD = __PORD__, SORD = __SORD__, PDESC = __PDESC__, SDESC = __SDESC__;
 // Esferes: les millores 1-5 d'un personatge tenen 6 nivells, les 6-10 un (wiki, «Perks / Level»); la botiga ($os), 10 nivells de +4.000
 const PCOST = [200, 400, 600, 800, 1000, 2000];
 const perkMax = n => n <= 5 ? 6 : 1, perkCost = (n, l) => n <= 5 ? PCOST[l] : 1000;
@@ -1311,7 +1359,8 @@ function readMudae(text, tv) {
     if (have) out.sp = num(have[1]);
   } else if (/\$build/i.test(text)) {
     const cost = text.match(/(?:cuesta|costs?|coûte|costa|kostet)\s+(\d[\d.,]*)/i);
-    if (cost) out.nf = Math.max(0, Math.round(num(cost[1]) / tv) - 1);
+    if (cost) out.ktCost = num(cost[1]);
+    if (cost && tv) out.nf = Math.max(0, Math.round(num(cost[1]) / tv) - 1);
     if (have) out.k = num(have[1]);
   } else if (/\$bronze/i.test(text) && !/rewards/i.test(text)) {
     out.b = {};
@@ -1339,12 +1388,12 @@ function readMudae(text, tv) {
 function bonusFacts(B) {
   const get = (label, value) => { const r = (B || []).find(([l]) => label.test(l)), m = r && r[1].match(value); return m ? +m[1] : null; };
   return { pmax: get(/m[aá]x.*kakera|kakera.*m[aá]x/i, /(\d+)\s*%/), pcost: get(/(?:cost|coût).*kakera/i, /(\d+)\s*%/),
-    oh: get(/\$oh\b/i, /\+\s*(\d+)/), rt: get(/\$rt\b/i, /(\d+)\s*h/) };
+    oh: get(/\$oh\b/i, /\+\s*(\d+)/), rt: get(/\$rt\b/i, /(\d+)\s*h/), wl: get(/(?:espacio|slot).*(?:lista de deseos|wishlist)|wishlist.*slot/i, /\+\s*(\d+)/) };
 }
 // Cada torre té 12 pisos, un de cada; la següent s'obre en acabar-la, amb els mateixos pisos però amb menys efecte (wiki de Mudae)
 function towerNext(M) {
   const tw = M.t || 0, built = tw * 12 + M.f.length;
-  return { tw, built, cost: M.tv * (built + 1) * (tw >= 75 ? 10 : 1), rec: TOWER.find(n => !M.f.includes(n)) };  // de la torre 76 en amunt, x10
+  return { tw, built, cost: M.tv ? M.tv * (built + 1) * (tw >= 75 ? 10 : 1) : null, rec: TOWER.find(n => !M.f.includes(n)) };  // de la torre 76 en amunt, x10
 }
 // El $kt diu quants pisos tens en total: d'aquí surt la torre on ets. Si canvies de torre, els pisos marcats eren de l'anterior.
 function towerFromKt(M, nf) { const t = Math.floor(nf / 12); return { t, f: t === (M.t || 0) ? M.f : [] }; }
@@ -1359,7 +1408,14 @@ function nextBuys(levels, order, max, cost, count = 3) {
   }
   return out;
 }
-function millLoad() { try { return Object.assign({ b: {}, f: [], tv: 5000 }, JSON.parse(localStorage.getItem('mudae-millores') || '{}')); } catch (e) { return { b: {}, f: [], tv: 5000 }; } }
+// El preu base de la torre ($towervalue) és del servidor: l'escrius tu o surt del $kt si has marcat els pisos que tens (preu = base × (pisos + 1))
+function towerGuess(M) {
+  const { tw, built } = towerNext(M), v = M.ktCost && built ? Math.round(M.ktCost / (built + 1) / (tw >= 75 ? 10 : 1)) : 0;
+  return v >= 5000 && v <= 50000 ? v : null;
+}
+// Llocs de la wishlist: 7 de base (wiki de Mudae) més els del $bonus; sense $bonus, no ho sabem
+const wlSlots = () => { const v = bonusFacts(M.bonus).wl; return v == null ? null : 7 + v; };
+function millLoad() { try { return Object.assign({ b: {}, f: [], tv: null }, JSON.parse(localStorage.getItem('mudae-millores') || '{}')); } catch (e) { return { b: {}, f: [], tv: null }; } }
 let M = millLoad();
 const millSave = () => { try { localStorage.setItem('mudae-millores', JSON.stringify(M)); } catch (e) {} };
 const $id = id => document.getElementById(id);
@@ -1378,30 +1434,37 @@ function millDraw() {
     bl.push(li(T('El primer $oh del dia et dona +{e} esferes: tens {n} personatges amb la millora 10 (+20 cadascun).', { e: BF.oh, n })
       + (seen < n ? ' ' + T("Al tauler n'hi ha {m}: enganxa el $opp dels que falten.", { m: seen }) : '')));
   }
-  if (BF.rt != null && BF.rt !== RT) bl.push(li(T('El $rt et torna cada {n} h, però el tauler compta {c} h: posa «"rt_hores": {n}» al config.json.', { n: BF.rt, c: RT })));
+  if (BF.rt != null) bl.push(li(T('El $rt et torna cada {n} h: el tauler ja ho fa servir a «Què toca ara».', { n: BF.rt })));
+  if (BF.wl != null) bl.push(li(T('Tens {n} llocs a la wishlist (7 de base i {b} de bonus).', { n: 7 + BF.wl, b: BF.wl })));
+  window.RT_H = BF.rt; if (window.tick) tick();  // el $rt de «Què toca ara» torna quan diu el $bonus
   $id('bonusNext').innerHTML = !M.bonus ? li(T('Enganxa el $bonus per veure-hi el resum.')) : bl.join('');
   $id('bonusFold').hidden = !M.bonus;
   $id('bonusAll').innerHTML = (M.bonus || []).map(([l, v]) => { const i = v.indexOf(' (');
     return `<tr><td>${esc(l)}</td><td><b>${esc(i > 0 ? v.slice(0, i) : v)}</b>${i > 0 ? ' <span class="muted" style="font-size:13px">' + esc(v.slice(i + 1)) + '</span>' : ''}</td></tr>`; }).join('');
   // insígnies: el nivell de cada una i els 3 passos següents del pla, amb el preu (−25 % amb el Ruby IV)
   document.querySelectorAll('select[data-badge]').forEach(s => { s.value = String(M.b[s.dataset.badge] || 0); });
-  const lvl = Object.fromEntries(BADGES.map(([n]) => [n, M.b[n] || 0])), price = Object.fromEntries(BADGES.map(([n, p]) => [n, (M.bp && M.bp[n]) || p]));  // els del $k; si no, els de sèrie
+  // els preus, només del $k: cada servidor té els seus ($badgevalue)
+  const lvl = Object.fromEntries(BADGES.map(([n]) => [n, M.b[n] || 0])), price = n => (M.bp && M.bp[n]) || null;
   const next = [];
   let sum = 0;
   for (const [n, l] of PLAN) {
     if (lvl[n] >= l || l !== lvl[n] + 1 || next.length >= 3) continue;
-    const cost = Math.round(price[n] * l * (lvl.Ruby >= 4 ? 0.75 : 1));
-    sum += cost; lvl[n] = l;
-    next.push(`<li><button class="cmd" data-copy="$${n.toLowerCase()}">$${n.toLowerCase()}</button> <b>${esc(n)} ${['I', 'II', 'III', 'IV'][l - 1]}</b> · ${fmtK(cost)}`
-      + (k !== null ? ` <span class="tag ${k >= sum ? 'good' : ''}">${esc(k >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - k) }))}</span>` : '') + '</li>');
+    const cost = price(n) && Math.round(price(n) * l * (lvl.Ruby >= 4 ? 0.75 : 1));
+    if (cost) sum += cost;
+    lvl[n] = l;
+    next.push(`<li><button class="cmd" data-copy="$${n.toLowerCase()}">$${n.toLowerCase()}</button> <b>${esc(n)} ${['I', 'II', 'III', 'IV'][l - 1]}</b>` + (cost ? ` · ${fmtK(cost)}` : '')
+      + (cost && k !== null ? ` <span class="tag ${k >= sum ? 'good' : ''}">${esc(k >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - k) }))}</span>` : '') + '</li>');
   }
-  $id('badgeNext').innerHTML = next.join('') || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>';
+  if (next.length && !M.bp) next.push('<li class="muted">' + esc(T('Enganxa el $k per saber què costen al teu servidor.')) + '</li>');
+  $id('badgeNext').innerHTML = next.join('') || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>'
+    + '<li class="muted">' + esc(T("Ara, la kakera: primer acaba la torre 1 (cada pis és un bonus nou) i després els kakeraloots ($kl), que donen tirades, llocs de wishlist i menys espera del $rt i no s'acaben mai. Si n'obres molts, puja el $quantity: cada nivell, +1 % de doblar el que surt.")) + '</li>';
   // torre: els pisos marcats són els de la torre on ets (M.t torres acabades), el que en diu el $kt i el pis recomanat
   document.querySelectorAll('input[data-floor]').forEach(i => { i.checked = M.f.includes(+i.dataset.floor); });
-  $id('towerValue').value = M.tv;
+  $id('towerValue').value = M.tv ?? '';
   const { tw, built, cost, rec } = towerNext(M);
-  let html = T('Torre {t} · pisos {n}/12 · el següent costa {c}', { t: tw + 1, n: M.f.length, c: fmtK(cost) });
-  if (k !== null) html += ' · ' + (k >= cost ? T('el pots pagar') : T('et falten {n}', { n: fmtK(cost - k) }));
+  let html = cost == null ? T('Torre {t} · pisos {n}/12 · per saber què costa el següent, marca els pisos que tens i enganxa el $kt (o escriu el preu base)', { t: tw + 1, n: M.f.length })
+    : T('Torre {t} · pisos {n}/12 · el següent costa {c}', { t: tw + 1, n: M.f.length, c: fmtK(cost) });
+  if (cost != null && k !== null) html += ' · ' + (k >= cost ? T('el pots pagar') : T('et falten {n}', { n: fmtK(cost - k) }));
   html = esc(html);
   if (M.nf != null && M.nf !== built) html += '<br><span class="tag bad">' + esc(T('Segons el $kt tens {n} pisos: marca quins són a la llista', { n: M.nf })) + '</span>';
   if (rec) html += `<br>${esc(T('Recomanat:'))} <button class="cmd" data-copy="$build ${rec}">$build ${rec}</button>`;
@@ -1445,6 +1508,7 @@ function millDraw() {
   });
   $id('shopNext').innerHTML = !M.shop ? '<li>' + esc(T('Enganxa el $os per veure-hi els nivells')) + '</li>'
     : buyList(nextBuys(M.shop, SORD, shopMax, shopCost), '$os', SDESC) || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>';
+  if (window.pendDraw) pendDraw();
 }
 const millText = $id('millText'), millBtn = $id('millBtn'), millMsg = $id('millMsg');
 millText.addEventListener('input', () => { millBtn.disabled = !millText.value.trim(); });
@@ -1454,7 +1518,9 @@ function millRead(text) {
   if (!Object.keys(got).length) return false;
   if (got.nf != null) Object.assign(got, towerFromKt(M, got.nf));
   if (got.opp && got.opp.name) got.opps = Object.assign({}, M.opps, { [got.opp.name]: got.opp.levels });
-  Object.assign(M, got); millSave(); millDraw();
+  Object.assign(M, got);
+  if (got.ktCost && !M.tv && (M.tv = towerGuess(M))) M.nf = towerNext(M).built;
+  millSave(); millDraw();
   return true;
 }
 millBtn.onclick = () => {
@@ -1468,8 +1534,9 @@ document.addEventListener('change', ev => {
   else if (el.dataset && el.dataset.floor) {
     M.f = [...document.querySelectorAll('input[data-floor]:checked')].map(i => +i.dataset.floor);
     if (M.f.length === 12) { M.t = (M.t || 0) + 1; M.f = []; }  // torre acabada: la següent comença buida
+    if (!M.tv && (M.tv = towerGuess(M))) M.nf = towerNext(M).built;
   }
-  else if (el.id === 'towerValue') M.tv = Math.min(50000, Math.max(5000, num(el.value) || 5000));
+  else if (el.id === 'towerValue') M.tv = num(el.value) ? Math.min(50000, Math.max(5000, num(el.value))) : null;
   else return;
   millSave(); millDraw();
 });
@@ -1587,7 +1654,9 @@ function pasteAll(text) {
     window.millTu(text);
     const P = readPower(text);
     if (P) try { localStorage.setItem('mudae-poder', JSON.stringify({ ...P, t: Date.now() })); } catch (e) {}
-    powerDraw(); applyTu(tu, Date.now()); tuText.value = '';
+    RS = learnResets(RS, readResets(text), Date.now());  // el rellotge, amb els reinicis del teu servidor
+    try { localStorage.setItem('mudae-reinici', JSON.stringify(RS)); } catch (e) {}
+    powerDraw(); resetDraw(); applyTu(tu, Date.now()); pendDraw(); tuText.value = '';
     tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
     return;
   }
@@ -1605,7 +1674,14 @@ function pasteAll(text) {
     tuMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Per a la Pokédex, enganxa el $pd sumrare (un sol missatge), no les pàgines del $pd.'));
     return;
   }
-  if (millRead(text)) {  // $k, $kt, $opp, $os o $mmy=
+  const iv = /\$set|setting|configuraci|ajuste/i.test(text) ? readSettings(text) : null;
+  if (iv) {  // $settings: cada quant hi ha reclam
+    RS.iv = iv; try { localStorage.setItem('mudae-reinici', JSON.stringify(RS)); } catch (e) {}
+    resetDraw(); tick(); pendDraw(); tuText.value = '';
+    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Reclam cada {n} min', { n: iv })) + '</span>';
+    return;
+  }
+  if (millRead(text)) {  // $k, $kt, $opp, $os, $mmy= o $bonus
     tuText.value = '';
     tuMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit a Millores')) + '</span> ' + goTo('mill', T('Millores'));
     return;
@@ -1621,15 +1697,37 @@ function pasteAll(text) {
   tuMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer de Mudae.'));
 }
 tuText.addEventListener('paste', () => setTimeout(() => pasteAll(tuText.value)));
+// «Pendent!»: el que depèn del teu servidor o de tu i encara no has enganxat, amb l'ordre que ho diu. No suposem res.
+const NEED = __NEED__;
+function pendDraw() {
+  const out = [], add = (cmd, why) => out.push(`<li><button class="cmd" data-copy="${esc(cmd)}">${esc(cmd.trim())}</button> <span class="muted">${esc(why)}</span></li>`);
+  if (RS.m == null || !RS.next) add('$tu', T('quan tornen les tirades i el reclam, i el poder de kakera'));
+  if (!RS.iv) add('$settings', T('cada quant hi ha reclam al servidor'));
+  if (!M.bonus) add('$bonus', T('cada quant pots fer el $rt i quants llocs tens a la wishlist'));
+  if (!M.bp) add('$k', T('les teves insígnies i quant costen al servidor'));
+  if (M.nf == null && !M.ktCost) add('$kt', T('la torre: quants pisos tens i quant costa el següent'));
+  else if (M.nf == null) out.push(`<li>${goTo('mill', T('Millores'))} <span class="muted">${esc(T('la torre: marca els pisos que tens (o escriu el preu base de la torre)'))}</span></li>`);
+  NEED.forEach(([cmd, why]) => add(cmd, why));
+  document.getElementById('pendList').innerHTML = out.join('');
+  document.getElementById('pend').hidden = !out.length;
+}
+pendDraw();
 """
 
 
 JS_WL = r"""
 // Muntador de wishlist: què treure (ja és teu o d'algú altre) i què posar-hi (lliures de prioritat alta, per ordre)
-const WL = __WL__, MAX = 15;
+// els llocs de la wishlist depenen de tu (insígnies, torre, kakeraloots): surten del $bonus, no els suposem
+const WL = __WL__, MAX = wlSlots();
 const wlBox = document.getElementById('wlBuild');
 const bad = WL.wl.filter(w => !w.ok), keep = WL.wl.filter(w => w.ok);
-const free = MAX - keep.length;
+const free = MAX == null ? 0 : MAX - keep.length;
+if (MAX != null) document.getElementById('wlMax').textContent = '/' + MAX;
+if (MAX != null && MAX > WL.wl.length) {  // avís a Avui: llocs lliures
+  const n = MAX - WL.wl.length, box = document.getElementById('alertsBox'), ul = document.getElementById('alertsList');
+  ul.insertAdjacentHTML('beforeend', `<li><span class="tag accent">${esc(T('Wishlist'))}</span><span>${esc(T('Tens {n} llocs lliures. Mira «Per omplir» a la wishlist.', { n }))}</span><button type="button" class="go" data-goto="wl">${esc(T('Wishlist'))} →</button></li>`);
+  box.hidden = false; document.getElementById('alertsN').textContent = ul.children.length;
+}
 // la col·lecció que vols completar (o totes): te'n recomana els primers, ja ordenats pel servidor
 const SER = [...new Set(WL.cand.map(c => c.s))].sort((a, b) => a.localeCompare(b));
 let only = ''; try { only = localStorage.getItem('mudae-wlser') || ''; } catch (e) {}
@@ -1660,9 +1758,10 @@ function drawWl() {
       + (chosen.length > free ? `<span class="tag bad">${esc(T("N'has triat {n} de més", { n: chosen.length - free }))}</span>` : '')
       + '</div>';
   }
+  if (MAX == null) html += note(esc(T('Enganxa el $bonus a la casella d\'Avui per saber quants llocs tens a la wishlist i quins pots omplir.')));
   if (!WL.wl.some(w => w.star && w.ok))
     html += note(esc(T('No tens desig estrella: posa-hi el que vulguis més amb')) + ` <button class="cmd" data-copy="$sw ">$sw &lt;${esc(T('nom'))}&gt;</button>`);
-  html += note(esc(bad.length || free > 0 ? T('Quan ho hagis fet, enganxa el teu $wl a «Posar al dia».') : T('La wishlist està plena i tot està lliure: res a fer.')));
+  if (bad.length || MAX != null) html += note(esc(bad.length || free > 0 ? T('Quan ho hagis fet, enganxa el teu $wl a «Posar al dia».') : T('La wishlist està plena i tot està lliure: res a fer.')));
   wlBox.innerHTML = html;
 }
 wlBox.addEventListener('change', ev => {
@@ -1702,8 +1801,6 @@ def cmd_html(ordre):
 
 
 def group_title(g):
-    if g == "reclam":
-        return t("MOMENT BO: pots reclamar ({hours})", hours=", ".join(f"{h:02d}:02" for h in CLAIM_HOURS))
     return t(GRUPS[g])
 
 
@@ -1741,8 +1838,6 @@ def write_dashboard(d, hist):
         return (f'<li><span class="tag {cls}">{e(tag)}</span><span>{text}</span>'
                 f'<button type="button" class="go" data-goto="{go}">{e(tabs[go])} →</button></li>')
     alerts = [alert(t("Wishlist"), "bad", f'<b>{e(w["name"])}</b>: {e(w["todo"])}', "wl") for w in wl_bad]
-    if len(d["wishlist"]) < 15:
-        alerts.append(alert(t("Wishlist"), "accent", e(t("Tens {n} llocs lliures. Mira «Per omplir» a la wishlist.", n=15 - len(d["wishlist"]))), "wl"))
     for kind, r, prev in d["changes"]:
         if kind == "nou":
             continue
@@ -1801,14 +1896,14 @@ def write_dashboard(d, hist):
     groups = {}  # una targeta per grup; el text entre parèntesis del títol va a sota, més petit
     for i, (g, que, ordre, com, torna) in enumerate(RUTINA):
         if g not in groups:
-            title, _, sub = group_title(g).partition(" (")
+            title = group_title(g)  # a «Cada hora» i «Moment bo», el JavaScript hi posa a sota les hores del teu servidor
             groups[g] = [f'<div class="grp" data-period="{g}"><h3>{e(title[:1] + title[1:].lower())}'
-                         + (f'<small>{e(sub.rstrip(")"))}</small>' if sub else "") + '</h3>']
+                         + ('<small></small>' if g in ("hora", "reclam") else "") + '</h3>']
         tu = TU_KEY.get((g, ordre)) or TU_KEY.get(ordre)  # quina línia del $tu la marca
         box = (f'<input type="checkbox" data-id="r{i}" data-torna="{torna}"' + (f' data-tu="{tu}"' if tu else "") + '>' if torna is not None
                else '<span class="bullet">·</span>')
         groups[g].append(f'<label class="task">{box}<span><b>{e(t(que))}</b> {cmd_html(ordre)}'
-                         f'<span class="desc">{e(t(com, rt=RT_HORES))}</span><span class="when"></span></span></label>')
+                         f'<span class="desc">{e(t(com))}</span><span class="when"></span></span></label>')
     card = lambda g: "".join(groups[g]) + "</div>"
     checklist = ('<div class="groups">' + "".join(card(g) for g in ("hora", "reclam", "dia")) + "</div>"
                  + f'<details class="fold" data-fold="altres"><summary><h3>{e(t("Altres moments"))}</h3></summary><div class="groups fold-body">'
@@ -1838,6 +1933,7 @@ def write_dashboard(d, hist):
         + "".join(f'<div class="oline">{cmd_html(c)}<span>{e(t(desc))}</span></div>' for c, desc in items) + "</div></details>"
         for g, items in ORDRES)
     oc = f"oc.html?lang={LANG}"
+    need = ([["$mma+s", t("el teu harem, amb la sèrie de cada personatge")]] if not (DADES / "harem.txt").exists() else [])         + ([["$wl", t("la teva wishlist")]] if not (DADES / "wishlist.txt").exists() else [])         + ([["$imaso ", t("una sèrie que col·leccionis (o, a «Posar al dia», «Totes les teves sèries»)")]] if not series else [])
     # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
     all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
     paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$p", "$k", "$kt", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
@@ -1903,12 +1999,13 @@ def write_dashboard(d, hist):
  <div class="fets">
   <button type="button" class="fet" data-goto="coll"><span class="fet-l">{T_("Col·lecció")}</span><span class="fet-v">{pct}%</span><span class="fet-s">{T_("{a} de {b}", a=owned, b=total)}</span></button>
   <button type="button" class="fet" data-goto="trades"><span class="fet-l">{T_("Harem")}</span><span class="fet-v">{len(d["harem"])}</span><span class="fet-s">{T_("{n} sobrants", n=len(d["sobrants"]))}</span></button>
-  <button type="button" class="fet" data-goto="wl"><span class="fet-l">{T_("Wishlist")}</span><span class="fet-v">{len(d["wishlist"])}/15</span><span class="fet-s">{T_("tot bé") if not wl_bad else T_("{n} per arreglar", n=len(wl_bad))}</span></button>
+  <button type="button" class="fet" data-goto="wl"><span class="fet-l">{T_("Wishlist")}</span><span class="fet-v">{len(d["wishlist"])}<span id="wlMax"></span></span><span class="fet-s">{T_("tot bé") if not wl_bad else T_("{n} per arreglar", n=len(wl_bad))}</span></button>
   <button type="button" class="fet" data-goto="trades"><span class="fet-l">{T_("Intercanvis")}</span><span class="fet-v">{len(d["trades"])}</span><span class="fet-s">{T_("{n} oberts", n=pend)}</span></button>
  </div>
  <div class="paste"><textarea id="tuText" rows="1" spellcheck="false" aria-label="{T_("Enganxa un missatge de Mudae")}" placeholder="{T_("Enganxa aquí la resposta de Mudae a qualsevol d'aquestes ordres…")}"></textarea>
   <span id="tuMsg" role="status"></span>
   <div class="paste-cmds"><span class="muted">{T_("Copia l'ordre:")}</span> {paste_cmds}</div></div>
+ <div class="pend" id="pend" hidden><b>{T_("Pendent!")}</b> <span class="muted">{T_("El tauler encara no sap això del teu servidor ni de tu. Copia cada ordre, envia-la a Mudae i enganxa'n la resposta a dalt:")}</span><ul id="pendList"></ul></div>
 </section>
 <section class="panel today">
  <div class="today-head"><h2>{T_("Què toca ara")}</h2></div>
@@ -1916,7 +2013,7 @@ def write_dashboard(d, hist):
  {checklist}
 </section>
 <div class="g2">
- {f'<section class="panel"><div class="panel-head"><h2>{T_("Avisos")}</h2><span class="muted" style="font-size:13px">{len(alerts)}</span></div><ul class="alerts">{"".join(alerts)}</ul></section>' if alerts else ""}
+ <section class="panel" id="alertsBox"{"" if alerts else " hidden"}><div class="panel-head"><h2>{T_("Avisos")}</h2><span class="muted" id="alertsN" style="font-size:13px">{len(alerts)}</span></div><ul class="alerts" id="alertsList">{"".join(alerts)}</ul></section>
  <details class="panel fold ocbox" id="ocFold" data-fold="oc"><summary><h2>{T_("Ajudant del $oc")}</h2><span class="muted" style="font-size:13px">{T_("Troba la vermella: fes servir l'ajudant")}</span></summary>
   <div class="fold-body"><a href="{oc}" style="font-size:13px">{T_("Obrir a part")}</a><iframe src="{oc}" title="{T_("Ajudant del $oc")}"></iframe></div></details>
 </div>
@@ -2000,7 +2097,7 @@ def write_dashboard(d, hist):
  <section class="panel"><div class="panel-head"><h2>{T_("Insígnies")}</h2><span class="muted" style="font-size:13px">$kakerareward</span></div>
   <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="badgeNext"></ul>
   <table>{badge_rows}</table>
-  <p class="muted" style="margin:0;font-size:13px">{T_("Primer, més tirades (Sapphire) i gastar menys poder (Gold). El Ruby IV abaixa un 25 % el preu de totes les altres.")}</p>
+  <p class="muted" style="margin:0;font-size:13px">{T_("Primer, gastar menys poder per reacció (Gold IV) i el Ruby IV, que abaixa un 25 % el preu de totes les que queden; després, més tirades (Sapphire).")}</p>
  </section>
  <section class="panel"><div class="panel-head"><h2>{T_("Torre")}</h2><span class="muted" style="font-size:13px">$kt</span></div>
   <p class="clock" id="towerNext" style="margin:0"></p>
@@ -2152,15 +2249,15 @@ const more = document.getElementById('more');
 document.addEventListener('click', ev => {{ if (more.open && (!more.contains(ev.target) || ev.target.closest('.menu button'))) more.open = false; }});
 document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.open) {{ more.open = false; more.querySelector('summary').focus(); }} }});
 
-</script><script>{JS_TODAY.replace("__CLAIM__", json.dumps(CLAIM_HOURS))}</script>
+</script><script>{JS_TODAY}</script>
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
 <script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec))}</script>
 <script>{JS_ESP}</script>
-<script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()})).replace("__RT__", js(RT_HORES))}</script>
+<script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
 <script>{JS_CLS}</script>
 <script>{JS_ORD}</script>
 <script>{JS_PD}</script>
-<script>{JS_PASTE}</script>
+<script>{JS_PASTE.replace("__NEED__", js(need))}</script>
 <script>{JS_WL.replace("__WL__", wl_json)}</script>
 <script>{JS_MINE.replace("__MINE__", js(mine)).replace("__COLLS__", js([x["name"] for x in series])).replace("__ALTRES__", js(ALTRES))}</script></body></html>"""
     DASH.write_text(page, encoding="utf-8")

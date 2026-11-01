@@ -4,21 +4,50 @@ import assert from 'node:assert/strict';
 
 const py = readFileSync(new URL('../mudae.py', import.meta.url), 'utf8');
 const js = py.match(/JS_TODAY = """([\s\S]*?)"""/)[1];
-const until = new Function('CLAIM', js.match(/function until[\s\S]*?\n}\n/)[0] + 'return until;')([1, 4, 7, 10, 13, 16, 19, 22]);
+// Les hores del servidor no se suposen: surten del $tu (minut de les tirades, pròxim reclam) i del $settings (cada quant hi ha reclam)
+const fn = name => js.match(new RegExp(`function ${name}[\\s\\S]*?\\n}\\n`))[0].replaceAll('\\\\', '\\');
+const consts = js.match(/const MIN = [^\n]*/)[0] + '\n' + js.match(/const lastClaim = [^\n]*/)[0] + '\n' + js.match(/const tuMins = [^\n]*/)[0].replaceAll('\\\\', '\\');
+const T = new Function('RS', 'window', [consts, ...['nextRoll', 'nextClaim', 'until', 'readResets', 'learnResets', 'readSettings'].map(fn)].join('\n')
+  + 'return { nextRoll, nextClaim, lastClaim, until, readResets, learnResets, readSettings };');
 const at = (d, h, m, s = 0) => +new Date(2026, 9, d, h, m, s);  // hora local, 29/10/2026
 
-assert.equal(until('hora', at(29, 14, 30)), at(29, 15, 2));            // marcada a mitja hora: fins a les xx:02
-assert.equal(until('hora', at(29, 15, 1)), at(29, 15, 2));
-assert.equal(until('hora', at(29, 15, 2, 30)), at(29, 16, 2));         // just després del reinici: la següent
-assert.equal(until('hora', at(29, 23, 30)), at(30, 0, 2));             // canvi de dia
-assert.equal(until('reclam', at(29, 16, 5)), at(29, 19, 2));
-assert.equal(until('reclam', at(29, 23, 0)), at(30, 1, 2));            // l'últim del dia passa a l'endemà
-assert.equal(until('20', at(29, 9, 0)), at(30, 5, 0));                 // $daily / $dk: 20 h després
-const utc = new Date(until('utc', at(29, 14, 30)));
+// sense res enganxat, no sabem res: les tasques marcades queden marcades fins que enganxes el $tu
+let t = T({}, {});
+assert.equal(t.until('hora', at(29, 14, 30)), Infinity);
+assert.equal(t.until('reclam', at(29, 14, 30)), Infinity);
+assert.equal(t.until('rt', at(29, 14, 30)), Infinity);                 // el $rt, sense $bonus
+assert.equal(t.until('20', at(29, 9, 0)), at(30, 5, 0));               // $daily / $dk: 20 h després (de Mudae, igual a tots els servidors)
+const utc = new Date(t.until('utc', at(29, 14, 30)));
 assert.equal(utc.getUTCHours(), 0); assert.equal(utc.getUTCDate(), 30); // $oh: mitjanit UTC
+// un $tu enganxat a les 14:43:40 que diu «tirades en 18 min» i «reclam en 2 h 18 min»: reinici al minut 02, reclam a les 17:02
+const R = t.learnResets({}, { roll: 18, claim: 138 }, at(29, 14, 43, 40));
+assert.deepEqual(R, { m: 2, next: at(29, 17, 2) });
+assert.deepEqual(t.learnResets({}, { roll: 18, claim: 0 }, at(29, 14, 44, 10)), { m: 2 });  // Mudae arrodoneix: el mig minut ho aguanta
+t = T(R, { RT_H: 20 });
+assert.equal(t.until('hora', at(29, 14, 50)), at(29, 15, 2));
+assert.equal(t.until('hora', at(29, 15, 2, 30)), at(29, 16, 2));         // just després del reinici: la següent
+assert.equal(t.until('hora', at(29, 23, 30)), at(30, 0, 2));             // canvi de dia
+assert.equal(t.until('reclam', at(29, 16, 5)), at(29, 17, 2));
+assert.equal(t.until('reclam', at(29, 17, 30)), Infinity);              // passat el reclam i sense $settings: no sabem el següent
+assert.equal(t.lastClaim(at(29, 17, 30)), at(29, 17, 2));                // però sí que fa poc que es pot reclamar
+assert.equal(t.until('rt', at(29, 9, 0)), at(30, 5, 0));                // el $rt, amb les 20 h del $bonus
+// amb el $settings (reclam cada 180 min), els reclams van de 3 en 3 hores des del que deia el $tu, endavant i enrere
+t = T({ ...R, iv: 180 }, {});
+assert.equal(t.until('reclam', at(29, 17, 30)), at(29, 20, 2));
+assert.equal(t.until('reclam', at(29, 23, 0)), at(29, 23, 2));
+assert.equal(t.until('reclam', at(29, 23, 30)), at(30, 2, 2));           // passa a l'endemà
+assert.equal(t.until('reclam', at(29, 9, 0)), at(29, 11, 2));            // abans del $tu també
+assert.equal(t.lastClaim(at(29, 9, 0)), at(29, 8, 2));
+// del $tu: d'aquí quant es reinicien el reclam i les tirades
+assert.deepEqual(t.readResets('jo, no puedes reclamar hasta dentro de 2h 18 min.\nTienes 0 rolls restantes.\nEl siguiente reinicio será en 18 min.\nSiguiente reinicio de $daily en 19h 52 min.'), { claim: 138, roll: 18 });
+assert.deepEqual(t.readResets('jo, you can claim right now! The next claim reset is in 1h 14 min.\nYou have 8 rolls left. Next rolls reset in 18 min.'), { claim: 74, roll: 18 });
+// $settings: format suposat
+assert.equal(t.readSettings('Claim reset: every 180 min ($setclaim)'), 180);
+assert.equal(t.readSettings('Intervalo de reclamo: 2h ($setclaim)'), 120);
+assert.equal(t.readSettings('Rolls: 10 ($setrolls)'), null);
 // El $tu enganxat: minuts fins que cada tasca torna (0 = ja la pots fer)
 // JS_TODAY no és r"""…""": al fitxer de Python les barres van doblades (\\d) i al tauler surten soles (\d)
-const readTu = new Function(js.match(/function readTu[\s\S]*?\n}\n/)[0].replaceAll('\\\\', '\\') + 'return readTu;')();
+const readTu = new Function((js.match(/const tuMins = [^\n]*/)[0] + '\n' + js.match(/function readTu[\s\S]*?\n}\n/)[0]).replaceAll('\\\\', '\\') + 'return readTu;')();
 const tuEs = `jo, no puedes reclamar hasta dentro de 2h 18 min.
 Tienes 0 rolls restantes.
 El siguiente reinicio será en 18 min.
