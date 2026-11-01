@@ -95,6 +95,13 @@ Spheres cliqueados gracias al beneficio 9 dan más spheres: 0% > 10%
 [LVL 10] El primer $oh del día...`;
 assert.deepEqual(readMudae(os, 5000), { shop: [0, 3, 0, 0, 0, 0, 0, 0, 0, 10], sp: 1725 });
 assert.equal(readMudae(os.replace('[LVL 3]', '[MAX]'), 5000).shop[1], 10);
+// $or et torna el 90 % del que hi has posat: l'Harry Potter de Victor (01/11/2026), millora 4 al LVL 4 i la 10 → 3.000, et torna 2.700
+const refundPlan = new Function([costs, js.match(/const spent = [^\n]*/)[0], fn('refundPlan')].join('\n') + 'return refundPlan;')();
+const lv = o => Array.from({ length: 10 }, (_, i) => o[i + 1] || 0);
+assert.deepEqual(refundPlan(lv({ 4: 4, 10: 1 })), { total: 3000, back: 2700, free: 1700 });  // hi tornes la 10 i en queden 1.700
+assert.equal(refundPlan(lv({ 10: 1 })), null);             // només la 10: no hi ha res a tornar
+assert.equal(refundPlan(lv({ 4: 1, 10: 1 })), null);       // 1.200 → 1.080, i amb la 10 de nou en queden 80: no val la pena
+assert.deepEqual(refundPlan(lv({ 8: 1, 9: 1 })), { total: 2000, back: 1800, free: 1800 });
 // les compres d'esferes recomanades: la primera de l'ordre que no és al màxim, nivell a nivell
 const [nextBuys, perkMax, perkCost, shopMax, shopCost] = new Function(costs + '\n' + fn('nextBuys') + 'return [nextBuys, perkMax, perkCost, shopMax, shopCost];')();
 const PORD = [10, 4, 5, 2, 3, 8, 9, 1, 6, 7];

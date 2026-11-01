@@ -41,9 +41,21 @@ assert.equal(t.lastClaim(at(29, 9, 0)), at(29, 8, 2));
 // del $tu: d'aquí quant es reinicien el reclam i les tirades
 assert.deepEqual(t.readResets('jo, no puedes reclamar hasta dentro de 2h 18 min.\nTienes 0 rolls restantes.\nEl siguiente reinicio será en 18 min.\nSiguiente reinicio de $daily en 19h 52 min.'), { claim: 138, roll: 18 });
 assert.deepEqual(t.readResets('jo, you can claim right now! The next claim reset is in 1h 14 min.\nYou have 8 rolls left. Next rolls reset in 18 min.'), { claim: 74, roll: 18 });
-// $settings: format suposat
-assert.equal(t.readSettings('Claim reset: every 180 min ($setclaim)'), 180);
-assert.equal(t.readSettings('Intervalo de reclamo: 2h ($setclaim)'), 120);
+// $settings de Victor (01/11/2026): cada quant hi ha reclam i el minut dels reinicis
+const settings = `🛠️ Ajustes de Servidor 🛠️
+(Server sin premium)
+
+· Prefijo: $ ($prefix)
+· Idioma: es ($lang)
+· Reinicio de reclamos: Cada 180 min. ($setclaim)
+· Minuto exacto de cada reinicio: xx:02 ($setinterval)
+· Reinicio cambiado: por +0 min. ($shifthour)
+· Rolls por hora: 8 ($setrolls)
+· Tiempo antes de que se expire la reacción para reclamar: 45 sec. ($settimer)
+· Rolls sniping: 2 ($togglesnipe) => 8 sec.
+· Calculación de kakera: Reclamos y ranking de favoritos (y número de personajes reclamados) ($togglekakeraclaim/$togglekakeralike)`;
+assert.deepEqual(t.readSettings(settings), { iv: 180, m: 2 });
+assert.deepEqual(t.readSettings('Claim reset: every 2h ($setclaim)'), { iv: 120, m: null });  // en anglès: suposat
 assert.equal(t.readSettings('Rolls: 10 ($setrolls)'), null);
 // El $tu enganxat: minuts fins que cada tasca torna (0 = ja la pots fer)
 // JS_TODAY no és r"""…""": al fitxer de Python les barres van doblades (\\d) i al tauler surten soles (\d)
@@ -87,4 +99,7 @@ assert.deepEqual(readPower(tuEs), { p: 110, c: 36, h: 18 });
 assert.deepEqual(readPower(tuEs.replace('(18%)', '(15%)')), { p: 110, c: 36, h: 15 });  // el 10+ es llegeix, no es calcula
 assert.deepEqual(readPower('Power: 85%\nEach kakera button consumes 36% of your reaction power.'), { p: 85, c: 36, h: 18 });  // sense la línia 10+: la meitat
 assert.equal(readPower(tuEn), null);
+// el $settings no s'ha de confondre amb el $tu (la casella d'Avui mira primer si és un $tu: cal reclam i tirades)
+const tuS = readTu(settings);
+assert.ok(!(('claim' in tuS || 'rolls' in tuS) && Object.keys(tuS).length > 2), JSON.stringify(tuS));
 console.log('rutina: totes les proves passen');

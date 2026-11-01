@@ -530,16 +530,15 @@ function learnResets(R, r, now) {
   if (r.claim) out.next = +at(r.claim);
   return out;
 }
-// Del $settings, cada quant hi ha reclam en minuts ($setclaim, entre 60 i 600), o null
-// shortcut: format suposat (sense cap $settings de mostra); mirar-lo amb el de Victor
+// Del $settings: cada quant hi ha reclam en minuts (iv, de la línia del $setclaim, entre 60 i 600) i el minut dels reinicis (m, del $setinterval).
+// «· Reinicio de reclamos: Cada 180 min. ($setclaim)» i «· Minuto exacto de cada reinicio: xx:02 ($setinterval)» (de Victor, 01/11/2026). null si no hi és.
 function readSettings(text) {
-  for (const l of text.split(/\\r?\\n/)) {
-    if (!/setclaim|reclam|claim/i.test(l)) continue;
-    const m = l.match(/(\\d{2,3})\\s*min/i), h = l.match(/(\\d+(?:[.,]\\d+)?)\\s*h/i);
-    const v = m ? +m[1] : h ? Math.round(parseFloat(h[1].replace(',', '.')) * 60) : null;
-    if (v >= 60 && v <= 600) return v;
-  }
-  return null;
+  const ls = text.split(/\\r?\\n/), line = re => ls.find(l => re.test(l));
+  const c = line(/\\$setclaim/i) || line(/reclam|claim/i), i = line(/\\$setinterval/i);
+  const m = c && c.match(/(\\d{2,3})\\s*min/i), h = c && c.match(/(\\d+(?:[.,]\\d+)?)\\s*h/i);
+  const iv = m ? +m[1] : h ? Math.round(parseFloat(h[1].replace(',', '.')) * 60) : null;
+  const mm = i && i.match(/:\\s*(\\d{1,2})\\b/);
+  return iv >= 60 && iv <= 600 ? { iv, m: mm && +mm[1] < 60 ? +mm[1] : null } : null;
 }
 // El $tu enganxat: per a cada tasca, quants minuts falten perquè la puguis tornar a fer (0 = ja la pots fer).
 // Fem servir els minuts que diu Mudae, no les hores fixes: cada servidor reinicia tirades i reclams a una hora diferent.
@@ -1141,7 +1140,9 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
                             ("$ad <sèrie>", "Torna a les teves tirades una sèrie que havies tret"), ("$qs full", "Desa una còpia de la wishlist i de les llistes")]),
     ("Intercanvis", [("$give @persona", "Regala personatges (separa'ls amb $)"), ("$trade @persona", "Intercanvi amb confirmació dels dos")]),
     ("Esferes", [("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"), ("$oq", "Joc d'esferes"), ("$ot", "Joc d'esferes"),
-                 ("$opp <personatge>", "Millora un personatge amb esferes"), ("$os", "Botiga d'esferes: millores per a tots")]),
+                 ("$opp <personatge>", "Millora un personatge amb esferes"), ("$opz", "Els teus personatges que tenen esferes"),
+                 ("$or <personatge>", "Et torna les esferes d'un personatge (perds el 10 %)"), ("$os", "Botiga d'esferes: millores per a tots"),
+                 ("$shoprefund", "Et torna les esferes de la botiga (cada 15 dies)"), ("$ohu", "Quan tornen les esferes i les millores")]),
     ("Torre (kakeratower)", [("$kt", "Pisos, beneficis i preu del següent"), ("$towervalue", "Quant costa cada pis"),
                              ("$build 8", "Pis: reaccions a kakera −4 % de poder"), ("$build 11", "Pis: +1 tirada per hora"),
                              ("$build <número>", "Construeix el pis que triïs"), ("$destroy", "Desfà la torre i et torna la kakera")]),
@@ -1397,6 +1398,14 @@ function towerNext(M) {
 }
 // El $kt diu quants pisos tens en total: d'aquí surt la torre on ets. Si canvies de torre, els pisos marcats eren de l'anterior.
 function towerFromKt(M, nf) { const t = Math.floor(nf / 12); return { t, f: t === (M.t || 0) ? M.f : [] }; }
+// Esferes posades a un personatge: les millores 1-5 costen 200, 400, 600, 800, 1.000 i 2.000 per nivell; les 6-10, 1.000
+const spent = lv => lv.reduce((s, l, i) => s + (i < 5 ? PCOST.slice(0, l).reduce((a, b) => a + b, 0) : l ? 1000 : 0), 0);
+// $or <personatge> et torna el 90 % de tot el que hi has posat ($spheres). Si té esferes a les 1-9 (que només funcionen quan et surt),
+// val la pena si, tornant-hi la 10 (si la tenia), et queden almenys 1.000 per a la 10 d'un altre personatge. null si no.
+function refundPlan(lv) {
+  const total = spent(lv), back = Math.floor(total * 0.9), free = back - (lv[9] >= 1 ? 1000 : 0);
+  return lv.slice(0, 9).some(v => v > 0) && free >= 1000 ? { total, back, free } : null;
+}
 // Les compres següents, per ordre de recomanació: la primera millora que no és al màxim, i així fins a `count`
 function nextBuys(levels, order, max, cost, count = 3) {
   const lv = Array.from({ length: 10 }, (_, i) => levels[i] || 0), out = [];
@@ -1477,29 +1486,52 @@ function millDraw() {
     el.className = 'tag' + (v === undefined ? '' : (+el.dataset.perk <= 5 ? v >= 6 : v >= 1) ? ' good' : '');
   });
   // les compres d'esferes recomanades, amb el que costen sumades i si les pots pagar
+  const pay = (sum, have = M.sp) => have != null ? ` <span class="tag ${have >= sum ? 'good' : ''}">${esc(have >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - have) }))}</span>` : '';
   const buyList = (buys, cmd, desc) => { let sum = 0; const said = new Set(); return buys.map(b => { sum += b.cost;
     const d = said.has(b.n) ? '' : desc[b.n]; said.add(b.n);  // la descripció, només el primer cop que surt cada millora
-    return `<li><button class="cmd" data-copy="${esc(cmd)}">${esc(cmd)}</button> <b>${esc(T('Millora {n}', { n: b.n }))} · LVL ${b.l}</b> · ${fmtK(b.cost)}`
-      + (M.sp != null ? ` <span class="tag ${M.sp >= sum ? 'good' : ''}">${esc(M.sp >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - M.sp) }))}</span>` : '')
+    return `<li><button class="cmd" data-copy="${esc(cmd)}">${esc(cmd)}</button> <b>${esc(T('Millora {n}', { n: b.n }))} · LVL ${b.l}</b> · ${fmtK(b.cost)}` + pay(sum)
       + (d ? `<br><span class="muted" style="font-size:13px">${esc(d)}</span>` : '') + '</li>'; }).join(''); };
-  let perkHtml = !M.opp ? '<li>' + esc(T('Enganxa un $opp <personatge> per veure-hi els nivells')) + '</li>' : buyList(nextBuys(M.opp.levels, PORD, perkMax, perkCost), ('$opp ' + M.opp.name).trim(), PDESC)
-    || '<li>' + esc(T('Aquest personatge ja el tens millorat del tot.')) + '</li>';
-  // les claus diuen quant et surt cada personatge ($mmy=): les 1-5 només funcionen quan et surt, la 10 se suma cada dia
-  const keyOf = Object.fromEntries(M.keys || []), kOpp = M.opp ? keyOf[M.opp.name] || 0 : 0;
-  if (M.opp && kOpp >= KEYS_OFTEN)
-    perkHtml += '<li class="muted">' + esc(T('Et surt sovint ({n} claus): les millores 1-5 hi valen la pena.', { n: kOpp })) + '</li>';
-  else if (M.opp && M.opp.levels[9] >= 1)
-    perkHtml += '<li class="muted">' + esc(T("Aquest ja té la millora 10. Posar-la a un altre personatge que no regalaràs (1.000) et dona +20 esferes cada dia; les altres d'aquest només funcionen quan et surt a les tirades.")) + '</li>';
-  const often = (M.keys || []).slice(0, 5);
+  // Què val més la pena (wiki de Mudae, «Ourospheres»): la 10 dona +20 esferes cada dia a cada personatge que la té, encara que no et surti,
+  // fins a 100 personatges (després, 8), i es paga en 50 dies. Les 1-9 només funcionen quan et surt el personatge: només als que et surten sovint.
+  const keyOf = Object.fromEntries(M.keys || []), kOpp = M.opp ? keyOf[M.opp.name] || 0 : 0, often = kOpp >= KEYS_OFTEN;
+  const has10 = Object.entries(M.opps || {}).filter(([, lv]) => lv[9] >= 1).map(([n]) => n);
+  const n10 = Math.max(has10.length, BF.oh != null ? Math.round(BF.oh / 20) : 0);  // el $bonus els compta tots, també els que no has enganxat
+  // on posar la 10: personatges de les teves col·leccions (no els regalaràs), primer els que tenen més claus
+  const mineColl = typeof COLL === 'undefined' ? [] : Object.values(COLL).flat().filter(c => c.st === 'Meu').map(c => c.n);
+  const cands = [...new Set(mineColl)].filter(n => !has10.includes(n) && n !== (M.opp && M.opp.name)).sort((a, b) => (keyOf[b] || 0) - (keyOf[a] || 0)).slice(0, 3);
+  // la millora 10 a uns quants personatges, amb el que costen sumades i si les pots pagar amb `budget` esferes
+  const put10 = (names, budget) => names.map((n, i) => `<li><button class="cmd" data-copy="${esc('$opp ' + n)}">${esc('$opp ' + n)}</button> <b>${esc(T('Millora {n}', { n: 10 }))}</b> · ${fmtK(1000)}`
+    + pay(1000 * (i + 1), budget) + (i ? '' : `<br><span class="muted" style="font-size:13px">${esc(PDESC[10])}</span>`) + '</li>').join('');
+  let perkHtml;
+  const R = M.opp && !often && n10 < 100 ? refundPlan(M.opp.levels) : null;
+  if (!M.opp) perkHtml = li(T('Enganxa un $opp <personatge> per veure-hi els nivells'));
+  else if (R) {  // té esferes a les 1-9 i no et surt sovint: millor tornar-les ($or) i posar-les a la 10
+    const name = M.opp.name, budget = R.back + (M.sp || 0);
+    perkHtml = `<li><button class="cmd" data-copy="${esc('$or ' + name)}">${esc('$or ' + name)}</button> <b>${esc(T('Reemborsa les esferes'))}</b> · `
+      + esc(T("et torna {b} de les {t} que hi has posat (perds el 10 %), també les de la millora 10", { b: fmtK(R.back), t: fmtK(R.total) })) + '</li>'
+      + put10([name, ...cands].slice(0, Math.max(1, Math.min(4, Math.floor(budget / 1000)))), budget);
+  } else {
+    perkHtml = buyList(nextBuys(M.opp.levels, often || n10 >= 100 ? PORD : [10], perkMax, perkCost), ('$opp ' + M.opp.name).trim(), PDESC);
+    if (!perkHtml && !often && n10 < 100)  // aquest ja té la 10: la 10, a uns altres
+      perkHtml = put10(cands) || li(T('Posa la millora 10 a un altre personatge teu que no regalaràs: $opp <personatge>.'));
+    perkHtml ||= li(T('Aquest personatge ja el tens millorat del tot.'));
+  }
+  if (M.opp) {  // per què
+    perkHtml += '<li class="muted">' + esc(often
+      ? T('Et surt sovint ({n} claus): les millores 1-5 hi valen la pena.', { n: kOpp })
+      : n10 >= 100 ? T("Ja tens la millora 10 a 100 personatges: a partir d'ara en dona 8 esferes. Ara, les altres als que et surten més.")
+      : T('Primer, la millora 10 a tots els teus personatges que no regalaràs, fins a 100: +20 esferes cada dia cadascun, encara que no et surtin. Les altres només funcionen quan et surt el personatge: posa-les als que tinguin 10 claus o més.')) + '</li>';
+  }
+  const top5 = (M.keys || []).slice(0, 5);
   $id('perkKeys').innerHTML = !M.keys ? esc(T('Enganxa el $mmy= per saber quins et surten més.'))
-    : often.map(([name, n]) => `<button class="cmd" data-copy="${esc('$opp ' + name)}">${esc(name)}</button> <span class="muted" style="font-size:13px">${esc(n === 1 ? T('1 clau') : T('{n} claus', { n }))}</span>`).join('<br>')
-      + (often.length && often[0][1] < KEYS_OFTEN ? '<br><span class="muted" style="font-size:13px">' + esc(T('Encara cap no et surt prou: de moment, la millora 10.')) + '</span>' : '');
+    : top5.map(([name, n]) => `<button class="cmd" data-copy="${esc('$opp ' + name)}">${esc(name)}</button> <span class="muted" style="font-size:13px">${esc(n === 1 ? T('1 clau') : T('{n} claus', { n }))}</span>`).join('<br>')
+      + (top5.length && top5[0][1] < KEYS_OFTEN ? '<br><span class="muted" style="font-size:13px">' + esc(T('Encara cap no et surt prou: de moment, la millora 10.')) + '</span>' : '');
   $id('perkNext').innerHTML = perkHtml;
   // els personatges que has enganxat amb el $opp (Mudae no té cap llista dels millorats)
   const ops = Object.entries(M.opps || {}).filter(([, lv]) => lv.some(v => v > 0));
-  const n10 = ops.filter(([, lv]) => lv[9] >= 1).length;
+  const p10 = ops.filter(([, lv]) => lv[9] >= 1).length;
   $id('perkList').innerHTML = !ops.length ? esc(T('Encara no has enganxat cap personatge millorat.'))
-    : esc(T('Amb la millora 10: {n} (+{e} esferes al primer $oh del dia)', { n: n10, e: n10 * 20 })) + '<br>'
+    : esc(T('Amb la millora 10: {n} (+{e} esferes al primer $oh del dia)', { n: p10, e: p10 * 20 })) + '<br>'
       + ops.map(([name, lv]) => `<button class="cmd" data-copy="${esc('$opp ' + name)}">${esc(name)}</button> <span class="muted" style="font-size:13px">${lv.map((v, i) => v ? (i + 1) + ':' + v : '').filter(Boolean).join(' ')}</span>`).join('<br>');
   document.querySelectorAll('[data-shop]').forEach(el => {
     const v = M.shop ? M.shop[+el.dataset.shop - 1] : undefined;
@@ -1674,11 +1706,12 @@ function pasteAll(text) {
     tuMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Per a la Pokédex, enganxa el $pd sumrare (un sol missatge), no les pàgines del $pd.'));
     return;
   }
-  const iv = /\$set|setting|configuraci|ajuste/i.test(text) ? readSettings(text) : null;
-  if (iv) {  // $settings: cada quant hi ha reclam
-    RS.iv = iv; try { localStorage.setItem('mudae-reinici', JSON.stringify(RS)); } catch (e) {}
+  const set = /\$set|setting|configuraci|ajuste/i.test(text) ? readSettings(text) : null;
+  if (set) {  // $settings: cada quant hi ha reclam i a quin minut es reinicia tot
+    RS.iv = set.iv; if (set.m != null) RS.m = set.m;
+    try { localStorage.setItem('mudae-reinici', JSON.stringify(RS)); } catch (e) {}
     resetDraw(); tick(); pendDraw(); tuText.value = '';
-    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Reclam cada {n} min', { n: iv })) + '</span>';
+    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Reclam cada {n} min', { n: set.iv })) + '</span>';
     return;
   }
   if (millRead(text)) {  // $k, $kt, $opp, $os, $mmy= o $bonus
@@ -1936,7 +1969,7 @@ def write_dashboard(d, hist):
     need = ([["$mma+s", t("el teu harem, amb la sèrie de cada personatge")]] if not (DADES / "harem.txt").exists() else [])         + ([["$wl", t("la teva wishlist")]] if not (DADES / "wishlist.txt").exists() else [])         + ([["$imaso ", t("una sèrie que col·leccionis (o, a «Posar al dia», «Totes les teves sèries»)")]] if not series else [])
     # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
     all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
-    paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$p", "$k", "$kt", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
+    paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$settings", "$p", "$k", "$kt", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
                   + (f' <button class="cmd" data-copy="{e(all_cmd)}" data-tip="{e(t("Totes les teves sèries"))}">$imaa+os</button>' if len(all_cmd) > 9 else "")
                   + " " + cmd_html("$pd sumrare"))
     roman = ["0", "I", "II", "III", "IV"]
@@ -2111,17 +2144,17 @@ def write_dashboard(d, hist):
  <div class="g2">
   <div><h3 class="og-h">{T_("Els que et surten més (claus, $mmy=)")}</h3><p id="perkKeys" style="margin:0;font-size:14px;line-height:1.9"></p></div>
   <div><h3 class="og-h">{T_("Personatges que has millorat")}</h3><p id="perkList" style="margin:0;font-size:14px;line-height:1.9"></p>
-   <p class="muted" style="margin:6px 0 0;font-size:13px">{T_("Mudae no té cap llista dels personatges millorats: el tauler recorda els que enganxes amb el $opp. El $op sol només et mostra el primer.")}</p></div>
+   <p class="muted" style="margin:6px 0 0;font-size:13px">{T_("Amb $opz Mudae et diu quins personatges tenen esferes: enganxa el $opp de cadascun i el tauler se'n recorda.")}</p></div>
  </div>
  <details class="fold" data-fold="perks"><summary><h3 class="og-h">{T_("Totes les millores")}</h3></summary><div class="fold-body">
  <div class="ogrid">{perk_rows}</div>
- <p class="muted" style="margin:0;font-size:13px">{T_("Les 5 primeres tenen 6 nivells i les altres 5, un. Si millores un personatge del tot, les 5 primeres pugen un nivell més. Fes-les servir en personatges que no regalaràs: si te'n divorcies, perds el 10 %.")}</p></div></details>
+ <p class="muted" style="margin:0;font-size:13px">{T_("Les 5 primeres tenen 6 nivells i les altres 5, un. Si millores un personatge del tot, les 5 primeres pugen un nivell més. Fes-les servir en personatges que no regalaràs: si te'n divorcies, perds el 10 %. Amb $or <personatge> et tornen les esferes d'un personatge, també amb un 10 % menys.")}</p></div></details>
 </section>
 <section class="panel"><div class="panel-head"><h2>{T_("Botiga d'esferes")}</h2><span class="muted" style="font-size:13px">$os</span></div>
  <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="shopNext"></ul>
  <details class="fold" data-fold="shop"><summary><h3 class="og-h">{T_("Totes les millores")}</h3></summary><div class="fold-body">
  <div class="og">{shop_rows}</div>
- <p class="muted" style="margin:0;font-size:13px">{T_("Valen per a tots els personatges, però gairebé totes fan més forta una millora dels personatges: primer gasta les esferes amb el $opp. Cada nivell costa 4.000 més que l'anterior, i amb $shoprefund et tornen les esferes.")}</p></div></details>
+ <p class="muted" style="margin:0;font-size:13px">{T_("Valen per a tots els personatges, però gairebé totes fan més forta una millora dels personatges: primer gasta les esferes amb el $opp. Cada nivell costa 4.000 més que l'anterior, i amb $shoprefund et tornen les esferes (un cop cada 15 dies).")}</p></div></details>
 </section>
 </div>
 <div class="view" id="v-eines" role="tabpanel" hidden>
