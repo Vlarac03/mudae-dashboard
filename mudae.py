@@ -622,7 +622,13 @@ function place(s) {
   document.querySelectorAll('.now-col .grp').forEach(g => { g.hidden = !g.querySelector('.task'); });
   document.getElementById('nowNone').hidden = done.length < TASKS.length;
   document.getElementById('laterNone').hidden = done.length > 0;
-  later.closest('details').hidden = !done.length; document.getElementById('laterN').textContent = done.length;
+  const fd = later.closest('details'), card = document.getElementById('doneCard'), all = done.length === TASKS.length;
+  if (all !== (fd.parentElement === card)) {  // tot fet: els Fets, oberts, a l'esquerra (Victor, 01/11/2026); si no, plegats sota l'Estat
+    if (all) { card.append(fd); delete fd.dataset.fold; fd.open = true; }  // sense data-fold: obrir-lo aquí no es recorda
+    else { document.getElementById('laterNone').before(fd); fd.dataset.fold = 'fets'; fd.open = foldOpen('fets'); }
+  }
+  card.hidden = !all;
+  fd.hidden = !done.length; document.getElementById('laterN').textContent = done.length;
   if (f && f !== document.activeElement && f.isConnected) f.focus({ preventScroll: true });  // en moure'l, no perdis on eres
 }
 // «Estat»: sí o no de cada cosa que va i ve, i fins quan o quan torna. La kakera, amb les reaccions que et donava el poder del darrer $tu.
@@ -973,10 +979,14 @@ details.panel { display:block; }
 .st:last-child { border-bottom:0; }
 .st > .muted { grid-column:1 / -1; font-size:12.5px; }
 .done-fold { margin:6px 0 10px; }
+#doneCard .done-fold { margin:0 0 8px; }
 #later { gap:0; margin-top:6px; }
 #later .task { padding:6px 0; }
 #later .task > span { flex:1; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; }
-#later .when { display:inline; margin-left:auto; font-weight:500; }
+#later { container-type:inline-size; }
+#later .task > span { flex-wrap:nowrap; }
+#later .when { display:inline; margin-left:auto; font-weight:500; white-space:nowrap; }
+@container (max-width:400px) { #later .task > span > :is(.cmd, code) { display:none; } }  /* si no hi cap, fora l'ordre (surt a l'Estat): l'hora, a la mateixa línia */
 #later .desc { display:none; }
 #later .task:has(input:checked) > span > :not(.when) { opacity:.7; text-decoration:none; }
 .today .fold > summary h3 { margin:0; font-size:13.5px; font-weight:600; color:var(--ink-2); }
@@ -2052,7 +2062,7 @@ def write_dashboard(d, hist):
     card = lambda g: "".join(groups[g]) + "</div>" + foot.get(g, "") + "</div>"
     now_g = [g for g, *_, torna in RUTINA if torna is not None]
     checklist = ('<div class="plan"><div class="now-col">' + "".join(card(g) for g in dict.fromkeys(now_g))
-                 + f'<p class="muted none" id="nowNone" hidden>{e(t("Res a fer ara: a «Fets» tens quan torna cada cosa."))}</p></div>'
+                 + f'<div class="grp" id="doneCard" hidden><p class="muted none" id="nowNone" hidden>{e(t("Res a fer ara: a «Fets» tens quan torna cada cosa."))}</p></div></div>'
                  + f'<div class="grp later-col"><h3>{e(t("Estat"))}<small id="laterInfo"></small></h3><div id="state"></div>'
                  + f'<details class="fold done-fold" data-fold="fets" hidden><summary><h3>{e(t("Fets"))}</h3><span class="muted" id="laterN"></span></summary><div class="fold-body" id="later"></div></details>'
                  + f'<p class="muted none" id="laterNone">{e(t("Quan facis una cosa, marca-la: s’amagarà fins que la puguis tornar a fer. El $tu enganxat les marca soles."))}</p></div></div>'
