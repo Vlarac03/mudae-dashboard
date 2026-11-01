@@ -1309,7 +1309,17 @@ function autoKind(newIfMissing) {
   syncUpd(); updMsg.innerHTML = '<span class="tag">' + esc(T('Detectat: {k}', { k: kindSel.selectedOptions[0].textContent })) + '</span>';
   return true;
 }
-txt.addEventListener('paste', () => setTimeout(() => autoKind(false)));
+// En enganxar, es desa sol si és segur (Victor, 01/11/2026): el harem, la wishlist, totes les sèries o una sèrie que ja tens.
+// Una sèrie nova o una col·lecció especial (hi enganxes el $imaso d'una altra sèrie) les tries tu i cliques «Desar i actualitzar».
+function autoSave() {
+  const d = detect(txt.value);
+  if (updBtn.disabled || !d.kind) return false;
+  if (d.kind === 'serie' && (serieSel.value === '__new__' || !d.serie || serieName().toLowerCase() !== d.serie.toLowerCase())) return false;
+  updBtn.click(); return true;
+}
+txt.addEventListener('paste', () => setTimeout(() => {
+  if (autoKind(false) && !autoSave()) updMsg.innerHTML += ' ' + esc(T('Comprova la sèrie i clica «Desar i actualitzar».'));
+}));
 // el que vas triar l'última vegada (què enganxes i quina sèrie), per no haver-ho de canviar cada cop
 [kindSel, serieSel].forEach(el => {
   try { const v = localStorage.getItem('mudae-' + el.id); if ([...el.options].some(o => o.value === v)) el.value = v; } catch (e) {}
@@ -1538,12 +1548,13 @@ function millDraw() {
     el.textContent = v === undefined ? '' : 'LVL ' + v + '/10';
     el.className = 'tag' + (v >= 10 ? ' good' : '');
   });
-  $id('shopNext').innerHTML = !M.shop ? '<li>' + esc(T('Enganxa el $os per veure-hi els nivells')) + '</li>'
-    : buyList(nextBuys(M.shop, SORD, shopMax, shopCost), '$os', SDESC) || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>';
+  // la botiga reforça les millores 1-9, que només funcionen quan et surt el personatge: abans, la 10 (més segura i es paga abans)
+  $id('shopNext').innerHTML = (n10 < 100 ? '<li class="muted">' + esc(T('Abans que la botiga, la millora 10 als teus personatges (ara en tens {n} de 100): cada 1.000 esferes et donen +20 cada dia. Gairebé tota la botiga reforça les millores 1-9, que només funcionen quan et surt el personatge.', { n: n10 })) + '</li>' : '')
+    + (!M.shop ? '<li>' + esc(T('Enganxa el $os per veure-hi els nivells')) + '</li>'
+    : buyList(nextBuys(M.shop, SORD, shopMax, shopCost), '$os', SDESC) || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>');
   if (window.pendDraw) pendDraw();
 }
-const millText = $id('millText'), millBtn = $id('millBtn'), millMsg = $id('millMsg');
-millText.addEventListener('input', () => { millBtn.disabled = !millText.value.trim(); });
+const millText = $id('millText'), millMsg = $id('millMsg');  // en enganxar-hi, ho llegeix pasteAll (la casella d'Avui)
 // Desa el que diu el text ($k, $kt, $opp, $os, $mmy= o $tu); false si no és res d'això. També el fa servir la casella d'Avui.
 function millRead(text) {
   const got = readMudae(text, M.tv);
@@ -1555,11 +1566,6 @@ function millRead(text) {
   millSave(); millDraw();
   return true;
 }
-millBtn.onclick = () => {
-  if (!millRead(millText.value)) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt, el $opp, el $os, el $mmy=, el $bonus o el $tu.')); return; }
-  millText.value = ''; millBtn.disabled = true;
-  millMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit')) + '</span>';
-};
 document.addEventListener('change', ev => {
   const el = ev.target;
   if (el.dataset && el.dataset.badge) M.b[el.dataset.badge] = +el.value;
@@ -1679,7 +1685,7 @@ JS_PASTE = r"""
 // La casella d'Avui: hi enganxes qualsevol missatge de Mudae i el tauler l'envia on toca
 const tuText = document.getElementById('tuText'), tuMsg = document.getElementById('tuMsg');
 const goTo = (v, name) => `<button type="button" class="go" data-goto="${v}">${esc(name)} →</button>`;
-function pasteAll(text) {
+function pasteAll(text, area = tuText, msg = tuMsg) {  // area i msg: la casella on has enganxat i on surt el missatge
   if (!text.trim()) return;
   const tu = readTu(text), prev = txt.value;
   if (('claim' in tu || 'rolls' in tu) && Object.keys(tu).length > 2) {  // el $tu: marca les caselles (i la kakera i les esferes de Millores)
@@ -1688,48 +1694,51 @@ function pasteAll(text) {
     if (P) try { localStorage.setItem('mudae-poder', JSON.stringify({ ...P, t: Date.now() })); } catch (e) {}
     RS = learnResets(RS, readResets(text), Date.now());  // el rellotge, amb els reinicis del teu servidor
     try { localStorage.setItem('mudae-reinici', JSON.stringify(RS)); } catch (e) {}
-    powerDraw(); resetDraw(); applyTu(tu, Date.now()); pendDraw(); tuText.value = '';
-    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
+    powerDraw(); resetDraw(); applyTu(tu, Date.now()); pendDraw(); area.value = '';
+    msg.innerHTML = '<span class="tag good">' + esc(T('Marcat segons el $tu')) + '</span>';
     return;
   }
   if ('p' in tu && Object.keys(tu).length === 2) {  // «Tiempo restante antes de su próximo $p: 42 min.»
-    applyTu({ p: tu.p }, Date.now()); tuText.value = '';
-    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Pokéslot marcat')) + '</span>';
+    applyTu({ p: tu.p }, Date.now()); area.value = '';
+    msg.innerHTML = '<span class="tag good">' + esc(T('Pokéslot marcat')) + '</span>';
     return;
   }
   if (pdRead(text)) {  // abans que «Posar al dia»: «100 / 1.025» sembla el títol d'una sèrie
-    tuText.value = '';
-    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Pokédex al dia')) + '</span> ' + goTo('coll', T('Col·leccions'));
+    area.value = '';
+    msg.innerHTML = '<span class="tag good">' + esc(T('Pokédex al dia')) + '</span> ' + goTo('coll', T('Col·leccions'));
     return;
   }
   if (/\/\s*1[.,]?\d{3}\s*-\s*\S+\s+\d+\s*\/\s*\d+/.test(text)) {  // una pàgina del $pd («100 / 1.025 - Page 1 / 10»): no és una sèrie
-    tuMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Per a la Pokédex, enganxa el $pd sumrare (un sol missatge), no les pàgines del $pd.'));
+    msg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Per a la Pokédex, enganxa el $pd sumrare (un sol missatge), no les pàgines del $pd.'));
     return;
   }
   const set = /\$set|setting|configuraci|ajuste/i.test(text) ? readSettings(text) : null;
   if (set) {  // $settings: cada quant hi ha reclam i a quin minut es reinicia tot
     RS.iv = set.iv; if (set.m != null) RS.m = set.m;
     try { localStorage.setItem('mudae-reinici', JSON.stringify(RS)); } catch (e) {}
-    resetDraw(); tick(); pendDraw(); tuText.value = '';
-    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Reclam cada {n} min', { n: set.iv })) + '</span>';
+    resetDraw(); tick(); pendDraw(); area.value = '';
+    msg.innerHTML = '<span class="tag good">' + esc(T('Reclam cada {n} min', { n: set.iv })) + '</span>';
     return;
   }
   if (millRead(text)) {  // $k, $kt, $opp, $os, $mmy= o $bonus
-    tuText.value = '';
-    tuMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit a Millores')) + '</span> ' + goTo('mill', T('Millores'));
+    area.value = '';
+    msg.innerHTML = '<span class="tag good">' + esc(T('Llegit a Millores')) + '</span> ' + (area === tuText ? goTo('mill', T('Millores')) : '');
     return;
   }
   txt.value = text;
-  if (autoKind(true)) {  // el harem, la wishlist o sèries: es desen des de «Posar al dia», on ho revises abans
-    tuText.value = ''; tuMsg.innerHTML = '';
+  if (autoKind(true)) {  // el harem, la wishlist o sèries: van a «Posar al dia», que ho desa sol si és segur (una sèrie nova, no)
+    area.value = ''; msg.innerHTML = '';
     go('eines'); document.getElementById('upd').scrollIntoView({ block: 'start' });
-    updMsg.innerHTML += ' ' + esc(T('Revisa-ho i clica «Desar i actualitzar».'));
+    if (!autoSave()) updMsg.innerHTML += ' ' + esc(serieSel.value === '__new__' && kindSel.value === 'serie'
+      ? T('És una sèrie nova: comprova el nom i clica «Desar i actualitzar».') : T('Comprova la sèrie i clica «Desar i actualitzar».'));
     return;
   }
   txt.value = prev; syncUpd();
-  tuMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer de Mudae.'));
+  msg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer de Mudae.'));
 }
 tuText.addEventListener('paste', () => setTimeout(() => pasteAll(tuText.value)));
+// la de Millores, igual: no cal cap botó
+millText.addEventListener('paste', () => setTimeout(() => pasteAll(millText.value, millText, millMsg)));
 // «Pendent!»: el que depèn del teu servidor o de tu i encara no has enganxat, amb l'ordre que ho diu. No suposem res.
 const NEED = __NEED__;
 function pendDraw() {
@@ -2119,7 +2128,7 @@ def write_dashboard(d, hist):
  <div class="panel-head"><h2>{T_("Què tens")}</h2><span class="muted" id="millSum" style="font-size:13px"></span></div>
  <label for="millText" class="muted" style="font-size:14px">{T_("Enganxa el que et diu Mudae amb $k (kakera i insígnies), $kt (torre), $opp <personatge> o $os (esferes), $mmy= (claus), $bonus o $tu, d'un en un. Es guarda en aquest navegador.")}</label>
  <textarea id="millText" rows="4" spellcheck="false"></textarea>
- <div class="give-row"><button class="primary" id="millBtn" disabled>{T_("Llegir")}</button><span id="millMsg" role="status"></span></div>
+ <span id="millMsg" role="status"></span>
  <p class="muted" id="millMiss" style="margin:0;font-size:13px"></p>
 </section>
 <section class="panel"><div class="panel-head"><h2>{T_("Els teus bonus")}</h2><span class="muted" style="font-size:13px">$bonus</span></div>
