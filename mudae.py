@@ -1362,7 +1362,7 @@ function syncUpd() {
   document.getElementById('updEsp').hidden = !esp;
   const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : kindSel.value === 'totes' ? '$imaa+os ' + allList().join(' $ ')
     : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
-  updCmd.textContent = cmd; updCmd.dataset.copy = cmd;
+  updCmd.textContent = kindSel.value === 'totes' ? '$imaa+os' : cmd; updCmd.dataset.copy = cmd;  // la sencera surt a sota: aquí, sencera, no hi cap
   const all = kindSel.value === 'totes', allCopy = document.getElementById('updAllCopy');  // l'ordre sencera ben a la vista, amb les sèries
   document.getElementById('updAll').hidden = !all;
   document.getElementById('updAllCmd').textContent = allList().length ? cmd : T('Encara no tens cap sèrie: escriu-les a «Sèries noves».');
