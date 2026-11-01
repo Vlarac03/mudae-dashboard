@@ -1416,6 +1416,18 @@ function refundPlan(lv) {
   const total = spent(lv), back = Math.floor(total * 0.9), free = back - (lv[9] >= 1 ? 1000 : 0);
   return lv.slice(0, 9).some(v => v > 0) && free >= 1000 ? { total, back, free } : null;
 }
+// A la botiga cada nivell costa més que l'anterior: el nivell més barat d'entre les que et serveixen (si costen igual, per ordre), fins a `count`
+function cheapestBuys(levels, order, max, cost, count = 3) {
+  const lv = Array.from({ length: 10 }, (_, i) => levels[i] || 0), out = [];
+  while (out.length < count) {
+    const open = order.filter(n => lv[n - 1] < max(n));
+    if (!open.length) break;
+    const n = open.reduce((a, b) => cost(b, lv[b - 1]) < cost(a, lv[a - 1]) ? b : a);
+    out.push({ n, l: lv[n - 1] + 1, cost: cost(n, lv[n - 1]) });
+    lv[n - 1]++;
+  }
+  return out;
+}
 // Les compres següents, per ordre de recomanació: la primera millora que no és al màxim, i així fins a `count`
 function nextBuys(levels, order, max, cost, count = 3) {
   const lv = Array.from({ length: 10 }, (_, i) => levels[i] || 0), out = [];
@@ -1508,12 +1520,14 @@ function millDraw() {
   const n10 = Math.max(has10.length, BF.oh != null ? Math.round(BF.oh / 20) : 0);  // el $bonus els compta tots, també els que no has enganxat
   // on posar la 10: personatges de les teves col·leccions (no els regalaràs), primer els que tenen més claus
   const mineColl = typeof COLL === 'undefined' ? [] : Object.values(COLL).flat().filter(c => c.st === 'Meu').map(c => c.n);
+  // fins on la 10: a tots els personatges de les teves col·leccions, i com a molt a 100 (després en dona 8). Llavors, para i passa a la botiga.
+  const keepers = new Set(mineColl).size, goal10 = Math.min(100, keepers || 100), done10 = n10 >= goal10;
   const cands = [...new Set(mineColl)].filter(n => !has10.includes(n) && n !== (M.opp && M.opp.name)).sort((a, b) => (keyOf[b] || 0) - (keyOf[a] || 0)).slice(0, 3);
   // la millora 10 a uns quants personatges, amb el que costen sumades i si les pots pagar amb `budget` esferes
   const put10 = (names, budget) => names.map((n, i) => `<li><button class="cmd" data-copy="${esc('$opp ' + n)}">${esc('$opp ' + n)}</button> <b>${esc(T('Millora {n}', { n: 10 }))}</b> · ${fmtK(1000)}`
     + pay(1000 * (i + 1), budget) + (i ? '' : `<br><span class="muted" style="font-size:13px">${esc(PDESC[10])}</span>`) + '</li>').join('');
   let perkHtml;
-  const R = M.opp && !often && n10 < 100 ? refundPlan(M.opp.levels) : null;
+  const R = M.opp && !often && !done10 ? refundPlan(M.opp.levels) : null;
   if (!M.opp) perkHtml = li(T('Enganxa un $opp <personatge> per veure-hi els nivells'));
   else if (R) {  // té esferes a les 1-9 i no et surt sovint: millor tornar-les ($or) i posar-les a la 10
     const name = M.opp.name, budget = R.back + (M.sp || 0);
@@ -1521,16 +1535,17 @@ function millDraw() {
       + esc(T("et torna {b} de les {t} que hi has posat (perds el 10 %), també les de la millora 10", { b: fmtK(R.back), t: fmtK(R.total) })) + '</li>'
       + put10([name, ...cands].slice(0, Math.max(1, Math.min(4, Math.floor(budget / 1000)))), budget);
   } else {
-    perkHtml = buyList(nextBuys(M.opp.levels, often || n10 >= 100 ? PORD : [10], perkMax, perkCost), ('$opp ' + M.opp.name).trim(), PDESC);
-    if (!perkHtml && !often && n10 < 100)  // aquest ja té la 10: la 10, a uns altres
-      perkHtml = put10(cands) || li(T('Posa la millora 10 a un altre personatge teu que no regalaràs: $opp <personatge>.'));
+    perkHtml = buyList(nextBuys(M.opp.levels, often ? PORD : [10], perkMax, perkCost), ('$opp ' + M.opp.name).trim(), PDESC);
+    if (!perkHtml && !often)  // aquest ja té la 10: la 10, a uns altres, o, si ja la tenen tots, la botiga
+      perkHtml = done10 ? li(T('Para de gastar en personatges que no et surten sovint: ara, la botiga d\'esferes ($os).'))
+        : put10(cands) || li(T('Posa la millora 10 a un altre personatge teu que no regalaràs: $opp <personatge>.'));
     perkHtml ||= li(T('Aquest personatge ja el tens millorat del tot.'));
   }
   if (M.opp) {  // per què
     perkHtml += '<li class="muted">' + esc(often
       ? T('Et surt sovint ({n} claus): les millores 1-5 hi valen la pena.', { n: kOpp })
-      : n10 >= 100 ? T("Ja tens la millora 10 a 100 personatges: a partir d'ara en dona 8 esferes. Ara, les altres als que et surten més.")
-      : T('Primer, la millora 10 a tots els teus personatges que no regalaràs, fins a 100: +20 esferes cada dia cadascun, encara que no et surtin. Les altres només funcionen quan et surt el personatge: posa-les als que tinguin 10 claus o més.')) + '</li>';
+      : done10 ? T('Ja tens la millora 10 a {n} personatges: tots els de les teves col·leccions, o 100. A partir d\'aquí, la botiga ($os) i les millores 1-9 als que et surten sovint.', { n: n10 })
+      : T('Primer, la millora 10 a tots els teus personatges que no regalaràs (en tens {n} de {t}): +20 esferes cada dia cadascun, encara que no et surtin. Les altres només funcionen quan et surt el personatge: posa-les als que tinguin 10 claus o més.', { n: n10, t: goal10 })) + '</li>';
   }
   const top5 = (M.keys || []).slice(0, 5);
   $id('perkKeys').innerHTML = !M.keys ? esc(T('Enganxa el $mmy= per saber quins et surten més.'))
@@ -1548,10 +1563,14 @@ function millDraw() {
     el.textContent = v === undefined ? '' : 'LVL ' + v + '/10';
     el.className = 'tag' + (v >= 10 ? ' good' : '');
   });
-  // la botiga reforça les millores 1-9, que només funcionen quan et surt el personatge: abans, la 10 (més segura i es paga abans)
-  $id('shopNext').innerHTML = (n10 < 100 ? '<li class="muted">' + esc(T('Abans que la botiga, la millora 10 als teus personatges (ara en tens {n} de 100): cada 1.000 esferes et donen +20 cada dia. Gairebé tota la botiga reforça les millores 1-9, que només funcionen quan et surt el personatge.', { n: n10 })) + '</li>' : '')
-    + (!M.shop ? '<li>' + esc(T('Enganxa el $os per veure-hi els nivells')) + '</li>'
-    : buyList(nextBuys(M.shop, SORD, shopMax, shopCost), '$os', SDESC) || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>');
+  // La botiga, quan ja tens la 10 a tots (abans, la 10 es paga més de pressa). I només el que et serveix: la 2 (megaesferes) va sola;
+  // la 1-9 reforça aquella millora dels personatges, així que només si algun personatge teu la té; la 10, si en tens algun de millorat del tot.
+  const opsLv = Object.values(M.opps || {});
+  const useful = n => n === 2 || (n === 10 ? opsLv.some(lv => lv.every((v, i) => v >= perkMax(i + 1))) : opsLv.some(lv => lv[n - 1] > 0));
+  $id('shopNext').innerHTML = (done10 ? li(T('Ara sí: la botiga. Et recomano només les que reforcen millores que ja tens als teus personatges.'))
+      : '<li class="muted">' + esc(T('Encara no: abans, la millora 10 als teus personatges (en tens {n} de {t}). Cada 1.000 esferes et donen +20 cada dia, i gairebé tota la botiga només reforça les millores 1-9, que funcionen quan et surt el personatge.', { n: n10, t: goal10 })) + '</li>')
+    + (!M.shop ? li(T('Enganxa el $os per veure-hi els nivells'))
+    : buyList(cheapestBuys(M.shop, SORD.filter(useful), shopMax, shopCost), '$os', SDESC) || li(T('Ja tens al màxim les que et serveixen. Les altres reforcen millores que cap personatge teu no té.')));
   if (window.pendDraw) pendDraw();
 }
 const millText = $id('millText'), millMsg = $id('millMsg');  // en enganxar-hi, ho llegeix pasteAll (la casella d'Avui)
@@ -1747,6 +1766,7 @@ function pendDraw() {
   if (!RS.iv) add('$settings', T('cada quant hi ha reclam al servidor'));
   if (!M.bonus) add('$bonus', T('cada quant pots fer el $rt i quants llocs tens a la wishlist'));
   if (!M.bp) add('$k', T('les teves insígnies i quant costen al servidor'));
+  if (!M.opps) add('$opz', T('quins personatges tenen esferes (enganxa cada pàgina)'));
   if (M.nf == null && !M.ktCost) add('$kt', T('la torre: quants pisos tens i quant costa el següent'));
   else if (M.nf == null) out.push(`<li>${goTo('mill', T('Millores'))} <span class="muted">${esc(T('la torre: marca els pisos que tens (o escriu el preu base de la torre)'))}</span></li>`);
   NEED.forEach(([cmd, why]) => add(cmd, why));
@@ -1978,7 +1998,7 @@ def write_dashboard(d, hist):
     need = ([["$mma+s", t("el teu harem, amb la sèrie de cada personatge")]] if not (DADES / "harem.txt").exists() else [])         + ([["$wl", t("la teva wishlist")]] if not (DADES / "wishlist.txt").exists() else [])         + ([["$imaso ", t("una sèrie que col·leccionis (o, a «Posar al dia», «Totes les teves sèries»)")]] if not series else [])
     # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
     all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
-    paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$settings", "$p", "$k", "$kt", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
+    paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$settings", "$p", "$k", "$kt", "$opz", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
                   + (f' <button class="cmd" data-copy="{e(all_cmd)}" data-tip="{e(t("Totes les teves sèries"))}">$imaa+os</button>' if len(all_cmd) > 9 else "")
                   + " " + cmd_html("$pd sumrare"))
     roman = ["0", "I", "II", "III", "IV"]
@@ -2153,7 +2173,7 @@ def write_dashboard(d, hist):
  <div class="g2">
   <div><h3 class="og-h">{T_("Els que et surten més (claus, $mmy=)")}</h3><p id="perkKeys" style="margin:0;font-size:14px;line-height:1.9"></p></div>
   <div><h3 class="og-h">{T_("Personatges que has millorat")}</h3><p id="perkList" style="margin:0;font-size:14px;line-height:1.9"></p>
-   <p class="muted" style="margin:6px 0 0;font-size:13px">{T_("Amb $opz Mudae et diu quins personatges tenen esferes: enganxa el $opp de cadascun i el tauler se'n recorda.")}</p></div>
+   <p class="muted" style="margin:6px 0 0;font-size:13px">{T_("El $opz et mostra els personatges que tenen esferes, un per pàgina: enganxa cada pàgina (amb la fletxa de Mudae passes a la següent) i el tauler se'n recorda.")}</p></div>
  </div>
  <details class="fold" data-fold="perks"><summary><h3 class="og-h">{T_("Totes les millores")}</h3></summary><div class="fold-body">
  <div class="ogrid">{perk_rows}</div>

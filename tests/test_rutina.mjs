@@ -102,4 +102,7 @@ assert.equal(readPower(tuEn), null);
 // el $settings no s'ha de confondre amb el $tu (la casella d'Avui mira primer si és un $tu: cal reclam i tirades)
 const tuS = readTu(settings);
 assert.ok(!(('claim' in tuS || 'rolls' in tuS) && Object.keys(tuS).length > 2), JSON.stringify(tuS));
+// el $opz (Victor, 01/11/2026) tampoc no és un $tu, encara que parli del $oh
+const tuO = readTu('Tienes 145\nHarry Potter\n[LVL 0] Si no está reclamado, el personaje tendrá protección de deseos.\n[MAX] El primer $oh del día genera +20 spheres y tiene un +1% de probabilidad de otorgar 1 $oq');
+assert.ok(!('claim' in tuO || 'rolls' in tuO), JSON.stringify(tuO));
 console.log('rutina: totes les proves passen');

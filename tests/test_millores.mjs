@@ -75,6 +75,25 @@ Harry Potter
 [LVL 0]  Un botón de sphere...
 [MAX]  El primer $oh del día genera +20 spheres y tiene un +1% de probabilidad de otorgar 1 $oq`;
 assert.deepEqual(readMudae(oppMax, 5000), { opp: { name: 'Harry Potter', levels: [0, 0, 6, 0, 0, 0, 0, 0, 0, 1] }, sp: 1725 });
+// el $opz de Victor (01/11/2026): els personatges amb esferes, un per pàgina, amb el mateix format que el $opp
+const opz = `1. $opz
+2. MudaeAPP — 12:29
+Mejora los beneficios del personaje seleccionado.
+Un bono se aplica cuando es mejorado completamente. Filtrar con variables funciona.
+Escribe $infosphere para ver más información.
+Tienes 145
+Harry Potter
+[LVL 0] Probabilidad de aparición incrementada para los personajes adyacentes a este en tu $wishlist: 0 > 15%
+[LVL 0] Valor de kakera base incrementado: 0 > 20
+[LVL 0] Probabilidad de obtener +1 botón de kakera: 0 > 7%
+[LVL 0] Probabilidad de obtener +1 llave: 0 > 4%
+[LVL 0] Cantidad de spheres ganadas por botón de kakera (excepto púrpura) cliqueado por ti en este personaje: 0 > 3
+[LVL 0] Un personaje aleatorio de tu lista de deseos podría aparecer automáticamente después de que tu rolleas este personaje (2% de probabilidades). Si no está reclamado, el personaje tendrá protección de deseos. Si ya ha sido reclamado por ti, obtendrás 3 llaves Omega (revisa $ok)
+[LVL 0] Los botones de kakera se pueden convertir en kakera del Caos cuando tu rolleas este personaje (1% de probabilidad por kakera excluyendo rojo, luz, oscuridad y arcoíris)
+[LVL 0] Aparece con 4 botones de kakera (sin púrpura) y costando la mitad de poder cuando rolleado por primera vez ese día, solo tu puedes hacer click. El descuento aplica solo a los primeros 40 cliqueos del día. Las spheres adquiridas por el beneficio 5 se duplicarán en estos botones tras realizar 40 clicks.
+[LVL 0] Un botón de sphere aparece cuando rolleas este personaje por primera vez ese día. 1/7 de obtener 1 $oq por click. Hasta 10 clicks en spheres por día, solo tú puedes hacer click.
+[MAX] El primer $oh del día genera +20 spheres y tiene un +1% de probabilidad de otorgar 1 $oq`;
+assert.deepEqual(readMudae(opz, 5000), { opp: { name: 'Harry Potter', levels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1] }, sp: 145 });
 const fn = name => js.match(new RegExp(`function ${name}[\\s\\S]*?\\n}\\n`))[0];
 // $os: la botiga d'esferes (10 bonus; alguns ocupen dues línies)
 const os = `Mejora los bonos de los ourobeneficios. Estos bonos se aplican a TODOS los personajes. Escribe $shoprefund para reembolsar las spheres. Escribe $oo para los fragmentos.
@@ -110,6 +129,10 @@ assert.deepEqual(nextBuys([2, 0, 0, 6, 0, 0, 0, 0, 0, 1], PORD, perkMax, perkCos
 assert.deepEqual(nextBuys([0, 0, 0, 5, 0, 0, 0, 0, 0, 0], PORD, perkMax, perkCost, 2), [{ n: 10, l: 1, cost: 1000 }, { n: 4, l: 6, cost: 2000 }]);
 assert.deepEqual(nextBuys([6, 6, 6, 6, 6, 1, 1, 1, 1, 1], PORD, perkMax, perkCost), []);  // millorat del tot
 assert.deepEqual(nextBuys([0, 3], [2, 4], shopMax, shopCost, 2), [{ n: 2, l: 4, cost: 16000 }, { n: 2, l: 5, cost: 20000 }]);
+// la botiga: el nivell més barat d'entre les que et serveixen; si costen igual, la primera de l'ordre
+const cheapestBuys = new Function(costs + '\n' + fn('cheapestBuys') + 'return cheapestBuys;')();
+assert.deepEqual(cheapestBuys([0, 0, 0, 0], [2, 4], shopMax, shopCost), [{ n: 2, l: 1, cost: 4000 }, { n: 4, l: 1, cost: 4000 }, { n: 2, l: 2, cost: 8000 }]);
+assert.deepEqual(cheapestBuys([0, 3, 0, 0], [2, 4], shopMax, shopCost, 2), [{ n: 4, l: 1, cost: 4000 }, { n: 4, l: 2, cost: 8000 }]);
 
 // $bonus de Victor (01/11/2026), dues pàgines («1.» i «2.»): una línia per bonus, i el que en fa servir el tauler
 const bonus = `1. Bonos del Jugador
