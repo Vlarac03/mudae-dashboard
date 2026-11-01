@@ -6,24 +6,24 @@
 <b>Download:</b> green <b>Code → Download ZIP</b> button at the top of this page.<br>
 <b>English</b> · <a href="README.ca.md">Català</a> · <a href="README.es.md">Español</a></p>
 
-![The Today tab: collection stats, the roll and claim clock, and what to do now](assets/tauler.png)
+![The Today tab: collection stats, the roll and claim clock, the paste box with its To do! list, and what to do now](assets/tauler.png)
 
 A dashboard that runs on your own computer for the Mudae Discord bot. You paste what Mudae sends you and it tracks your collections, wishlist and trades, tells you what to do each hour, helps you with the `$oc` sphere game and keeps an Excel workbook up to date. Available in English, Catalan and Spanish.
 
 ## Features
 
 - **Tabs in the order you use them**: Today, Collections, Wishlist, Trades, Upgrades and Update. The roll and claim clock stays above the tabs, alerts take you to the tab where you fix them, and long sections fold away and stay open or closed the way you left them.
-- **One box for everything**: paste any Mudae message at the top of the Today tab (`$tu`, `$settings`, `$bonus`, `$k`, `$kt`, `$opp`, `$os`, `$mmy=`, `$mma+s`, `$wl`, `$imaso`…) and the dashboard sends it where it belongs. Under it, a copy button for each command it understands and a **To do!** box with the commands it still needs: nothing that depends on your server or on you is assumed (roll and claim times, `$rt` hours, wishlist slots, badge and tower prices). Harem, wishlist and series go to «Update» so you can check them before saving.
+- **One box for everything**: paste any Mudae message at the top of the Today tab (`$tu`, `$settings`, `$bonus`, `$k`, `$kt`, `$opp`, `$opz`, `$os`, `$mmy=`, `$mma+s`, `$wl`, `$imaso`…) and the dashboard reads it as soon as you paste it, with no button, and sends it where it belongs. Under it, a copy button for each command it understands and a **To do!** box with the commands it still needs: nothing that depends on your server or on you is assumed (roll and claim times, `$rt` hours, wishlist slots, badge and tower prices). Harem, wishlist and series are saved straight away; a new series or a custom collection waits in «Update» for you to check it.
 - **What to do now**: paste your `$tu` and the checklist ticks itself, Pokéslot (`$p`) included. Three cards (every hour, claim time, start of the day) where each task stays ticked until you can do it again (`$daily` and `$dk` every 20 h, `$vote` every 12 h, `$oh` at midnight UTC, rolls at your server's minute…). The roll minute and the next claim come from your `$tu`, how often claims reset from `$settings`, and the `$rt` hours from `$bonus`.
 - **Notifications**: while the dashboard is open, it tells you when your rolls are back (and whether you can claim and react to kakera), and when your claim, `$daily`, `$vote`, `$dk`, `$rt` or `$p` are ready again. They beep and stay on screen until you close them. Turn them on and off with the **Notifications** button at the top.
 - **`$oc` helper**: mark the colors that appear and it tells you which square to click to find the red sphere. It's folded on the Today tab: open it with a click.
 - **Collections**: one album per series with your characters, the free ones, the ones on your wishlist and the ones other players own (and who). Click the ones you get to mark them as yours.
 - **Custom collections**: a group you pick, even if it isn't a Mudae series (for example, the Eevees from the Pokédex). Type its name and characters, and the `$imaso` of the series they come from fills in who owns each one.
 - **Pokédex**: paste your `$pd sumrare` (one message) and see how many Pokémon you have of each rarity. Pasting the «time left before your next `$p`» message ticks the Pokéslot task.
-- **Upgrades**: paste your `$k`, `$kt`, `$opp <character>`, `$os`, `$mmy=` or `$bonus` and it tells you which badge, tower floor, sphere perk and sphere shop upgrade to get next, and how much kakera you still need. The `$bonus` adds a summary: how many kakera buttons a full power bar covers, the spheres your first `$oh` gives, your `$rt` hours and your wishlist slots. Prices only come from what you paste (`$k`, `$kt`), since each server sets its own.
+- **Upgrades**: paste your `$k`, `$kt`, `$opp <character>`, `$os`, `$mmy=` or `$bonus` and it tells you which badge, tower floor, sphere perk and sphere shop upgrade to get next, and how much kakera you still need. The `$bonus` adds a summary: how many kakera buttons a full power bar covers, the spheres your first `$oh` gives, your `$rt` hours and your wishlist slots. Prices only come from what you paste (`$k`, `$kt`), since each server sets its own. For spheres: perk 10 first on every character you keep (up to 100), perks 1-9 only on the ones you roll often, a `$or` refund plan when it pays off, and it tells you when to stop and move to the sphere shop. Its paste box works like the Today one.
 - **Wishlist**: warns you about characters you already own or someone else claimed, and builds the `$wishremove` and `$wish` commands for you.
 - **Trades and gifts**: the `$give` command for each player, and a search box that understands misspelled series lists («full metal alchimist», «Rezero»…).
-- **Update**: paste your `$mma+s` (your harem, with each character's series), `$wl` or an `$imaso` and click a button. It reminds you if your harem is more than a week old.
+- **Update**: paste your `$mma+s` (your harem, with each character's series), `$wl` or an `$imaso` and it's saved as soon as you paste it (a new series or a custom collection waits for you to check it and click the button). It reminds you if your harem is more than a week old.
 - **Common commands**: grouped by topic (rolls, claims, your collection, harem and profile, trades, spheres, tower, kakera, Pokéslot…), each group folded, with a search box («wish», «kakera»…), what each command does and a copy button.
 - **Excel**: the same in a spreadsheet, which keeps what you type in it (priorities, notes, trade status).
 
@@ -36,11 +36,12 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 1. Install [Python](https://www.python.org/downloads/) 3.12 or newer. On the first screen of the installer, tick «Add python.exe to PATH» (recommended, though it also works without it).
 2. Click the green **Code → Download ZIP** button at the top of this page. Before unzipping it: right-click the ZIP → **Properties** → tick **«Unblock»** → OK (otherwise Windows may block the `.bat` files). Then unzip the folder somewhere you'll keep it (for example, Documents). Don't run it from inside the zip.
 3. Double-click **`Configura.bat`**. Choose your language (English by default), then type your Mudae name (the one in «Belongs to …» on your characters) and, if you want, your server's name. It creates a **Mudae** shortcut on your desktop and opens the dashboard.
-4. In the dashboard, go to **«Update»** and paste, in this order:
-   - **Your harem**: type `$mma+s` in Discord, copy the message Mudae sends you by DM and paste it choosing «Your harem».
-   - **Your wishlist**: `$wl`, choosing «Your wishlist».
-   - **Each series you collect**: `$imaso <series>` (for example `$imaso Harry Potter`), choosing «A series» → «New series…» and typing its name as Mudae shows it.
-   - **Then, all at once**: choose «All your series», copy the command it shows (`$imaa+os Series 1 $ Series 2 $ …`) and paste every message Mudae sends back. No need to pick what you're pasting: the dashboard works it out.
+4. In the dashboard, paste what Mudae sends you into the box at the top of the **Today** tab. It works out what each message is and saves it by itself. In this order:
+   - **Your harem**: type `$mma+s` in Discord, copy the message Mudae sends you by DM and paste it.
+   - **Your wishlist**: `$wl`.
+   - **Each series you collect**: `$imaso <series>` (for example `$imaso Harry Potter`). A new series waits for you: check its name in «Update» and click **Save and update**.
+   - **Then, all at once**: in «Update», choose «All your series», copy the command it shows (`$imaa+os Series 1 $ Series 2 $ …`) and paste every message Mudae sends back.
+   - **Your server and you**: the **To do!** box under the paste box lists the commands still missing (`$tu`, `$settings`, `$bonus`, `$k`…). Paste them the same way.
 
 From then on, open the dashboard with the **Mudae** shortcut on your desktop.
 
@@ -49,7 +50,7 @@ From then on, open the dashboard with the **Mudae** shortcut on your desktop.
 - **What to do now** tells you what to do and when. Tick things as you do them.
 - **When you get a character**: in «Collections», choose the series, click it and click **They're mine**.
 - **When you give characters away**: in «Trades» → «Search my characters», find them, copy the `$give` command and, once Mudae confirms it, click **I've given them**.
-- **Once a week**: paste your `$mma+s` again in «Update» (the dashboard reminds you).
+- **Once a week**: paste your `$mma+s` again in the Today box (the dashboard reminds you).
 
 ## Good to know
 

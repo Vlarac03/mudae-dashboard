@@ -6,24 +6,24 @@
 <b>Descárgalo:</b> botón verde <b>Code → Download ZIP</b>, arriba de esta página.<br>
 <a href="README.md">English</a> · <a href="README.ca.md">Català</a> · <b>Español</b></p>
 
-![La pestaña Hoy: cifras de la colección, el reloj de tiradas y reclamo, y qué toca ahora](assets/tauler.png)
+![La pestaña Hoy: cifras de la colección, el reloj de tiradas y reclamo, la casilla para pegar con el recuadro ¡Pendiente!, y qué toca ahora](assets/tauler.png)
 
 Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que te envía Mudae y te lleva las colecciones, la wishlist y los intercambios, te dice qué toca hacer cada hora, te ayuda con el juego de esferas `$oc` y te mantiene al día un Excel. En español, catalán e inglés.
 
 ## Qué hace
 
 - **Pestañas por orden de uso**: Hoy, Colecciones, Wishlist, Intercambios, Mejoras y Poner al día. El reloj de tiradas y reclamo se ve desde todas, los avisos te llevan a la pestaña donde se arreglan, y los bloques largos se pliegan y se quedan abiertos o cerrados como los dejaste.
-- **Una sola casilla para todo**: arriba de la pestaña Hoy pegas cualquier mensaje de Mudae (`$tu`, `$settings`, `$bonus`, `$k`, `$kt`, `$opp`, `$os`, `$mmy=`, `$mma+s`, `$wl`, `$imaso`…) y el panel lo envía donde toca. Debajo hay un botón para copiar cada comando que entiende y un recuadro **¡Pendiente!** con los comandos que aún le faltan: no supone nada de lo que depende de tu servidor o de ti (horas de tiradas y reclamos, horas del `$rt`, huecos de la wishlist, precios de las insignias y de la torre). El harén, la wishlist y las series van a «Poner al día» para que lo revises antes de guardarlo.
+- **Una sola casilla para todo**: arriba de la pestaña Hoy pegas cualquier mensaje de Mudae (`$tu`, `$settings`, `$bonus`, `$k`, `$kt`, `$opp`, `$opz`, `$os`, `$mmy=`, `$mma+s`, `$wl`, `$imaso`…) y el panel lo lee en cuanto lo pegas, sin ningún botón, y lo envía donde toca. Debajo hay un botón para copiar cada comando que entiende y un recuadro **¡Pendiente!** con los comandos que aún le faltan: no supone nada de lo que depende de tu servidor o de ti (horas de tiradas y reclamos, horas del `$rt`, huecos de la wishlist, precios de las insignias y de la torre). El harén, la wishlist y las series se guardan enseguida; una serie nueva o una colección especial te espera en «Poner al día» para que la compruebes.
 - **Qué toca ahora**: pegas el `$tu` y la lista se marca sola, Pokéslot (`$p`) incluido. Tres tarjetas (cada hora, momento de reclamar, al empezar el día) donde cada tarea queda marcada hasta que la puedes volver a hacer (`$daily` y `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a medianoche UTC, tiradas en el minuto de tu servidor…). El minuto de las tiradas y el próximo reclamo salen del `$tu`, cada cuánto hay reclamo del `$settings` y las horas del `$rt` del `$bonus`.
 - **Notificaciones**: mientras el panel está abierto, te avisa cuando vuelves a tener tiradas (y te dice si puedes reclamar y reaccionar a kakera), y cuando vuelves a tener el reclamo, el `$daily`, el `$vote`, el `$dk`, el `$rt` o el `$p`. Suenan y se quedan en pantalla hasta que las cierras. Se activan y se desactivan con el botón **Notificaciones** de arriba.
 - **Ayudante del `$oc`**: marcas los colores que salen y te dice en qué casilla hacer clic para encontrar la roja. Está plegado en la pestaña Hoy: se abre con un clic.
 - **Colecciones**: un álbum por serie con tus personajes, los libres, los de la wishlist y los de otros jugadores (y de quién son). Haces clic en los que consigues para marcarlos como tuyos.
 - **Colecciones especiales**: un grupo que eliges tú, aunque no sea una serie de Mudae (por ejemplo, los Eevee de la Pokédex). Escribes el nombre y los personajes, y el `$imaso` de la serie de la que salen te pone de quién es cada uno.
 - **Pokédex**: pegas el `$pd sumrare` (un solo mensaje) y ves cuántos Pokémon tienes de cada rareza. Si pegas el mensaje del tiempo que falta para el próximo `$p`, se marca la tarea del Pokéslot.
-- **Mejoras**: pegas el `$k`, el `$kt`, un `$opp <personaje>`, el `$os`, el `$mmy=` o el `$bonus` y te dice qué insignia, qué piso de la torre, qué mejora de esferas y qué mejora de la tienda de esferas te toca, y cuánta kakera te falta. El `$bonus` añade un resumen: cuántos botones de kakera haces con el poder lleno, las esferas del primer `$oh`, las horas del `$rt` y los huecos de la wishlist. Los precios solo salen de lo que pegas (`$k`, `$kt`), porque cada servidor tiene los suyos.
+- **Mejoras**: pegas el `$k`, el `$kt`, un `$opp <personaje>`, el `$os`, el `$mmy=` o el `$bonus` y te dice qué insignia, qué piso de la torre, qué mejora de esferas y qué mejora de la tienda de esferas te toca, y cuánta kakera te falta. El `$bonus` añade un resumen: cuántos botones de kakera haces con el poder lleno, las esferas del primer `$oh`, las horas del `$rt` y los huecos de la wishlist. Los precios solo salen de lo que pegas (`$k`, `$kt`), porque cada servidor tiene los suyos. Para las esferas: primero la mejora 10 en todos los personajes que no vayas a regalar (hasta 100), las 1-9 solo en los que te salen a menudo, un plan con el `$or` cuando sale a cuenta, y te dice cuándo parar y pasar a la tienda de esferas. Su casilla funciona como la de Hoy.
 - **Wishlist**: te avisa de los que ya son tuyos o que ha reclamado alguien, y te prepara los comandos `$wishremove` y `$wish`.
 - **Intercambios y regalos**: el comando `$give` para cada jugador, y un buscador que entiende listas de series mal escritas («full metal alchimist», «Rezero»…).
-- **Poner al día**: pegas el `$mma+s` (tu harem, con la serie de cada personaje), el `$wl` o un `$imaso` y haces clic en un botón. Te avisa si hace más de una semana que no pones al día el harem.
+- **Poner al día**: pegas el `$mma+s` (tu harem, con la serie de cada personaje), el `$wl` o un `$imaso` y se guarda en cuanto lo pegas (una serie nueva o una colección especial te espera para que la compruebes y pulses el botón). Te avisa si hace más de una semana que no pones al día el harem.
 - **Comandos de uso habitual**: por temas (tiradas, reclamar, tu colección, harén y perfil, intercambios, esferas, torre, kakera, Pokéslot…), cada grupo plegado, con un buscador («wish», «kakera»…), lo que hace cada comando y un botón de copiar.
 - **Excel**: lo mismo en una hoja de cálculo, que respeta lo que escribes en ella (prioridades, notas, estado de los intercambios).
 
@@ -36,11 +36,12 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 1. Instala [Python](https://www.python.org/downloads/) 3.12 o más nuevo. En la primera pantalla del instalador, marca «Add python.exe to PATH» (recomendado, aunque sin él también funciona).
 2. Haz clic en el botón verde **Code → Download ZIP** arriba de esta página. Antes de descomprimirlo: clic derecho al ZIP → **Propiedades** → marca **«Desbloquear»** → Aceptar (si no, Windows puede bloquear los `.bat`). Después descomprime la carpeta donde la quieras tener (por ejemplo, en Documentos). No la abras desde dentro del zip.
 3. Doble clic en **`Configura.bat`**. Elige el idioma (el 2 es el español), escribe tu nombre en Mudae (el que sale en «Pertenece a …» en tus personajes) y, si quieres, el del servidor. Crea el acceso directo **Mudae** en el escritorio y abre el panel.
-4. En el panel, ve a **«Poner al día»** y pega, por orden:
-   - **Tu harem**: escribe `$mma+s` en Discord, copia el mensaje que te llega por privado y pégalo eligiendo «Tu harem».
-   - **Tu wishlist**: `$wl`, eligiendo «La wishlist».
-   - **Cada serie que coleccionas**: `$imaso <serie>` (por ejemplo, `$imaso Harry Potter`), eligiendo «Una serie» → «Serie nueva…» y escribiendo su nombre tal como sale en Mudae.
-   - **Después, todas de golpe**: elige «Todas tus series», copia el comando que sale (`$imaa+os Serie 1 $ Serie 2 $ …`) y pega todos los mensajes que te devuelve Mudae. No hace falta elegir qué pegas: el panel lo adivina.
+4. En el panel, pega lo que te envía Mudae en la casilla de arriba de la pestaña **Hoy**. Adivina qué es cada mensaje y lo guarda solo. Por orden:
+   - **Tu harem**: escribe `$mma+s` en Discord, copia el mensaje que te llega por privado y pégalo.
+   - **Tu wishlist**: `$wl`.
+   - **Cada serie que coleccionas**: `$imaso <serie>` (por ejemplo, `$imaso Harry Potter`). Una serie nueva te espera: comprueba su nombre en «Poner al día» y pulsa **Guardar y actualizar**.
+   - **Después, todas de golpe**: en «Poner al día», elige «Todas tus series», copia el comando que sale (`$imaa+os Serie 1 $ Serie 2 $ …`) y pega todos los mensajes que te devuelve Mudae.
+   - **Tu servidor y tú**: el recuadro **¡Pendiente!**, debajo de la casilla, dice qué comandos faltan (`$tu`, `$settings`, `$bonus`, `$k`…). Pégalos igual.
 
 A partir de aquí, abre el panel con el acceso directo **Mudae** del escritorio.
 
@@ -49,7 +50,7 @@ A partir de aquí, abre el panel con el acceso directo **Mudae** del escritorio.
 - **Qué toca ahora** te dice qué hacer y cuándo. Ve marcando lo que haces.
 - **Cuando consigas un personaje**: en «Colecciones», elige la serie, haz clic en él y en **Ya son míos**.
 - **Cuando regales**: en «Intercambios» → «Buscar entre los míos», búscalos, copia el `$give` y, cuando Mudae lo confirme, haz clic en **Ya los he dado**.
-- **Una vez por semana**: vuelve a pegar el `$mma+s` en «Poner al día» (el panel te avisa).
+- **Una vez por semana**: vuelve a pegar el `$mma+s` en la casilla de Hoy (el panel te avisa).
 
 ## Bueno saber
 
