@@ -160,16 +160,18 @@ def parse_owners(text):
 def read_series():
     rows = []
     spec = set(specials())
-    harem = {n for n, _ in lines(DADES / "harem.txt")} if spec else set()
+    hp = DADES / "harem.txt"
+    harem, ht = {n for n, _ in lines(hp)}, hp.stat().st_mtime if hp.exists() else 0
     for f in sorted((DADES / "series").glob("*.txt")):
         seen, serie = set(), f.stem.translate(FROM_FILE)
+        fresh = ht >= f.stat().st_mtime  # harem més nou que la sèrie: hi mana ell (has reclamat algú i no has tornat a fer el $imaso)
         for line, _ in lines(f):
             m = CLAIM.match(line)
             h = HEART_ONLY.match(line)
             name, owner = (m.group(1).strip(), m.group(2)) if m else (h.group(1).strip(), "algú") if h else (line, "")
             if owner.casefold() == ME.casefold():  # Mudae escriu els noms en minúscula («pep»), tu pots haver posat «Pep»
                 owner = ME
-            if serie in spec and name in harem:  # a les especials, el que és al teu harem és teu (no hi ha cap $imaso que ho digui)
+            if name in harem and (serie in spec or fresh):  # a les especials, sempre (no hi ha cap $imaso que ho digui)
                 owner = ME
             if name not in seen:
                 seen.add(name)
@@ -2647,7 +2649,6 @@ def classify_harem(text):
             got[name] = serie
     if not got:
         raise ValueError(t("No he trobat cap «Personatge - Sèrie». Copia el missatge del $mma+s sencer."))
-    (DADES / "harem.txt").write_text("\n".join(got) + "\n", encoding="utf-8")
     for f in (DADES / "series").glob("*.txt"):  # els que eren teus i ja no hi són: els has donat o te n'has divorciat
         rows = f.read_text(encoding="utf-8-sig").splitlines()
         new = []
@@ -2657,6 +2658,7 @@ def classify_harem(text):
             new.append(f"{m.group(1).strip()} 💞 => algú" if gone else r)  # de qui és ara, ho dirà el pròxim $imaso
         if new != rows:
             f.write_text("\n".join(new) + "\n", encoding="utf-8")
+    (DADES / "harem.txt").write_text("\n".join(got) + "\n", encoding="utf-8")  # després de les sèries, perquè sigui el més nou
     path = DADES / "series-sobrants.json"
     old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     by_name = {n: sr for sr, ns in old.items() for n in ns if sr != ALTRES}  # el que ja sabíem i ara no surt, es queda

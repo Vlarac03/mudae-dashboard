@@ -1,5 +1,6 @@
 """Proves del que llegeix i desa mudae.py. Executa: python -m unittest discover tests"""
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -176,6 +177,18 @@ class Desar(Base):
         self.write("series/HP.txt", "Hedwig 💞 => jo\nDobby 💞 => jo\nWinky 💞 => pep\n")
         mudae.save_paste("harem", "", "Hedwig - HP\n")
         self.assertEqual([(r["name"], r["owner"]) for r in mudae.read_series()], [("Hedwig", "jo"), ("Dobby", "algú"), ("Winky", "pep")])
+
+    def test_harem_nou_mana_sobre_la_serie(self):  # Victor, 01/11/2026: reclames un de la wishlist i enganxes només el harem
+        self.write("series/HP.txt", "Hedwig\nDobby 💞 => pep\n")
+        self.write("wishlist.txt", "Hedwig\n")
+        mudae.save_paste("harem", "", "Hedwig - HP\n")
+        self.assertEqual([(r["name"], r["owner"]) for r in mudae.read_series()], [("Hedwig", "jo"), ("Dobby", "pep")])
+        self.assertEqual(mudae.build_data()["wishlist"][0]["state"], "Meu")
+        # després, un $imaso diu que l'has donat: mana la sèrie, que és més nova
+        self.write("series/HP.txt", "Hedwig 💞 => anna\n")
+        later = (self.tmp / "harem.txt").stat().st_mtime + 5
+        os.utime(self.tmp / "series/HP.txt", (later, later))
+        self.assertEqual([(r["name"], r["owner"]) for r in mudae.read_series()], [("Hedwig", "anna")])
 
     def test_esborrar_colleccio(self):
         self.write("series/Eevees.txt", "Vaporeon\n")
