@@ -1419,8 +1419,11 @@ const LVL = /\[(?:LVL\s*(\d+)|MAX)\]/;
 const levelsOf = (text, max) => [...text.matchAll(new RegExp(LVL, 'g'))].slice(0, 10).map((m, i) => m[1] != null ? +m[1] : max(i + 1));
 function readMudae(text, tv) {
   const out = {}, have = text.match(/(?:Tienes|You have|Tens|Vous avez|Hai|Du hast|Você tem)\s+(\d[\d.,]*)/i);
-  if (/\$limroul/i.test(text) && /\$kl\b/i.test(text)) {  // $bonus: «· Rolls por hora: +8 (6 $k + 1 $kl + 1 $kt)», una línia per bonus
-    out.bonus = text.split(/\r?\n/).map(l => l.match(/^\s*(?:\d+\.\s*)?·\s*([^:]+?)\s*:\s*(.+?)\s*$/)).filter(Boolean).map(m => [m[1], m[2]]);
+  // $bonus: «· Rolls por hora: +8 (6 $k + 1 $kl + 1 $kt)», una línia per bonus, en dues pàgines (la 2 no porta ni el $limroul ni el $kl).
+  // El $os també parla de megaesferes, però porta [LVL n]. Les etiquetes angleses són suposades.
+  if (/bonos del jugador|player bonus|\$limroul|\$oh\b[^:\n]*(?:bono|bonus)[^:\n]*:|megaspheres?\s*:|spheres adicionales|additional spheres/i.test(text) && !LVL.test(text)) {
+    const rows = text.split(/\r?\n/).map(l => l.match(/^\s*(?:\d+\.\s*)?[·•*-]?\s*([^:]+?)\s*:\s*(.+?)\s*$/)).filter(Boolean).map(m => [m[1], m[2]]);
+    if (rows.length) out.bonus = rows;  // cap línia entesa: com si no l'haguessis enganxat («Pendent!» el continua demanant)
   } else if (/\$shoprefund/i.test(text) && LVL.test(text)) {  // $os: la botiga d'esferes
     out.shop = levelsOf(text, shopMax);
     if (have) out.sp = num(have[1]);
@@ -1506,6 +1509,11 @@ function towerGuess(M) {
   return v >= 5000 && v <= 50000 ? v : null;
 }
 // Llocs de la wishlist: 7 de base (wiki de Mudae) més els del $bonus; sense $bonus, no ho sabem
+// Copiat de Discord, les línies poden començar amb el codi d'un emoji («:addroll: · Rolls por hora…», «<:sp:123>»): el traiem
+const noEmoji = t => t.replace(/^([ \t]*)(?:<a?:\w+:\d+>|:[\w~]+:)[ \t]*/gm, '$1');
+// Les pàgines del $bonus s'enganxen d'una en una: s'ajunten per l'etiqueta (si una es repeteix, mana la nova)
+const mergeBonus = (old, add) => [...(old || []).filter(([l]) => !add.some(([a]) => a === l)), ...add];
+const hasBonus = () => !!(M.bonus && M.bonus.length);  // un de buit (d'abans de l'01/11/2026) no compta
 const wlSlots = () => { const v = bonusFacts(M.bonus).wl; return v == null ? null : 7 + v; };
 function millLoad() { try { return Object.assign({ b: {}, f: [], tv: null }, JSON.parse(localStorage.getItem('mudae-millores') || '{}')); } catch (e) { return { b: {}, f: [], tv: null }; } }
 let M = millLoad();
@@ -1516,7 +1524,7 @@ function millDraw() {
   $id('millSum').textContent = [k !== null ? T('Kakera: {n}', { n: fmtK(k) }) : '', M.sp != null ? T('Esferes: {n}', { n: fmtK(M.sp) }) : '']
     .filter(Boolean).join(' · ') || T('Encara no has enganxat res');
   // el que encara no ha enganxat: cada servidor té els seus preus i cada jugador els seus nivells
-  const miss = [!M.bp && '$k', M.nf == null && '$kt', !M.opp && '$opp <personatge>', !M.shop && '$os', !M.keys && '$mmy=', !M.bonus && '$bonus'].filter(Boolean);
+  const miss = [!M.bp && '$k', M.nf == null && '$kt', !M.opp && '$opp <personatge>', !M.shop && '$os', !M.keys && '$mmy=', !hasBonus() && '$bonus'].filter(Boolean);
   $id('millMiss').textContent = miss.length ? T('Per començar, enganxa: {list}', { list: miss.join(' · ') }) : '';
   // $bonus: el que en treus i, plegada, la llista sencera (el valor en negreta i d'on surt, a part)
   const BF = bonusFacts(M.bonus), li = s => '<li>' + esc(s) + '</li>', bl = [];
@@ -1529,8 +1537,9 @@ function millDraw() {
   if (BF.rt != null) bl.push(li(T('El $rt et torna cada {n} h: el tauler ja ho fa servir a «Què toca ara».', { n: BF.rt })));
   if (BF.wl != null) bl.push(li(T('Tens {n} llocs a la wishlist (7 de base i {b} de bonus).', { n: 7 + BF.wl, b: BF.wl })));
   window.RT_H = BF.rt; if (window.tick) tick();  // el $rt de «Què toca ara» torna quan diu el $bonus
-  $id('bonusNext').innerHTML = !M.bonus ? li(T('Enganxa el $bonus per veure-hi el resum.')) : bl.join('');
-  $id('bonusFold').hidden = !M.bonus;
+  $id('bonusNext').innerHTML = !hasBonus() ? li(T('Enganxa el $bonus per veure-hi el resum.'))
+    : bl.join('') || li(T("Del $bonus que has enganxat no n'he pogut treure res: torna'l a enganxar sencer (les dues pàgines)."));
+  $id('bonusFold').hidden = !hasBonus();
   $id('bonusAll').innerHTML = (M.bonus || []).map(([l, v]) => { const i = v.indexOf(' (');
     return `<tr><td>${esc(l)}</td><td><b>${esc(i > 0 ? v.slice(0, i) : v)}</b>${i > 0 ? ' <span class="muted" style="font-size:13px">' + esc(v.slice(i + 1)) + '</span>' : ''}</td></tr>`; }).join('');
   // insígnies: el nivell de cada una i els 3 passos següents del pla, amb el preu (−25 % amb el Ruby IV)
@@ -1649,6 +1658,7 @@ function millRead(text) {
   if (!Object.keys(got).length) return false;
   if (got.nf != null) Object.assign(got, towerFromKt(M, got.nf));
   if (got.opp && got.opp.name) got.opps = Object.assign({}, M.opps, { [got.opp.name]: got.opp.levels });
+  if (got.bonus) got.bonus = mergeBonus(M.bonus, got.bonus);
   Object.assign(M, got);
   if (got.ktCost && !M.tv && (M.tv = towerGuess(M))) M.nf = towerNext(M).built;
   millSave(); millDraw();
@@ -1774,6 +1784,7 @@ JS_PASTE = r"""
 const tuText = document.getElementById('tuText'), tuMsg = document.getElementById('tuMsg');
 const goTo = (v, name) => `<button type="button" class="go" data-goto="${v}">${esc(name)} →</button>`;
 function pasteAll(text, area = tuText, msg = tuMsg) {  // area i msg: la casella on has enganxat i on surt el missatge
+  text = noEmoji(text);
   if (!text.trim()) return;
   const tu = readTu(text), prev = txt.value;
   if (('claim' in tu || 'rolls' in tu) && Object.keys(tu).length > 2) {  // el $tu: marca les caselles (i la kakera i les esferes de Millores)
@@ -1833,7 +1844,7 @@ function pendDraw() {
   const out = [], add = (cmd, why) => out.push(`<li><button class="cmd" data-copy="${esc(cmd)}">${esc(cmd.trim())}</button> <span class="muted">${esc(why)}</span></li>`);
   if (RS.m == null || !RS.next) add('$tu', T('quan tornen les tirades i el reclam, i el poder de kakera'));
   if (!RS.iv) add('$settings', T('cada quant hi ha reclam al servidor'));
-  if (!M.bonus) add('$bonus', T('cada quant pots fer el $rt i quants llocs tens a la wishlist'));
+  if (!hasBonus()) add('$bonus', T('cada quant pots fer el $rt i quants llocs tens a la wishlist'));
   if (!M.bp) add('$k', T('les teves insígnies i quant costen al servidor'));
   if (!M.opps) add('$opz', T('quins personatges tenen esferes (enganxa cada pàgina)'));
   if (M.nf == null && !M.ktCost) add('$kt', T('la torre: quants pisos tens i quant costa el següent'));

@@ -149,8 +149,46 @@ const B = readMudae(bonus + '\n · Espacios de lista de deseos: +8 (6 $k + 0 $kl
 assert.equal(B.length, 10);
 assert.deepEqual(B[0], ['Rolls por hora', '+8 (6 $k + 1 $kl + 1 $kt)']);
 assert.deepEqual(B[6], ['Probabilidad de obtener una llave adicional en deseos', '+10% ($kt)']);
+assert.deepEqual(readMudae(bonus.replaceAll('·', '•'), 5000).bonus.slice(0, 1), [['Rolls por hora', '+8 (6 $k + 1 $kl + 1 $kt)']]);  // amb • en lloc de ·
+assert.equal(readMudae('Bonos del Jugador\n$limroul $kl', 5000).bonus, undefined);  // cap línia entesa: no desa un $bonus buit
+// les dues pàgines del $bonus, cadascuna sola (Victor, 01/11/2026: la 2 sola no s'entenia), i ajuntades
+const [pg1, pg2] = bonus.split('\n2. ');
+assert.equal(readMudae(pg1, 5000).bonus.length, 6);
+assert.deepEqual(readMudae('2. ' + pg2, 5000).bonus.map(([l]) => l), ['Probabilidad de obtener una llave adicional en deseos', '$oh bono diario']);
+const mergeBonus = new Function(js.match(/const mergeBonus = [^\n]*/)[0] + '\nreturn mergeBonus;')();
+const both = mergeBonus(readMudae(pg1, 5000).bonus, readMudae('2. ' + pg2, 5000).bonus);
+assert.equal(both.length, 8);
+assert.equal(mergeBonus(both, [['$oh bono diario', '+80 spheres']]).find(([l]) => l === '$oh bono diario')[1], '+80 spheres');  // la nova mana
+assert.equal(readMudae('[LVL 3] Una megasphere tiene un 1/50\n · Megaspheres: 0', 5000).bonus, undefined);  // el $os no és el $bonus
+// el $bonus tal com surt en copiar-lo de Discord (Victor, 01/11/2026): cada línia comença amb el codi de l'emoji
+const clip = `:addroll: · Rolls por hora: +8 (6 $k + 1 $kl + 1 $kt)
+:wlslot: · Espacios de lista de deseos: +8 (6 $k + 0 $kl + 2 $kt)
+:wlslot: · Bono de aparición para deseos: +150% ($k + $bw + slash)
+:sw: · % bono adicional de aparición para $starwish: +150% ($kt + $bw + $tuto) (= 300%)
+:sw: · Espacios de Starwish:  +0 (0 $kl + 0 $sw)
+:wishprotect: · Probabilidad de aparición de Wishprotect: 1/10.000 ($kl)
+:rtcd: · Tiempo de espera para $rt: 20h (-30h $k -0h $kl)
+:disablemore: · Límite $limroul de animanga: -6 $wa/$ha (6 $kl + 0 $kt)
+:disablemore: · Límite $limroul de juegos: -4 $wg/$hg (4 $kl + 0 $kt)
+:morekakera: · Bono por kakera obtenido: +0% (premium + slash)
+:morekakera: · Bono de kakera de llaves doradas: 4.500 (0 $kt, 0 $bk)
+:morekakera: · Poder máximo de Kakera: 110% ($kt)
+:morekakera: · Costo de poder por botón de kakera: 36% (-60% $k -4% $kt)
+:morekakera: · Bono adicional para botones de kakera: +0% ($bk)
+:morekakera: · Bono adicional para botones de kakera en starwishes: +16% ($sw)
+:kakeraL: · Kakera aleatorio por kakera de Luz: 4-5 (1 $kt)
+:bku: · Probabilidad de completar + reiniciar $bku en $sw: +0% ($kl) (este intervalo: 10%)
+:chaoskey: · Probabilidad de obtener una llave adicional en deseos: +10% ($kt)
+:sp: · Spheres adicionales: +0 (spheres cliqueadas + premium)
+:sp: · $oh bono diario: +80 spheres, 4% de obtener 1 $oq ($op) y 0% $ot ($shop)
+:spM: · Megaspheres: 0 recompensas y 0% de probabilidad de ser gratis ($shop)`;
+const noEmoji = new Function(js.match(/const noEmoji = [^\n]*/)[0] + '\nreturn noEmoji;')();
+assert.equal(readMudae(clip, 5000).bonus, undefined);  // sense treure els emojis, no se n'entén cap línia
+assert.equal(readMudae(noEmoji(clip), 5000).bonus.length, 21);
+assert.equal(noEmoji(' <:sp:123> · Capital: 1.725 :sp:'), ' · Capital: 1.725 :sp:');  // només el del principi de la línia
 const bonusFacts = new Function(fn('bonusFacts') + 'return bonusFacts;')();
 assert.deepEqual(bonusFacts(B), { pmax: 110, pcost: 36, oh: 40, rt: 20, wl: 8 });  // 7 de base + 8 = els 15 de Victor
+assert.deepEqual(bonusFacts(readMudae(noEmoji(clip), 5000).bonus), { pmax: 110, pcost: 36, oh: 80, rt: 20, wl: 8 });
 assert.deepEqual(bonusFacts(undefined), { pmax: null, pcost: null, oh: null, rt: null, wl: null });
 assert.deepEqual(readMudae('Hola, això no és de Mudae', 5000), {});
 assert.deepEqual(readMudae('Kakera rewards\nBonus Bronze I + Silver I + Gold I\n$bronze', 5000), {});  // el $kakerareward no són els teus nivells

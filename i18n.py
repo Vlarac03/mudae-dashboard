@@ -5,6 +5,7 @@ Les variables entre claus ({n}, {name}…) s'han de mantenir iguals.
 """
 
 ES = {
+    "Del $bonus que has enganxat no n'he pogut treure res: torna'l a enganxar sencer (les dues pàgines).": "Del $bonus que has pegado no he podido sacar nada: vuelve a pegarlo entero (las dos páginas).",
     "Totes al màxim": "Todas al máximo",
     "Et guarda un reinici de tirades, com el $vote: el gastes amb $rolls. Cada 20 h (cal tenir 5 personatges al $ll)": "Te guarda un reinicio de tiradas, como el $vote: lo gastas con $rolls. Cada 20 h (hay que tener 5 personajes en el $ll)",
     "Guarda un reinici de tirades (cada 20 h)": "Guarda un reinicio de tiradas (cada 20 h)",
@@ -579,6 +580,7 @@ ES = {
 }
 
 EN = {
+    "Del $bonus que has enganxat no n'he pogut treure res: torna'l a enganxar sencer (les dues pàgines).": "I couldn't get anything from the $bonus you pasted: paste it again in full (both pages).",
     "Totes al màxim": "All maxed",
     "Et guarda un reinici de tirades, com el $vote: el gastes amb $rolls. Cada 20 h (cal tenir 5 personatges al $ll)": "Stores a roll reset, like $vote: spend it with $rolls. Every 20 h (you need 5 characters in your $ll)",
     "Guarda un reinici de tirades (cada 20 h)": "Stores a roll reset (every 20 h)",
