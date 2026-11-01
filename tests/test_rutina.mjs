@@ -105,4 +105,10 @@ assert.ok(!(('claim' in tuS || 'rolls' in tuS) && Object.keys(tuS).length > 2), 
 // el $opz (Victor, 01/11/2026) tampoc no és un $tu, encara que parli del $oh
 const tuO = readTu('Tienes 145\nHarry Potter\n[LVL 0] Si no está reclamado, el personaje tendrá protección de deseos.\n[MAX] El primer $oh del día genera +20 spheres y tiene un +1% de probabilidad de otorgar 1 $oq');
 assert.ok(!('claim' in tuO || 'rolls' in tuO), JSON.stringify(tuO));
+// la cua de «Què toca ara»: a «Després», el que torna abans primer, i el que no sabem quan torna (Infinity), al final
+const byBack = new Function(js.match(/const byBack = [^\n]*/)[0] + '\nreturn byBack;')();
+assert.deepEqual([5, Infinity, 1, Infinity, 3].map(back => ({ back })).sort(byBack).map(x => x.back), [1, 3, 5, Infinity, Infinity]);
+// les tasques marcades abans de l'01/11/2026 (r0, r1…) passen al nom nou
+const OLD = new Function(js.match(/const OLD = [^\n]*/)[0] + 'return OLD;')();
+assert.equal(OLD.r5, 'rolls'); assert.equal(OLD.r8, 'claim'); assert.equal(OLD.r17, 'p');
 console.log('rutina: totes les proves passen');

@@ -64,35 +64,33 @@ ALTRES = "Altres (no la sé: mira-la amb $im)"
 PREFERITS = CONFIG.get("preferits", [])
 
 GRUPS = {
-    "dia": "EN COMENÇAR EL DIA",
-    "hora": "CADA HORA",
-    "reclam": "MOMENT BO: pots reclamar",
+    "reclam": "POTS RECLAMAR",
+    "hora": "CADA HORA: no les perdis",
+    "dia": "UN COP AL DIA",
+    "comodi": "COMODINS: guarda'ls per quan calguin",
     "aconseguit": "UN COP PER SETMANA (o quan aconsegueixis algú)",
     "temps": "QUAN TINGUIS TEMPS",
 }
-# (grup, què, ordre, com, quan es torna a poder fer): surt al full Rutina i al tauler.
+# (grup, què, ordre, com, quan es torna a poder fer): surt al full Rutina i al tauler, per ordre d'importància.
 # «hora» = al reinici de tirades · «reclam» = al pròxim reclam · «rt» = les hores del $rt · «utc» = a mitjanit UTC · un número = hores des que la fas
 # Les hores que depenen del servidor o de tu (reinicis, $rt) surten del que enganxes ($tu, $settings, $bonus), mai d'aquí.
 RUTINA = [
-    ("dia", "Mirar què tens", "$tu", "Resum de tot el que tens disponible", "hora"),
-    ("dia", "Votar", "$vote", "Et guarda un reinici de tirades: el gastes amb $rolls. Cada 12 h", 12),
-    ("dia", "Reinici de tirades", "$daily", "Et torna les tirades. Cada 20 h: guarda'l per quan te'n quedis sense", 20),
-    ("dia", "Esferes", "$oh (×4)", "Primer blaves (destapen 3), als últims clics les millors. 2 minuts!", "utc"),
-    ("dia", "Trobar la vermella", "$oc", "Si en tens. Fes servir l'ajudant: et diu on clicar", "utc"),
+    ("reclam", "Reclamar", "clic al cor", "El millor que surti: wishlist > les teves sèries > molta kakera. Si no surt res bo, espera't: a l'última hora abans del reinici, reclama el millor que hi hagi", "reclam"),
     ("hora", "Tirades", "$m", "Fes-les totes: les que no fas es perden", "hora"),
     ("hora", "Kakera", "clic al botó", "Cada reacció gasta poder: enganxa el $tu per saber quant", "hora"),
-    ("reclam", "1. Tirades", "$m", "Totes", "reclam"),
-    ("reclam", "2. Reclamar", "clic al cor", "El millor: wishlist > les teves sèries > molta kakera", "reclam"),
-    ("reclam", "3. Més tirades", "$us · $rolls", "Tirades guardades ($us) i el reinici del vot ($rolls)", "reclam"),
-    ("reclam", "4. Un altre de bo?", "$rt", "Et deixa tornar a reclamar: només per a la wishlist o les teves sèries", "rt"),
-    ("reclam", "5. Sense poder?", "$dk", "Recarrega el poder i dona kakera. Cada 20 h", 20),
+    ("hora", "Pokéslot", "$p", "Tirada de Pokémon: cada 2 h, per a tots els servidors", 2),
+    ("hora", "Mirar què tens", "$tu", "Enganxa'l a la casella de dalt: marca sol el que ja has fet", "hora"),
+    ("dia", "Votar", "$vote", "Et guarda un reinici de tirades: el gastes amb $rolls. Cada 12 h", 12),
+    ("dia", "Reinici de tirades", "$daily", "Et guarda un reinici de tirades, com el $vote: el gastes amb $rolls. Cada 20 h (cal tenir 5 personatges al $ll)", 20),
+    ("dia", "Esferes", "$oh (×4)", "Primer blaves (destapen 3), als últims clics les millors. 2 minuts!", "utc"),
+    ("dia", "Trobar la vermella", "$oc", "Si en tens. Fes servir l'ajudant: et diu on clicar", "utc"),
+    ("comodi", "Un altre reclam", "$rt", "Ja has reclamat i en surt un de la wishlist o de les teves sèries? Torna a reclamar", "rt"),
+    ("comodi", "Recarregar el poder", "$dk", "Quan no et quedi poder per a la kakera: el torna tot i dona kakera. Cada 20 h", 20),
     ("aconseguit", "Treure'l de la wishlist", "$wishremove <nom>", "I posa-hi el primer de «Per omplir» (full Wishlist)", None),
-    ("aconseguit", "Posar al dia les dades", "$mma+s · $wl · $imaso <sèrie>", "Per privat i sense pàgines. Enganxa-ho a «Posar al dia» del tauler", None),
+    ("aconseguit", "Posar al dia les dades", "$mma+s · $wl · $imaso <sèrie>", "Per privat i sense pàgines. Enganxa-ho a la casella d'Avui", None),
     ("aconseguit", "Obrir el tauler", "Mudae", "Accés directe de l'escriptori: posa al dia l'Excel i obre el tauler", None),
     ("temps", "Intercanvis", "$trade @persona", "Full Intercanvis: a qui demanar què. Ofereix dels Sobrants", None),
     ("temps", "Kakera estalviada", "$kt", "A la pestanya Millores et diu en què gastar-la: insígnies, torre o kakeraloots", None),
-    # al final perquè els data-id (r0, r1…) de les tasques que ja tenies marcades no canviïn; al tauler surt a «Cada hora»
-    ("hora", "Pokéslot", "$p", "Tirada de Pokémon: cada 2 h, per a tots els servidors", 2),
 ]
 
 SKIP = re.compile(r"Harem de|Wishlist|^Page\b|\bAPP\b|—\s*\d{1,2}:\d{2}|^\$|^Mudae$|^\d+\s*/\s*\d+$", re.I)
@@ -486,8 +484,8 @@ document.addEventListener('toggle', ev => {  // toggle no puja: l'escoltem en la
 """
 
 
-# Tasques de RUTINA que es marquen soles en enganxar el $tu (per ordre, o per grup i ordre)
-TU_KEY = {"$tu": "tu", "$vote": "vote", "$daily": "daily", "$oh (×4)": "oh", "$oc": "oc", ("hora", "$m"): "rolls",
+# Tasques de RUTINA amb hora: el seu nom al tauler (data-id) i la línia del $tu que la marca (les mateixes claus que readTu)
+TU_KEY = {"$tu": "tu", "$vote": "vote", "$daily": "daily", "$oh (×4)": "oh", "$oc": "oc", "$m": "rolls",
           "clic al botó": "kakera", "clic al cor": "claim", "$rt": "rt", "$dk": "dk", "$p": "p"}
 
 JS_TODAY = """
@@ -496,7 +494,7 @@ JS_TODAY = """
 let RS = {}; try { RS = JSON.parse(localStorage.getItem('mudae-reinici')) || {}; } catch (e) {}
 if (RS.c) RS = {};  // el format d'abans (hores fixes de config.json): es torna a aprendre del $tu
 const MIN = 60000, HOUR = 3600000;
-const clock = document.getElementById('clock'), claimNow = document.getElementById('claimNow');
+const clock = document.getElementById('clock');
 const pad = n => String(n).padStart(2, '0');
 const fmt = m => m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
 const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -597,11 +595,49 @@ function powerDraw() {
   if (P && d) d.textContent = T('Cada reacció gasta {c} % de poder ({h} % amb personatges de 10+ claus). Al $tu de les {t} tenies {p} %.',
     { c: P.c, h: P.h ?? Math.round(P.c / 2), t: hm(new Date(P.t)), p: P.p });
 }
-function load() { try { return JSON.parse(localStorage.getItem('mudae-fet') || '{}'); } catch (e) { return {}; } }
+// fins a l'01/11/2026 les tasques es deien r0, r1… (la seva posició): les que tenies marcades passen al nom nou
+const OLD = { r0: 'tu', r1: 'vote', r2: 'daily', r3: 'oh', r4: 'oc', r5: 'rolls', r6: 'kakera', r8: 'claim', r10: 'rt', r11: 'dk', r17: 'p' };
+function load() {
+  let s; try { s = JSON.parse(localStorage.getItem('mudae-fet') || '{}'); } catch (e) { return {}; }
+  for (const k in s) if (/^r[0-9]/.test(k)) { if (OLD[k] && !(OLD[k] in s)) s[OLD[k]] = s[k]; delete s[k]; }
+  return s;
+}
 function save(s) { try { localStorage.setItem('mudae-fet', JSON.stringify(s)); } catch (e) {} }
 const backOf = (i, s) => { const t = s[i.dataset.id]; return typeof t === 'number' ? until(i.dataset.torna, t) : (t && t.b) || 0; };  // {b}: l'hora que deia el $tu
 // Tasques que avisen quan tornen soles. El $oh i el $oc no: tornen a mitjanit UTC (la 1 de la matinada).
 const NOTI = ['rolls', 'claim', 'daily', 'vote', 'dk', 'rt', 'p'], was = {};
+// La cua: el que pots fer, al seu grup d'«Ara» (per l'ordre de la llista); el que has fet s'amaga a «Fets», pel que torna abans
+const TASKS = [...document.querySelectorAll('.task[data-home]')], later = document.getElementById('later');
+const byBack = (a, b) => a.back === b.back ? 0 : a.back < b.back ? -1 : 1;  // Infinity (no sabem quan torna) al final
+function place(s) {
+  const f = document.activeElement, done = [];
+  TASKS.forEach(t => {
+    const i = t.querySelector('input');
+    if (i.checked) done.push({ t, back: backOf(i, s) });
+    else document.querySelector(`.grp[data-period="${t.dataset.home}"] .tl`).append(t);
+  });
+  done.sort(byBack).forEach(x => later.append(x.t));
+  document.querySelectorAll('.now-col .grp').forEach(g => { g.hidden = !g.querySelector('.task'); });
+  document.getElementById('nowNone').hidden = done.length < TASKS.length;
+  document.getElementById('laterNone').hidden = done.length > 0;
+  later.closest('details').hidden = !done.length; document.getElementById('laterN').textContent = done.length;
+  if (f && f !== document.activeElement && f.isConnected) f.focus({ preventScroll: true });  // en moure'l, no perdis on eres
+}
+// «Estat»: sí o no de cada cosa que va i ve, i fins quan o quan torna. La kakera, amb les reaccions que et donava el poder del darrer $tu.
+const STATE = ['claim', 'rolls', 'kakera', 'p', 'rt', 'dk'];
+function stateDraw(now) {
+  let P = null; try { P = JSON.parse(localStorage.getItem('mudae-poder')); } catch (e) {}
+  const nc = nextClaim(+now);
+  document.getElementById('state').innerHTML = STATE.map(k => {
+    const i = document.querySelector(`input[data-id="${k}"]`); if (!i) return '';
+    const t = i.closest('.task'), cmd = t.querySelector('.cmd, code');
+    const more = i.checked ? t.querySelector('.when').textContent
+      : k === 'kakera' && P ? T('{n} reaccions: tenies {p} % de poder al $tu de les {t}', { n: Math.floor(P.p / P.c), p: P.p, t: hm(new Date(P.t)) })
+      : k === 'claim' && nc != null ? T('fins a les {h} ({in})', { h: hm(new Date(nc)), in: fmt(Math.ceil((nc - now) / 60000)) }) : '';
+    return `<div class="st"><span><b>${esc(t.querySelector('b').textContent)}</b> ${cmd ? `<code>${esc(cmd.textContent)}</code>` : ''}</span>`
+      + `<span class="tag ${i.checked ? 'bad' : 'good'}">${esc(i.checked ? T('Encara no') : T('Ara pots'))}</span>` + (more ? `<span class="muted">${esc(more)}</span>` : '') + '</div>';
+  }).join('');
+}
 function tick() {
   const now = new Date(), s = load();
   document.querySelectorAll('input[data-torna]').forEach(i => {
@@ -611,16 +647,15 @@ function tick() {
     if (when) when.textContent = !i.checked ? '' : isFinite(back) ? T('Torna a les {h} ({rest})', { h: hm(new Date(back)), rest: fmt(Math.ceil((back - now) / 60000)) })
       : T('No sé quan torna: enganxa el {c}', { c: i.dataset.torna === 'rt' ? '$bonus' : '$tu' });
   });
+  place(s); stateDraw(now);
   // a la barra de pestanyes (es veu des de totes): quan tornen les tirades i el reclam, segons el que has enganxat
   const nr = nextRoll(+now), nc = nextClaim(+now), lc = lastClaim(+now), mins = x => Math.ceil((x - now) / 60000);
   // la primera hora després del reinici del reclam, si no has reclamat ja (el $tu ho diu: «no puedes reclamar hasta…»)
   const fresh = lc != null && now - lc < HOUR && !document.querySelector('input[data-tu="claim"]')?.checked;
-  document.querySelector('.grp[data-period="reclam"]')?.classList.toggle('now', fresh);
-  const at = x => ({ h: hm(new Date(x)), in: fmt(mins(x)) });
+  const at = x => ({ h: hm(new Date(x)), in: fmt(mins(x)) }), cs = document.querySelector('.grp[data-period="reclam"] h3 small');
+  if (cs) cs.textContent = nc == null ? T('enganxa el $tu') : T('fins a les {h} ({in})', at(nc));  // si no reclames abans del reinici, el perds
   clock.innerHTML = (nr == null ? esc(T('Tirades: enganxa el $tu')) : T('Tirades a les <b>{h}</b> ({in})', at(nr))) + ' · '
     + (nc == null ? esc(RS.next ? T('reclam: enganxa el $tu o el $settings') : T('reclam: enganxa el $tu')) : T('reclam a les <b>{h}</b> ({in})', at(nc))) + (fresh ? ' <span class="tag good">' + esc(T('Pots reclamar')) + '</span>' : '');
-  claimNow.hidden = !fresh;
-  if (fresh) claimNow.textContent = T('Pots reclamar des de les {h}: fes els passos de «Moment bo»', { h: hm(new Date(lc)) });
   // tasques que acaben de tornar soles (no les has desmarcat tu, que n'esborra l'hora): avisa
   const back = [];
   NOTI.forEach(k => document.querySelectorAll(`input[data-tu="${k}"]`).forEach(i => {
@@ -693,12 +728,12 @@ document.addEventListener('change', ev => {
   if (i.checked) s[i.dataset.id] = Date.now(); else delete s[i.dataset.id];
   save(s); tick();
 });
-// a les targetes «Cada hora» i «Moment bo», el minut de les tirades i les hores dels reclams del teu servidor (o què falta)
+// a «Cada hora», el minut de les tirades; a «Estat», les hores dels reclams del teu servidor (o què falta)
 function resetDraw() {
-  const s = p => document.querySelector(`.grp[data-period="${p}"] h3 small`), now = Date.now(), nc = nextClaim(now);
-  if (s('hora')) s('hora').textContent = RS.m == null ? T('enganxa el $tu') : T('minut {m}', { m: pad(RS.m) });
-  if (s('reclam')) s('reclam').textContent = nc == null ? T('enganxa el $tu') : !RS.iv ? T('el pròxim, a les {h}', { h: hm(new Date(nc)) })
-    : Array.from({ length: Math.min(24, Math.floor(1440 / RS.iv)) }, (_, k) => new Date(nc + k * RS.iv * MIN)).sort((a, b) => a.getHours() * 60 + a.getMinutes() - b.getHours() * 60 - b.getMinutes()).map(hm).join(', ');
+  const s = document.querySelector('.grp[data-period="hora"] h3 small'), info = document.getElementById('laterInfo'), nc = nextClaim(Date.now());
+  if (s) s.textContent = RS.m == null ? T('enganxa el $tu') : T('minut {m}', { m: pad(RS.m) });
+  if (info) info.textContent = nc == null ? '' : !RS.iv ? T('Pròxim reclam a les {h}', { h: hm(new Date(nc)) })
+    : T('Reclams a les {list}', { list: Array.from({ length: Math.min(24, Math.floor(1440 / RS.iv)) }, (_, k) => new Date(nc + k * RS.iv * MIN)).sort((a, b) => a.getHours() * 60 + a.getMinutes() - b.getHours() * 60 - b.getMinutes()).map(hm).join(', ') });
 }
 powerDraw(); resetDraw(); tick(); setInterval(tick, 30000);
 
@@ -863,7 +898,6 @@ button.pill:disabled { opacity:.45; cursor:default; }
   background:rgba(28,28,32,.75); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); border:1px solid var(--glass-b); box-shadow:var(--sh); }
 .clock:empty { display:none; }
 .clock b { color:var(--ink); }
-.claim-now { margin:0; padding:8px 12px; border-radius:10px; background:var(--good-soft); color:var(--good); font-size:13.5px; font-weight:650; }
 
 /* resum (només a Avui): salutació i quatre xifres que porten a la seva pestanya */
 .resum { display:grid; grid-template-columns:auto minmax(0,1fr); gap:28px; align-items:center; padding:20px 26px;
@@ -927,8 +961,22 @@ details.panel { display:block; }
 .grp { display:grid; padding:14px 16px 4px; border-radius:14px; background:rgba(255,255,255,.035); border:1px solid var(--line); transition:border-color .3s, background .3s; }
 .grp h3 { margin:0 0 4px; font-size:14px; font-weight:650; display:grid; gap:1px; }
 .grp h3 small { font-size:11.5px; font-weight:500; color:var(--muted); }
-.grp.now { border-color:rgba(62,207,142,.45); background:rgba(62,207,142,.06); }
-.grp.now h3 { color:var(--good); }
+.plan { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:start; }
+.now-col { display:grid; gap:12px; }
+.grp.claim { border-color:rgba(62,207,142,.45); background:rgba(62,207,142,.06); }
+.grp.claim h3 { color:var(--good); }
+.grp .tip { margin:0 0 12px; font-size:13px; color:var(--muted); }
+.plan .none { margin:2px 0 12px; font-size:13.5px; }
+.st { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:2px 10px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px; }
+.st:last-child { border-bottom:0; }
+.st > .muted { grid-column:1 / -1; font-size:12.5px; }
+.done-fold { margin:6px 0 10px; }
+#later { gap:0; margin-top:6px; }
+#later .task { padding:6px 0; }
+#later .task > span { flex:1; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; }
+#later .when { display:inline; margin-left:auto; font-weight:500; }
+#later .desc { display:none; }
+#later .task:has(input:checked) > span > :not(.when) { opacity:.7; text-decoration:none; }
 .today .fold > summary h3 { margin:0; font-size:13.5px; font-weight:600; color:var(--ink-2); }
 .og h3 { margin:10px 0 2px; font-size:11.5px; font-weight:650; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
 .task { display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer; }
@@ -1050,7 +1098,7 @@ button, a, label, .row, .task { touch-action:manipulation; }
     background:radial-gradient(280px circle at var(--mx,50%) var(--my,50%),rgba(var(--acc-rgb),.07),transparent 70%); }
   .panel:hover::after, .resum:hover::after { opacity:1; }
 }
-@media (max-width:900px) { .resum { grid-template-columns:1fr; gap:14px; } }
+@media (max-width:900px) { .resum, .plan { grid-template-columns:1fr; gap:14px; } }
 @media (max-width:640px) {
   main { padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
   .resum { padding:18px; } .hola { font-size:22px; } .panel { padding:16px; }
@@ -1117,7 +1165,7 @@ SHOP_ORDER = [2, 4, 9, 5, 3, 1, 8, 6, 7, 10]
 ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del tauler
     # el primer és el resum (obert d'entrada): les de cada dia i les que entén el tauler, repetides del seu grup
     ("Les més útils", [("$tu", "Tot el que tens disponible"), ("$m", "Tirada: personatge qualsevol"),
-                       ("$daily", "Reinici de tirades (cada 20 h)"), ("$vote", "Vota i guanya un reinici"),
+                       ("$daily", "Guarda un reinici de tirades (cada 20 h)"), ("$vote", "Vota i guanya un reinici"),
                        ("$rt", "Torna a poder reclamar"), ("$dk", "Recarrega el poder i dona kakera"),
                        ("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"),
                        ("$p", "Tirada de Pokémon: cada 2 h, per a tots els servidors"), ("$k", "La teva kakera i com guanyar-ne"),
@@ -1130,8 +1178,8 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
     ("Tirades", [("$m", "Tirada: personatge qualsevol"), ("$w", "Tirada: només noies"), ("$h", "Tirada: només nois"),
                  ("$ma", "Tirada: qualsevol, d'anime"), ("$wa", "Tirada: noies d'anime"), ("$ha", "Tirada: nois d'anime"),
                  ("$mg", "Tirada: qualsevol, de videojocs"), ("$wg", "Tirada: noies de videojocs"), ("$hg", "Tirada: nois de videojocs"),
-                 ("$us", "Gasta tirades guardades"), ("$rolls", "Reinici de tirades del vot"),
-                 ("$daily", "Reinici de tirades (cada 20 h)"), ("$vote", "Vota i guanya un reinici")]),
+                 ("$us", "Gasta tirades guardades"), ("$rolls", "Gasta un reinici guardat del $vote o el $daily"),
+                 ("$daily", "Guarda un reinici de tirades (cada 20 h)"), ("$vote", "Vota i guanya un reinici")]),
     ("Reclamar i kakera", [("$tu", "Tot el que tens disponible"), ("$rt", "Torna a poder reclamar"), ("$dk", "Recarrega el poder i dona kakera"),
                            ("$mu", "Quan podràs reclamar"), ("$k", "La teva kakera i com guanyar-ne")]),
     ("La teva col·lecció", [("$mma+s", "El teu harem sencer amb la sèrie de cada un, per privat"), ("$mmbs", "El harem amb la sèrie de cada un, per privat"),
@@ -1500,8 +1548,16 @@ function millDraw() {
       + (cost && k !== null ? ` <span class="tag ${k >= sum ? 'good' : ''}">${esc(k >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - k) }))}</span>` : '') + '</li>');
   }
   if (next.length && !M.bp) next.push('<li class="muted">' + esc(T('Enganxa el $k per saber què costen al teu servidor.')) + '</li>');
-  $id('badgeNext').innerHTML = next.join('') || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>'
-    + '<li class="muted">' + esc(T("Ara, la kakera: primer acaba la torre 1 (cada pis és un bonus nou) i després els kakeraloots ($kl), que donen tirades, llocs de wishlist i menys espera del $rt i no s'acaben mai. Si n'obres molts, puja el $quantity: cada nivell, +1 % de doblar el que surt.")) + '</li>';
+  $id('badgeNext').innerHTML = next.join('') || '<li>' + esc(T('Ja les tens totes al màxim.')) + '</li>';
+  // Totes al màxim: ja no hi ha res a fer. Insígnies baixa plegada (recorda si l'obres) i les esferes pugen al costat de la torre;
+  // el consell de la kakera passa a la torre, que és on va ara. Si no, sempre oberta i sense recordar res (sense data-fold).
+  const allMax = !next.length, bx = $id('badgeBox');
+  $id('badgeMax').hidden = !allMax; $id('kakeraNext').hidden = !allMax;
+  $id('kakeraNext').textContent = T("Ara, la kakera: primer acaba la torre 1 (cada pis és un bonus nou) i després els kakeraloots ($kl), que donen tirades, llocs de wishlist i menys espera del $rt i no s'acaben mai. Si n'obres molts, puja el $quantity: cada nivell, +1 % de doblar el que surt.");
+  if (allMax) {
+    $id('millG2').append($id('perkBox')); $id('v-mill').append(bx);
+    if (bx.dataset.fold !== 'badges-max') { bx.dataset.fold = 'badges-max'; bx.open = foldOpen('badges-max'); }
+  } else { $id('millG2').prepend(bx); $id('shopBox').before($id('perkBox')); delete bx.dataset.fold; bx.open = true; }
   // torre: els pisos marcats són els de la torre on ets (M.t torres acabades), el que en diu el $kt i el pis recomanat
   document.querySelectorAll('input[data-floor]').forEach(i => { i.checked = M.f.includes(+i.dataset.floor); });
   $id('towerValue').value = M.tv ?? '';
@@ -1967,22 +2023,28 @@ def write_dashboard(d, hist):
     if len(sizes) > 12:
         sob += f"<tr><td class='sub'>{e(t('i {n} sèries més, al full «Sobrants» de l’Excel', n=len(sizes) - 12))}</td><td></td></tr>"
 
-    # Llista d'avui: cada tasca marcada queda marcada fins que es pot tornar a fer (data-torna)
-    groups = {}  # una targeta per grup; el text entre parèntesis del títol va a sota, més petit
-    for i, (g, que, ordre, com, torna) in enumerate(RUTINA):
+    # «Què toca ara», una cua: a «Ara», el que pots fer, per grups i per ordre d'importància; a «Fets» (plegat), el que has fet, per l'hora
+    # que torna. Cada tasca marcada hi queda fins que es pot tornar a fer (data-torna); el JavaScript la mou (data-home: el seu grup).
+    groups, foot = {}, {"reclam": f'<p class="tip">{e(t("Abans, fes totes les tirades. Si en vols més:"))} {cmd_html("$us · $rolls")}</p>'}
+    for g, que, ordre, com, torna in RUTINA:
         if g not in groups:
-            title = group_title(g)  # a «Cada hora» i «Moment bo», el JavaScript hi posa a sota les hores del teu servidor
-            groups[g] = [f'<div class="grp" data-period="{g}"><h3>{e(title[:1] + title[1:].lower())}'
-                         + ('<small></small>' if g in ("hora", "reclam") else "") + '</h3>']
-        tu = TU_KEY.get((g, ordre)) or TU_KEY.get(ordre)  # quina línia del $tu la marca
-        box = (f'<input type="checkbox" data-id="r{i}" data-torna="{torna}"' + (f' data-tu="{tu}"' if tu else "") + '>' if torna is not None
-               else '<span class="bullet">·</span>')
-        groups[g].append(f'<label class="task">{box}<span><b>{e(t(que))}</b> {cmd_html(ordre)}'
+            title = group_title(g)  # a «Cada hora» i «Pots reclamar», el JavaScript hi posa a sota el minut de les tirades i fins quan pots reclamar
+            groups[g] = [f'<div class="grp{" claim" if g == "reclam" else ""}" data-period="{g}"><h3>{e(title[:1] + title[1:].lower())}'
+                         + ('<small></small>' if g in ("hora", "reclam") else "") + '</h3><div class="tl">']
+        key = TU_KEY[ordre] if torna is not None else None  # el seu nom i la línia del $tu que la marca
+        box = f'<input type="checkbox" data-id="{key}" data-torna="{torna}" data-tu="{key}">' if key else '<span class="bullet">·</span>'
+        home = f' data-home="{g}"' if key else ""
+        groups[g].append(f'<label class="task"{home}>{box}<span><b>{e(t(que))}</b> {cmd_html(ordre)}'
                          f'<span class="desc">{e(t(com))}</span><span class="when"></span></span></label>')
-    card = lambda g: "".join(groups[g]) + "</div>"
-    checklist = ('<div class="groups">' + "".join(card(g) for g in ("hora", "reclam", "dia")) + "</div>"
+    card = lambda g: "".join(groups[g]) + "</div>" + foot.get(g, "") + "</div>"
+    now_g = [g for g, *_, torna in RUTINA if torna is not None]
+    checklist = ('<div class="plan"><div class="now-col">' + "".join(card(g) for g in dict.fromkeys(now_g))
+                 + f'<p class="muted none" id="nowNone" hidden>{e(t("Res a fer ara: a «Fets» tens quan torna cada cosa."))}</p></div>'
+                 + f'<div class="grp later-col"><h3>{e(t("Estat"))}<small id="laterInfo"></small></h3><div id="state"></div>'
+                 + f'<details class="fold done-fold" data-fold="fets" hidden><summary><h3>{e(t("Fets"))}</h3><span class="muted" id="laterN"></span></summary><div class="fold-body" id="later"></div></details>'
+                 + f'<p class="muted none" id="laterNone">{e(t("Quan facis una cosa, marca-la: s’amagarà fins que la puguis tornar a fer. El $tu enganxat les marca soles."))}</p></div></div>'
                  + f'<details class="fold" data-fold="altres"><summary><h3>{e(t("Altres moments"))}</h3></summary><div class="groups fold-body">'
-                 + "".join(card(g) for g in groups if g not in ("hora", "reclam", "dia")) + "</div></details>")
+                 + "".join(card(g) for g in groups if g not in now_g) + "</div></details>")
 
     wl_names = {w["name"] for w in d["wishlist"]}
     coll = {s["name"]: [] for s in series}
@@ -2011,6 +2073,7 @@ def write_dashboard(d, hist):
     need = ([["$mma+s", t("el teu harem, amb la sèrie de cada personatge")]] if not (DADES / "harem.txt").exists() else [])         + ([["$wl", t("la teva wishlist")]] if not (DADES / "wishlist.txt").exists() else [])         + ([["$imaso ", t("una sèrie que col·leccionis (o, a «Posar al dia», «Totes les teves sèries»)")]] if not series else [])
     # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
     all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
+    mill_cmds = " ".join(cmd_html(c) for c in ("$k", "$kt", "$opz", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$tu"))  # el que llegeix Millores
     paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$settings", "$p", "$k", "$kt", "$opz", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
                   + (f' <button class="cmd" data-copy="{e(all_cmd)}" data-tip="{e(t("Totes les teves sèries"))}">$imaa+os</button>' if len(all_cmd) > 9 else "")
                   + " " + cmd_html("$pd sumrare"))
@@ -2084,7 +2147,6 @@ def write_dashboard(d, hist):
 </section>
 <section class="panel today">
  <div class="today-head"><h2>{T_("Què toca ara")}</h2></div>
- <p class="claim-now" id="claimNow" hidden></p>
  {checklist}
 </section>
 <div class="g2">
@@ -2127,10 +2189,10 @@ def write_dashboard(d, hist):
  </div></details>
 </div>
 <div class="view g2" id="v-wl" role="tabpanel" hidden>
- <section class="panel"><div class="panel-head"><h2>{T_("Què has de fer")}</h2></div><div id="wlBuild"></div></section>
  <section class="panel" id="wlp"><div class="panel-head"><h2>{T_("Wishlist")}</h2><span class="muted" style="font-size:13px">{T_("{n} de 15 llocs (l'estrella també compta)", n=len(d["wishlist"]))}</span></div>
   <table>{wl}</table>
  </section>
+ <section class="panel"><div class="panel-head"><h2>{T_("Què has de fer")}</h2></div><div id="wlBuild"></div></section>
 </div>
 <div class="view" id="v-trades" role="tabpanel" hidden>
 <section class="panel">
@@ -2159,29 +2221,30 @@ def write_dashboard(d, hist):
 <div class="view" id="v-mill" role="tabpanel" hidden>
 <section class="panel">
  <div class="panel-head"><h2>{T_("Què tens")}</h2><span class="muted" id="millSum" style="font-size:13px"></span></div>
- <label for="millText" class="muted" style="font-size:14px">{T_("Enganxa el que et diu Mudae amb $k (kakera i insígnies), $kt (torre), $opp <personatge> o $os (esferes), $mmy= (claus), $bonus o $tu, d'un en un. Es guarda en aquest navegador.")}</label>
- <textarea id="millText" rows="4" spellcheck="false"></textarea>
- <span id="millMsg" role="status"></span>
+ <div class="paste"><textarea id="millText" rows="1" spellcheck="false" aria-label="{T_("Enganxa un missatge de Mudae")}" placeholder="{T_("Enganxa aquí la resposta de Mudae a qualsevol d'aquestes ordres…")}"></textarea>
+  <span id="millMsg" role="status"></span>
+  <div class="paste-cmds"><span class="muted">{T_("Copia l'ordre:")}</span> {mill_cmds}</div></div>
  <p class="muted" id="millMiss" style="margin:0;font-size:13px"></p>
 </section>
 <section class="panel"><div class="panel-head"><h2>{T_("Els teus bonus")}</h2><span class="muted" style="font-size:13px">$bonus</span></div>
  <ul class="steps" id="bonusNext"></ul>
  <details class="fold" data-fold="bonus" id="bonusFold" hidden><summary><h3 class="og-h">{T_("Tots els bonus")}</h3></summary><div class="fold-body"><table id="bonusAll"></table></div></details>
 </section>
-<div class="g2">
- <section class="panel"><div class="panel-head"><h2>{T_("Insígnies")}</h2><span class="muted" style="font-size:13px">$kakerareward</span></div>
+<div class="g2" id="millG2">
+ <details class="panel fold" id="badgeBox" open><summary><h2>{T_("Insígnies")}</h2><span class="muted" style="font-size:13px">$kakerareward</span> <span class="tag good" id="badgeMax" hidden>{T_("Totes al màxim")}</span></summary><div class="fold-body">
   <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="badgeNext"></ul>
   <table>{badge_rows}</table>
   <p class="muted" style="margin:0;font-size:13px">{T_("Primer, gastar menys poder per reacció (Gold IV) i el Ruby IV, que abaixa un 25 % el preu de totes les que queden; després, més tirades (Sapphire).")}</p>
- </section>
+ </div></details>
  <section class="panel"><div class="panel-head"><h2>{T_("Torre")}</h2><span class="muted" style="font-size:13px">$kt</span></div>
   <p class="clock" id="towerNext" style="margin:0"></p>
+  <p class="muted" id="kakeraNext" style="margin:0;font-size:13px" hidden></p>
   <ul class="steps">{tower_rows}</ul>
   <p class="muted" style="margin:0;font-size:13px">{T_("Marca els pisos que ja tens de la torre on ets. Cada torre té 12 pisos, un de cada: quan l'acabes, comença la següent, amb els mateixos pisos però amb menys efecte (els de la llista són els de la primera). Cada pis costa més que l'anterior, triïs el que triïs: construeix primer els de dalt. Amb $destroy et torna la kakera.")}
    <label style="white-space:nowrap">{T_("Preu base ($towervalue):")} <input type="text" id="towerValue" inputmode="numeric" style="width:90px" aria-label="$towervalue"></label></p>
  </section>
 </div>
-<section class="panel"><div class="panel-head"><h2>{T_("Esferes")}</h2><span class="muted" id="perkWho" style="font-size:13px"></span></div>
+<section class="panel" id="perkBox"><div class="panel-head"><h2>{T_("Esferes")}</h2><span class="muted" id="perkWho" style="font-size:13px"></span></div>
  <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="perkNext"></ul>
  <div class="g2">
   <div><h3 class="og-h">{T_("Els que et surten més (claus, $mmy=)")}</h3><p id="perkKeys" style="margin:0;font-size:14px;line-height:1.9"></p></div>
@@ -2192,7 +2255,7 @@ def write_dashboard(d, hist):
  <div class="ogrid">{perk_rows}</div>
  <p class="muted" style="margin:0;font-size:13px">{T_("Les 5 primeres tenen 6 nivells i les altres 5, un. Si millores un personatge del tot, les 5 primeres pugen un nivell més. Fes-les servir en personatges que no regalaràs: si te'n divorcies, perds el 10 %. Amb $or <personatge> et tornen les esferes d'un personatge, també amb un 10 % menys.")}</p></div></details>
 </section>
-<section class="panel"><div class="panel-head"><h2>{T_("Botiga d'esferes")}</h2><span class="muted" style="font-size:13px">$os</span></div>
+<section class="panel" id="shopBox"><div class="panel-head"><h2>{T_("Botiga d'esferes")}</h2><span class="muted" style="font-size:13px">$os</span></div>
  <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="shopNext"></ul>
  <details class="fold" data-fold="shop"><summary><h3 class="og-h">{T_("Totes les millores")}</h3></summary><div class="fold-body">
  <div class="og">{shop_rows}</div>
