@@ -1196,6 +1196,8 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
                            ("$mu", "Quan podràs reclamar"), ("$k", "La teva kakera i com guanyar-ne")]),
     ("La teva col·lecció", [("$mma+s", "El teu harem sencer amb la sèrie de cada un, per privat"), ("$mmbs", "El harem amb la sèrie de cada un, per privat"),
                             ("$imaso <sèrie>", "Una sèrie sencera amb propietaris, per privat"), ("$im <personatge>", "Fitxa d'un personatge"),
+                            ("$mmi", "El teu harem amb fotos, en targetes"), ("$mmai", "El teu harem amb fotos, agrupat per sèrie"),
+                            ("$mmi <sèrie>", "Els teus personatges d'una sèrie, amb fotos"), ("$imai <sèrie>", "Una sèrie sencera amb fotos, també els que no són teus"),
                             ("$wl", "La teva wishlist"), ("$wish <nom>", "Afegeix a la wishlist (diversos: separa'ls amb $)"),
                             ("$wishremove <nom>", "Treu de la wishlist"), ("$sw <nom>", "Desig estrella")]),
     # de la wiki de Mudae («List of Commands»), 31/10/2026
