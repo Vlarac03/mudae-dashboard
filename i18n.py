@@ -5,6 +5,8 @@ Les variables entre claus ({n}, {name}…) s'han de mantenir iguals.
 """
 
 ES = {
+    "Les més útils": "Las más útiles",
+    "Com té configurat Mudae el servidor: cada quant hi ha reclam": "Cómo tiene configurado Mudae el servidor: cada cuánto hay reclamo",
     "% completat": "% completado",
     "1 personatge seleccionat": "1 personaje seleccionado",
     "1. Tirades": "1. Tiradas",
@@ -572,6 +574,8 @@ ES = {
 }
 
 EN = {
+    "Les més útils": "Most useful",
+    "Com té configurat Mudae el servidor: cada quant hi ha reclam": "How Mudae is set up on the server: how often claims reset",
     "% completat": "% complete",
     "1 personatge seleccionat": "1 character selected",
     "1. Tirades": "1. Rolls",

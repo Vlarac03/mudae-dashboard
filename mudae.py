@@ -475,8 +475,9 @@ const NET_MSG = () => '<span class="tag bad">' + esc(T('Sense connexió')) + '</
 const ERR_MSG = e => '<span class="tag bad">' + esc(T("No s'ha desat")) + '</span> ' + esc(e);
 const postJSON = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(r => r.json());
 // Plegables (details[data-fold]): cada un es queda obert o tancat com el vas deixar, també d'un dia per l'altre (en aquest navegador)
-const foldOpen = k => { try { return localStorage.getItem('mudae-fold-' + k) === '1'; } catch (e) { return false; } };
-document.querySelectorAll('details[data-fold]').forEach(d => { d.open = foldOpen(d.dataset.fold); });
+// si no l'has tocat mai, com ve (data-open: obert d'entrada)
+const foldOpen = (k, def = false) => { try { const v = localStorage.getItem('mudae-fold-' + k); return v == null ? def : v === '1'; } catch (e) { return def; } };
+document.querySelectorAll('details[data-fold]').forEach(d => { d.open = foldOpen(d.dataset.fold, d.hasAttribute('data-open')); });
 document.addEventListener('toggle', ev => {  // toggle no puja: l'escoltem en la fase de captura
   const d = ev.target; if (!d.dataset || !d.dataset.fold) return;
   if (d.closest('#ordres') && document.getElementById('ordQ').value.trim()) return;  // el cercador els obre: no és teu
@@ -1114,6 +1115,18 @@ SHOP_ORDER = [2, 4, 9, 5, 3, 1, 8, 6, 7, 10]
 
 
 ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del tauler
+    # el primer és el resum (obert d'entrada): les de cada dia i les que entén el tauler, repetides del seu grup
+    ("Les més útils", [("$tu", "Tot el que tens disponible"), ("$m", "Tirada: personatge qualsevol"),
+                       ("$daily", "Reinici de tirades (cada 20 h)"), ("$vote", "Vota i guanya un reinici"),
+                       ("$rt", "Torna a poder reclamar"), ("$dk", "Recarrega el poder i dona kakera"),
+                       ("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"),
+                       ("$p", "Tirada de Pokémon: cada 2 h, per a tots els servidors"), ("$k", "La teva kakera i com guanyar-ne"),
+                       ("$kt", "Pisos, beneficis i preu del següent"), ("$opz", "Els teus personatges que tenen esferes"),
+                       ("$opp <personatge>", "Millora un personatge amb esferes"), ("$or <personatge>", "Et torna les esferes d'un personatge (perds el 10 %)"),
+                       ("$os", "Botiga d'esferes: millores per a tots"), ("$shoprefund", "Et torna les esferes de la botiga (cada 15 dies)"),
+                       ("$wl", "La teva wishlist"), ("$mma+s", "El teu harem sencer amb la sèrie de cada un, per privat"),
+                       ("$imaso <sèrie>", "Una sèrie sencera amb propietaris, per privat"), ("$bonus", "Els bonus que tens"),
+                       ("$settings", "Com té configurat Mudae el servidor: cada quant hi ha reclam")]),
     ("Tirades", [("$m", "Tirada: personatge qualsevol"), ("$w", "Tirada: només noies"), ("$h", "Tirada: només nois"),
                  ("$ma", "Tirada: qualsevol, d'anime"), ("$wa", "Tirada: noies d'anime"), ("$ha", "Tirada: nois d'anime"),
                  ("$mg", "Tirada: qualsevol, de videojocs"), ("$wg", "Tirada: noies de videojocs"), ("$hg", "Tirada: nois de videojocs"),
@@ -1659,7 +1672,7 @@ ordQ.addEventListener('input', () => {
     const all = g.querySelector('h3').textContent.toLowerCase().includes(k);
     let n = 0;
     g.querySelectorAll('.oline').forEach(l => { l.hidden = !!k && !all && !l.textContent.toLowerCase().includes(k); n += !l.hidden; });
-    g.hidden = !n; g.open = k ? !!n : foldOpen(g.dataset.fold); any = any || !!n;
+    g.hidden = !n; g.open = k ? !!n : foldOpen(g.dataset.fold, g.hasAttribute('data-open')); any = any || !!n;
   });
   document.getElementById('ordNone').hidden = any;
 });
@@ -1991,9 +2004,9 @@ def write_dashboard(d, hist):
                  + '<datalist id="dlSeries">' + "".join(f'<option value="{e(x)}">' for x in all_series) + '</datalist>')
     serie_opts = "".join(f'<option value="{e(x["name"])}">{e(x["name"])}</option>' for x in series)
     ordres = "".join(  # un grup plegable per tema: tancats d'entrada, el cercador els obre
-        f'<details class="og fold" data-fold="ord-{e(g)}"><summary><h3>{e(t(g))}</h3><span class="muted">{len(items)}</span></summary><div class="fold-body">'
+        f'<details class="og fold" data-fold="ord-{e(g)}"{" data-open" if i == 0 else ""}><summary><h3>{e(t(g))}</h3><span class="muted">{len(items)}</span></summary><div class="fold-body">'
         + "".join(f'<div class="oline">{cmd_html(c)}<span>{e(t(desc))}</span></div>' for c, desc in items) + "</div></details>"
-        for g, items in ORDRES)
+        for i, (g, items) in enumerate(ORDRES))
     oc = f"oc.html?lang={LANG}"
     need = ([["$mma+s", t("el teu harem, amb la sèrie de cada personatge")]] if not (DADES / "harem.txt").exists() else [])         + ([["$wl", t("la teva wishlist")]] if not (DADES / "wishlist.txt").exists() else [])         + ([["$imaso ", t("una sèrie que col·leccionis (o, a «Posar al dia», «Totes les teves sèries»)")]] if not series else [])
     # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
