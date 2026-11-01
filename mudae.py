@@ -1285,7 +1285,7 @@ syncUpd();
 
 JS_MILL = r"""
 // Pestanya «Millores»: llegeix el que enganxes de Mudae ($k, $kt, $opp) i recomana el següent pas. Es guarda al navegador.
-const BADGES = __BADGES__, PLAN = __PLAN__, TOWER = __TOWER__, PORD = __PORD__, SORD = __SORD__, PDESC = __PDESC__, SDESC = __SDESC__;
+const BADGES = __BADGES__, PLAN = __PLAN__, TOWER = __TOWER__, PORD = __PORD__, SORD = __SORD__, PDESC = __PDESC__, SDESC = __SDESC__, RT = __RT__;
 // Esferes: les millores 1-5 d'un personatge tenen 6 nivells, les 6-10 un (wiki, «Perks / Level»); la botiga ($os), 10 nivells de +4.000
 const PCOST = [200, 400, 600, 800, 1000, 2000];
 const perkMax = n => n <= 5 ? 6 : 1, perkCost = (n, l) => n <= 5 ? PCOST[l] : 1000;
@@ -1299,7 +1299,9 @@ const LVL = /\[(?:LVL\s*(\d+)|MAX)\]/;
 const levelsOf = (text, max) => [...text.matchAll(new RegExp(LVL, 'g'))].slice(0, 10).map((m, i) => m[1] != null ? +m[1] : max(i + 1));
 function readMudae(text, tv) {
   const out = {}, have = text.match(/(?:Tienes|You have|Tens|Vous avez|Hai|Du hast|Você tem)\s+(\d[\d.,]*)/i);
-  if (/\$shoprefund/i.test(text) && LVL.test(text)) {  // $os: la botiga d'esferes
+  if (/\$limroul/i.test(text) && /\$kl\b/i.test(text)) {  // $bonus: «· Rolls por hora: +8 (6 $k + 1 $kl + 1 $kt)», una línia per bonus
+    out.bonus = text.split(/\r?\n/).map(l => l.match(/^\s*(?:\d+\.\s*)?·\s*([^:]+?)\s*:\s*(.+?)\s*$/)).filter(Boolean).map(m => [m[1], m[2]]);
+  } else if (/\$shoprefund/i.test(text) && LVL.test(text)) {  // $os: la botiga d'esferes
     out.shop = levelsOf(text, shopMax);
     if (have) out.sp = num(have[1]);
   } else if (LVL.test(text)) {
@@ -1332,6 +1334,13 @@ function readMudae(text, tv) {
   }
   return out;
 }
+// Del $bonus, el que fa servir el tauler: poder màxim i el que gasta cada botó de kakera, esferes del $oh i hores del $rt
+// shortcut: etiquetes en castellà (les de Victor) i en anglès suposat; mirar-ho amb un $bonus en anglès
+function bonusFacts(B) {
+  const get = (label, value) => { const r = (B || []).find(([l]) => label.test(l)), m = r && r[1].match(value); return m ? +m[1] : null; };
+  return { pmax: get(/m[aá]x.*kakera|kakera.*m[aá]x/i, /(\d+)\s*%/), pcost: get(/(?:cost|coût).*kakera/i, /(\d+)\s*%/),
+    oh: get(/\$oh\b/i, /\+\s*(\d+)/), rt: get(/\$rt\b/i, /(\d+)\s*h/) };
+}
 // Cada torre té 12 pisos, un de cada; la següent s'obre en acabar-la, amb els mateixos pisos però amb menys efecte (wiki de Mudae)
 function towerNext(M) {
   const tw = M.t || 0, built = tw * 12 + M.f.length;
@@ -1359,8 +1368,21 @@ function millDraw() {
   $id('millSum').textContent = [k !== null ? T('Kakera: {n}', { n: fmtK(k) }) : '', M.sp != null ? T('Esferes: {n}', { n: fmtK(M.sp) }) : '']
     .filter(Boolean).join(' · ') || T('Encara no has enganxat res');
   // el que encara no ha enganxat: cada servidor té els seus preus i cada jugador els seus nivells
-  const miss = [!M.bp && '$k', M.nf == null && '$kt', !M.opp && '$opp <personatge>', !M.shop && '$os', !M.keys && '$mmy='].filter(Boolean);
+  const miss = [!M.bp && '$k', M.nf == null && '$kt', !M.opp && '$opp <personatge>', !M.shop && '$os', !M.keys && '$mmy=', !M.bonus && '$bonus'].filter(Boolean);
   $id('millMiss').textContent = miss.length ? T('Per començar, enganxa: {list}', { list: miss.join(' · ') }) : '';
+  // $bonus: el que en treus i, plegada, la llista sencera (el valor en negreta i d'on surt, a part)
+  const BF = bonusFacts(M.bonus), li = s => '<li>' + esc(s) + '</li>', bl = [];
+  if (BF.pmax && BF.pcost) bl.push(li(T('Amb el poder ple ({p} %) pots reaccionar a {n} botons de kakera: cadascun en gasta {c} %.', { p: BF.pmax, n: Math.floor(BF.pmax / BF.pcost), c: BF.pcost })));
+  if (BF.oh != null) {
+    const n = Math.round(BF.oh / 20), seen = Object.values(M.opps || {}).filter(lv => lv[9] >= 1).length;
+    bl.push(li(T('El primer $oh del dia et dona +{e} esferes: tens {n} personatges amb la millora 10 (+20 cadascun).', { e: BF.oh, n })
+      + (seen < n ? ' ' + T("Al tauler n'hi ha {m}: enganxa el $opp dels que falten.", { m: seen }) : '')));
+  }
+  if (BF.rt != null && BF.rt !== RT) bl.push(li(T('El $rt et torna cada {n} h, però el tauler compta {c} h: posa «"rt_hores": {n}» al config.json.', { n: BF.rt, c: RT })));
+  $id('bonusNext').innerHTML = !M.bonus ? li(T('Enganxa el $bonus per veure-hi el resum.')) : bl.join('');
+  $id('bonusFold').hidden = !M.bonus;
+  $id('bonusAll').innerHTML = (M.bonus || []).map(([l, v]) => { const i = v.indexOf(' (');
+    return `<tr><td>${esc(l)}</td><td><b>${esc(i > 0 ? v.slice(0, i) : v)}</b>${i > 0 ? ' <span class="muted" style="font-size:13px">' + esc(v.slice(i + 1)) + '</span>' : ''}</td></tr>`; }).join('');
   // insígnies: el nivell de cada una i els 3 passos següents del pla, amb el preu (−25 % amb el Ruby IV)
   document.querySelectorAll('select[data-badge]').forEach(s => { s.value = String(M.b[s.dataset.badge] || 0); });
   const lvl = Object.fromEntries(BADGES.map(([n]) => [n, M.b[n] || 0])), price = Object.fromEntries(BADGES.map(([n, p]) => [n, (M.bp && M.bp[n]) || p]));  // els del $k; si no, els de sèrie
@@ -1436,7 +1458,7 @@ function millRead(text) {
   return true;
 }
 millBtn.onclick = () => {
-  if (!millRead(millText.value)) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt, el $opp, el $os, el $mmy= o el $tu.')); return; }
+  if (!millRead(millText.value)) { millMsg.innerHTML = '<span class="tag bad">' + esc(T('No ho entenc')) + '</span> ' + esc(T('Enganxa el missatge sencer del $k, el $kt, el $opp, el $os, el $mmy=, el $bonus o el $tu.')); return; }
   millText.value = ''; millBtn.disabled = true;
   millMsg.innerHTML = '<span class="tag good">' + esc(T('Llegit')) + '</span>';
 };
@@ -1818,7 +1840,7 @@ def write_dashboard(d, hist):
     oc = f"oc.html?lang={LANG}"
     # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
     all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
-    paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$p", "$k", "$kt", "$opp <personatge>", "$os", "$mmy=", "$mma+s", "$wl", "$imaso <sèrie>"))
+    paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$p", "$k", "$kt", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
                   + (f' <button class="cmd" data-copy="{e(all_cmd)}" data-tip="{e(t("Totes les teves sèries"))}">$imaa+os</button>' if len(all_cmd) > 9 else "")
                   + " " + cmd_html("$pd sumrare"))
     roman = ["0", "I", "II", "III", "IV"]
@@ -1965,10 +1987,14 @@ def write_dashboard(d, hist):
 <div class="view" id="v-mill" role="tabpanel" hidden>
 <section class="panel">
  <div class="panel-head"><h2>{T_("Què tens")}</h2><span class="muted" id="millSum" style="font-size:13px"></span></div>
- <label for="millText" class="muted" style="font-size:14px">{T_("Enganxa el que et diu Mudae amb $k (kakera i insígnies), $kt (torre), $opp <personatge> o $os (esferes), $mmy= (claus) o $tu, d'un en un. Es guarda en aquest navegador.")}</label>
+ <label for="millText" class="muted" style="font-size:14px">{T_("Enganxa el que et diu Mudae amb $k (kakera i insígnies), $kt (torre), $opp <personatge> o $os (esferes), $mmy= (claus), $bonus o $tu, d'un en un. Es guarda en aquest navegador.")}</label>
  <textarea id="millText" rows="4" spellcheck="false"></textarea>
  <div class="give-row"><button class="primary" id="millBtn" disabled>{T_("Llegir")}</button><span id="millMsg" role="status"></span></div>
  <p class="muted" id="millMiss" style="margin:0;font-size:13px"></p>
+</section>
+<section class="panel"><div class="panel-head"><h2>{T_("Els teus bonus")}</h2><span class="muted" style="font-size:13px">$bonus</span></div>
+ <ul class="steps" id="bonusNext"></ul>
+ <details class="fold" data-fold="bonus" id="bonusFold" hidden><summary><h3 class="og-h">{T_("Tots els bonus")}</h3></summary><div class="fold-body"><table id="bonusAll"></table></div></details>
 </section>
 <div class="g2">
  <section class="panel"><div class="panel-head"><h2>{T_("Insígnies")}</h2><span class="muted" style="font-size:13px">$kakerareward</span></div>
@@ -2130,7 +2156,7 @@ document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.op
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
 <script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec))}</script>
 <script>{JS_ESP}</script>
-<script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
+<script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()})).replace("__RT__", js(RT_HORES))}</script>
 <script>{JS_CLS}</script>
 <script>{JS_ORD}</script>
 <script>{JS_PD}</script>

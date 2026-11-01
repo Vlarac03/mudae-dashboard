@@ -103,6 +103,24 @@ assert.deepEqual(nextBuys([0, 0, 0, 5, 0, 0, 0, 0, 0, 0], PORD, perkMax, perkCos
 assert.deepEqual(nextBuys([6, 6, 6, 6, 6, 1, 1, 1, 1, 1], PORD, perkMax, perkCost), []);  // millorat del tot
 assert.deepEqual(nextBuys([0, 3], [2, 4], shopMax, shopCost, 2), [{ n: 2, l: 4, cost: 16000 }, { n: 2, l: 5, cost: 20000 }]);
 
+// $bonus de Victor (01/11/2026), dues pàgines («1.» i «2.»): una línia per bonus, i el que en fa servir el tauler
+const bonus = `1. Bonos del Jugador
+
+ · Rolls por hora: +8 (6 $k + 1 $kl + 1 $kt)
+ · Tiempo de espera para $rt: 20h (-30h $k -0h $kl)
+ · Límite $limroul de animanga: -6 $wa/$ha (6 $kl + 0 $kt)
+ · Poder máximo de Kakera: 110% ($kt)
+ · Costo de poder por botón de kakera: 36% (-60% $k -4% $kt)
+ · Bono adicional para botones de kakera: +0% ($bk)
+2. · Probabilidad de obtener una llave adicional en deseos: +10% ($kt)
+ · $oh bono diario: +40 spheres, 2% de obtener 1 $oq ($op) y 0% $ot ($shop)`;
+const B = readMudae(bonus, 5000).bonus;
+assert.equal(B.length, 8);
+assert.deepEqual(B[0], ['Rolls por hora', '+8 (6 $k + 1 $kl + 1 $kt)']);
+assert.deepEqual(B[6], ['Probabilidad de obtener una llave adicional en deseos', '+10% ($kt)']);
+const bonusFacts = new Function(fn('bonusFacts') + 'return bonusFacts;')();
+assert.deepEqual(bonusFacts(B), { pmax: 110, pcost: 36, oh: 40, rt: 20 });
+assert.deepEqual(bonusFacts(undefined), { pmax: null, pcost: null, oh: null, rt: null });
 assert.deepEqual(readMudae('Hola, això no és de Mudae', 5000), {});
 assert.deepEqual(readMudae('Kakera rewards\nBonus Bronze I + Silver I + Gold I\n$bronze', 5000), {});  // el $kakerareward no són els teus nivells
 // torre: 12 pisos per torre; el $kt diu el total i d'aquí surt la torre on ets
