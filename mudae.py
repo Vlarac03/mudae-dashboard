@@ -851,6 +851,13 @@ function sortBars() {
 }
 try { const v = localStorage.getItem('mudae-collSort'); if (v in SORTS) sortSel.value = v; } catch (e) {}
 sortSel.onchange = () => { try { localStorage.setItem('mudae-collSort', sortSel.value); } catch (e) {} sortBars(); };
+// cercador de col·leccions (amb moltes sèries): amaga les barres que no hi coincideixen, i l'àlbum si la seva queda amagada
+const collQ = document.getElementById('collQ');
+collQ.oninput = () => {
+  const q = collQ.value.trim().toLowerCase();
+  barsBox.querySelectorAll('.row[data-serie]').forEach(r => { r.hidden = !!q && !r.dataset.serie.toLowerCase().includes(q); });
+  const on = barsBox.querySelector('.row.on'); if (on && on.hidden) { album.hidden = true; draw(); }
+};
 sortBars();
 """
 
@@ -1364,7 +1371,7 @@ render();
 
 JS_UPD = r"""
 // «Posar al dia»: enganxes el que diu Mudae i el servidor ho desa a dades/ i refà l'Excel i el tauler
-const META = __META__, SPECIALS = __SPECIALS__, SIZES = __SIZES__;
+const META = __META__, SPECIALS = __SPECIALS__, SIZES = __SIZES__, HAREM_N = __HAREM_N__;
 const kindSel = document.getElementById('updKind'), serieBox = document.getElementById('updSerieBox'), serieSel = document.getElementById('updSerie');
 const newIn = document.getElementById('updNew'), txt = document.getElementById('updText'), updBtn = document.getElementById('updBtn');
 const updMsg = document.getElementById('updMsg'), updCmd = document.getElementById('updCmd'), age = document.getElementById('updAge');
@@ -1411,7 +1418,7 @@ function syncUpd() {
   newIn.hidden = serieSel.value !== '__new__';
   const esp = kindSel.value === 'serie' && SPECIALS.includes(serieName());
   document.getElementById('updEsp').hidden = !esp;
-  const cmds = groups().map(g => '$imaa+os ' + g.join(' $ '));
+  const gs = groups(), cmds = gs.map(g => '$imaa+os ' + g.join(' $ ')), today = new Date().toLocaleDateString('sv');  // sv: AAAA-MM-DD, com el servidor
   const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : kindSel.value === 'totes' ? (cmds.length === 1 ? cmds[0] : '$imaa+os ')
     : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
   updCmd.textContent = kindSel.value === 'totes' ? '$imaa+os' : cmd; updCmd.dataset.copy = cmd;  // la sencera surt a sota: aquí, sencera, no hi cap
@@ -1421,7 +1428,8 @@ function syncUpd() {
   document.getElementById('updAllCmd').innerHTML = !cmds.length ? code(T('Encara no tens cap sèrie: escriu-les a «Sèries noves».'))
     : cmds.length === 1 ? code(cmds[0])
     : '<span class="muted" style="font-size:13px">' + esc(T("Mudae contesta 1.000 personatges com a molt: envia els grups d'un en un i enganxa cada resposta abans d'enviar el següent. Les sèries noves van primer.")) + '</span>'
-      + cmds.map((c, i) => '<div class="give-row"><b>' + esc(T('Grup {n} de {t}', { n: i + 1, t: cmds.length })) + '</b><button class="copybtn" data-copy="' + esc(c) + '">' + esc(T('Copiar ordre')) + '</button></div>' + code(c)).join('');
+      + cmds.map((c, i) => '<div class="give-row"><b>' + esc(T('Grup {n} de {t}', { n: i + 1, t: cmds.length })) + '</b>'
+        + (gs[i].every(s => (META.series || {})[s] === today) ? '<span class="tag good">' + esc(T('Posat al dia avui')) + '</span>' : '') + '<button class="copybtn" data-copy="' + esc(c) + '">' + esc(T('Copiar ordre')) + '</button></div>' + code(c)).join('');
   allCopy.dataset.copy = cmds[0] || ''; allCopy.hidden = cmds.length !== 1;
   const ad = '$ad ' + allList().join(' $ '), adCopy = document.getElementById('updAdCopy');  // desbloqueja totes les teves sèries a les tirades
   document.getElementById('updAd').hidden = !all || !allList().length;
@@ -1447,6 +1455,12 @@ function autoSave() {
   const d = detect(txt.value);
   if (updBtn.disabled || !d.kind) return false;
   if (d.kind === 'serie' && (serieSel.value === '__new__' || !d.serie || serieName().toLowerCase() !== d.serie.toLowerCase())) return false;
+  // un $mma+s d'una sola sèrie sembla el harem, però desar-lo faria «d'algú» tots els altres: si en té menys de la meitat, el desa qui ho decideix
+  const n = txt.value.split(/\r?\n/).filter(l => / - /.test(l)).length;
+  if (d.kind === 'harem' && HAREM_N >= 20 && n < HAREM_N / 2) {
+    updMsg.innerHTML += ' <span class="tag bad">' + esc(T('Comprova-ho')) + '</span> ' + esc(T('Hi ha {n} personatges i el teu harem en té {h}. Si és el harem sencer ($mma+s, sense sèrie), clica «Desar i actualitzar».', { n, h: HAREM_N }));
+    return true;  // ja diu què cal fer: que no s'hi afegeixi l'altre missatge
+  }
   updBtn.click(); return true;
 }
 txt.addEventListener('paste', () => setTimeout(() => {
@@ -2274,7 +2288,8 @@ def write_dashboard(d, hist):
 <section class="panel" id="coll">
  <div class="panel-head"><h2>{T_("Col·leccions")}</h2>
   <label class="give-row" style="margin:0">{T_("Ordena:")} <select id="collSort"><option value="mine">{T_("Més teus")}</option><option value="pct">{T_("% completat")}</option>
-   <option value="left">{T_("Et falten menys")}</option><option value="size">{T_("Més personatges")}</option><option value="az">{T_("Alfabètic")}</option></select></label>
+   <option value="left">{T_("Et falten menys")}</option><option value="size">{T_("Més personatges")}</option><option value="az">{T_("Alfabètic")}</option></select>
+   <input type="search" id="collQ" spellcheck="false" autocomplete="off" aria-label="{T_("Busca una col·lecció")}" placeholder="{T_("Busca una col·lecció")}" style="width:auto;min-width:160px"></label>
   <div class="legend"><span><i style="background:var(--accent)"></i>{T_("Teus")}</span><span><i style="background:var(--warm)"></i>{T_("D'algú altre")}</span><span><i style="background:var(--sunk)"></i>{T_("Lliures")}</span></div></div>
  <div class="bars">{"".join(bars)}</div>
  <div class="album" hidden>
@@ -2510,7 +2525,7 @@ document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.op
 
 </script><script>{JS_TODAY}</script>
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
-<script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec)).replace("__SIZES__", js({x["name"]: x["total"] for x in series}))}</script>
+<script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec)).replace("__SIZES__", js({x["name"]: x["total"] for x in series})).replace("__HAREM_N__", str(len(d["harem"])))}</script>
 <script>{JS_ESP}</script>
 <script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
 <script>{JS_CLS}</script>
