@@ -1369,6 +1369,9 @@ function syncUpd() {
   document.getElementById('updAll').hidden = !all;
   document.getElementById('updAllCmd').textContent = allList().length ? cmd : T('Encara no tens cap sèrie: escriu-les a «Sèries noves».');
   allCopy.dataset.copy = cmd; allCopy.hidden = !allList().length;
+  const ad = '$ad ' + allList().join(' $ '), adCopy = document.getElementById('updAdCopy');  // desbloqueja totes les teves sèries a les tirades
+  document.getElementById('updAd').hidden = !all || !allList().length;
+  document.getElementById('updAdCmd').textContent = adCopy.dataset.copy = ad;
   updBtn.disabled = location.protocol === 'file:' || !txt.value.trim() || (kindSel.value === 'serie' && !serieName());
 }
 [kindSel, serieSel, newIn, txt, allNew].forEach(el => el.addEventListener('input', syncUpd));
@@ -1402,14 +1405,21 @@ txt.addEventListener('paste', () => setTimeout(() => {
 });
 if (location.protocol === 'file:') updMsg.innerHTML = OFF_MSG();
 try {  // el que no s'ha pogut posar al dia la vegada anterior (es desa abans de recarregar)
-  const w = sessionStorage.getItem('mudae-avis');
-  if (w) { sessionStorage.removeItem('mudae-avis'); updMsg.innerHTML = '<span class="tag good">' + esc(T('Desat')) + '</span> <span class="tag bad">' + esc(T('Atenció')) + '</span> ' + esc(w); }
+  const w = sessionStorage.getItem('mudae-avis'), ad = sessionStorage.getItem('mudae-ad');  // ad: l'ordre per desbloquejar les sèries noves
+  sessionStorage.removeItem('mudae-avis'); sessionStorage.removeItem('mudae-ad');
+  if (w || ad) updMsg.innerHTML = '<span class="tag good">' + esc(T('Desat')) + '</span>'
+    + (w ? ' <span class="tag bad">' + esc(T('Atenció')) + '</span> ' + esc(w) : '')
+    + (ad ? ' ' + esc(T('Sèrie nova: desbloqueja-la perquè et surti a les tirades:')) + ' <button class="cmd" data-copy="' + esc(ad) + '">' + esc(ad) + '</button>' : '');
 } catch (e) {}
 updBtn.onclick = async () => {
   updBtn.disabled = true; updMsg.textContent = T('Desant…');
   try {
-    const j = await postJSON('/dades', { kind: kindSel.value, serie: serieName(), text: txt.value, noves: kindSel.value === 'totes' ? newSeries() : [] });
-    if (j.ok) { try { if (j.warn) sessionStorage.setItem('mudae-avis', j.warn); } catch (e) {} location.reload(); }
+    const noves = kindSel.value === 'totes' ? newSeries() : kindSel.value === 'serie' && serieSel.value === '__new__' ? [serieName()] : [];
+    const j = await postJSON('/dades', { kind: kindSel.value, serie: serieName(), text: txt.value, noves: kindSel.value === 'totes' ? noves : [] });
+    if (j.ok) {
+      try { if (j.warn) sessionStorage.setItem('mudae-avis', j.warn); if (noves.length) sessionStorage.setItem('mudae-ad', '$ad ' + noves.join(' $ ')); } catch (e) {}
+      location.reload();
+    }
     else { updMsg.innerHTML = ERR_MSG(j.error); syncUpd(); }
   } catch (err) { updMsg.innerHTML = NET_MSG(); syncUpd(); }
 };
@@ -2300,6 +2310,8 @@ def write_dashboard(d, hist):
   <span class="muted" style="font-size:13px">{T_("1. Copia l'ordre: són les teves sèries separades amb $. 2. Envia-la a Mudae. 3. Enganxa a sota tot el que et contesti per privat (tots els missatges).")}</span>
   <label class="give-row">{T_("Sèries noves:")} <input type="text" id="updAllNew" spellcheck="false" autocomplete="off" style="flex:1;min-width:220px;width:auto" placeholder="{T_("Harry Potter $ Pingu $ ABBA")}"></label>
   <span class="muted" style="font-size:13px">{T_("Escriu les que vulguis afegir, separades amb $ i com surten a Mudae: entren a l'ordre i es creen soles quan enganxes la resposta.")}</span></div>
+ <div class="give" id="updAd" hidden><div class="give-row"><b>{T_("Desbloqueja-les a les teves tirades")}</b><button class="copybtn" id="updAdCopy" data-copy="">{T_("Copiar ordre")}</button></div><code id="updAdCmd"></code>
+  <span class="muted" style="font-size:13px">{T_("Perquè et surtin tots els seus personatges, encara que hagis tret la sèrie ($d) o els amagui el $limroul. Al $adl tens els que ja has desbloquejat.")}</span></div>
  <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
  <div class="give-row"><button class="primary" id="updBtn" disabled>{T_("Desar i actualitzar")}</button><span id="updMsg" role="status"></span></div>
 </section>
