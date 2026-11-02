@@ -1506,7 +1506,7 @@ function readMudae(text, tv) {
   const out = {}, have = text.match(/(?:Tienes|You have|Tens|Vous avez|Hai|Du hast|Você tem)\s+(\d[\d.,]*)/i);
   // $bonus: «· Rolls por hora: +8 (6 $k + 1 $kl + 1 $kt)», una línia per bonus, en dues pàgines (la 2 no porta ni el $limroul ni el $kl).
   // El $os també parla de megaesferes, però porta [LVL n]. Les etiquetes angleses són suposades.
-  if (/bonos del jugador|player bonus|\$limroul|\$oh\b[^:\n]*(?:bono|bonus)[^:\n]*:|megaspheres?\s*:|spheres adicionales|additional spheres/i.test(text) && !LVL.test(text)) {
+  if (/bonos del jugador|player bonus|\$limroul|\$oh\b[^:\n]*(?:bono|bonus)[^:\n]*:|megaspheres?\s*:|spheres adicionales|additional spheres/i.test(text) && !LVL.test(text) && !/\$build/i.test(text)) {  // el $kt també parla del $limroul (pis 3)
     const rows = text.split(/\r?\n/).map(l => l.match(/^\s*(?:\d+\.\s*)?[·•*-]?\s*([^:]+?)\s*:\s*(.+?)\s*$/)).filter(Boolean).map(m => [m[1], m[2]]);
     if (rows.length) out.bonus = rows;  // cap línia entesa: com si no l'haguessis enganxat («Pendent!» el continua demanant)
   } else if (/\$shoprefund/i.test(text) && LVL.test(text)) {  // $os: la botiga d'esferes
@@ -1520,7 +1520,12 @@ function readMudae(text, tv) {
   } else if (/\$build/i.test(text)) {
     const cost = text.match(/(?:cuesta|costs?|coûte|costa|kostet)\s+(\d[\d.,]*)/i);
     if (cost) out.ktCost = num(cost[1]);
-    if (cost && tv) out.nf = Math.max(0, Math.round(num(cost[1]) / tv) - 1);
+    // el $kt ho diu tot: «(+5.000 por piso, $towervalue)», «(+1 torre)» i una marca (✅) davant de cada pis fet de la torre on ets
+    const step = text.match(/\+\s*(\d[\d.,]*)[^)\n]*\$towervalue/i), tw = text.match(/\(\s*\+\s*(\d+)\s*(?:torres?|towers?|tours?|torri|türme?)\b/i);
+    const done = [...text.matchAll(/^[ \t]*[^\s\[][^\[\n]*\[(\d{1,2})\]/gm)].map(m => +m[1]).filter(n => n >= 1 && n <= 12);
+    if (step) out.tv = num(step[1]);
+    if (done.length) { out.t = tw ? +tw[1] : 0; out.f = done; out.nf = out.t * 12 + done.length; }
+    else if (cost && (out.tv || tv)) out.nf = Math.max(0, Math.round(num(cost[1]) / (out.tv || tv)) - 1);  // sense marques: pel preu
     if (have) out.k = num(have[1]);
   } else if (/\$bronze/i.test(text) && !/rewards/i.test(text)) {
     out.b = {};
@@ -1595,7 +1600,7 @@ function towerGuess(M) {
 }
 // Llocs de la wishlist: 7 de base (wiki de Mudae) més els del $bonus; sense $bonus, no ho sabem
 // Copiat de Discord, les línies poden començar amb el codi d'un emoji («:addroll: · Rolls por hora…», «<:sp:123>»): el traiem
-const noEmoji = t => t.replace(/^([ \t]*)(?:<a?:\w+:\d+>|:[\w~]+:)[ \t]*/gm, '$1');
+const noEmoji = t => t.replace(/^([ \t]*)(?:<a?:\w+:\d+>|:[\w~]+:)(?![ \t]*\[\d)[ \t]*/gm, '$1');  // menys la marca d'un pis del $kt («:check: [2]»)
 // Les pàgines del $bonus s'enganxen d'una en una: s'ajunten per l'etiqueta (si una es repeteix, mana la nova)
 const mergeBonus = (old, add) => [...(old || []).filter(([l]) => !add.some(([a]) => a === l)), ...add];
 const hasBonus = () => !!(M.bonus && M.bonus.length);  // un de buit (d'abans de l'01/11/2026) no compta
@@ -1741,7 +1746,7 @@ const millText = $id('millText'), millMsg = $id('millMsg');  // en enganxar-hi, 
 function millRead(text) {
   const got = readMudae(text, M.tv);
   if (!Object.keys(got).length) return false;
-  if (got.nf != null) Object.assign(got, towerFromKt(M, got.nf));
+  if (got.nf != null && !got.f) Object.assign(got, towerFromKt(M, got.nf));  // si el $kt porta les marques, manen elles
   if (got.opp && got.opp.name) got.opps = Object.assign({}, M.opps, { [got.opp.name]: got.opp.levels });
   if (got.bonus) got.bonus = mergeBonus(M.bonus, got.bonus);
   Object.assign(M, got);
@@ -1755,7 +1760,8 @@ document.addEventListener('change', ev => {
   else if (el.dataset && el.dataset.floor) {
     M.f = [...document.querySelectorAll('input[data-floor]:checked')].map(i => +i.dataset.floor);
     if (M.f.length === 12) { M.t = (M.t || 0) + 1; M.f = []; }  // torre acabada: la següent comença buida
-    if (!M.tv && (M.tv = towerGuess(M))) M.nf = towerNext(M).built;
+    if (!M.tv) M.tv = towerGuess(M);
+    if (M.tv) M.nf = towerNext(M).built;  // has marcat un pis nou: mana el que marques, no el $kt d'abans
   }
   else if (el.id === 'towerValue') M.tv = num(el.value) ? Math.min(50000, Math.max(5000, num(el.value))) : null;
   else return;

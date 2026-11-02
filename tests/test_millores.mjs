@@ -42,6 +42,34 @@ Arma un piso usando $build <numero del beneficio>
 assert.deepEqual(readMudae(kt, 5000), { ktCost: 40000, nf: 7, k: 615 });
 assert.deepEqual(readMudae(kt.replace('cuesta 40.000', 'costs 80,000'), 10000), { ktCost: 80000, nf: 7, k: 615 });
 assert.deepEqual(readMudae(kt, null), { ktCost: 40000, k: 615 });  // sense el preu base de la torre, no sabem quants pisos tens
+// el $kt sencer d'un amic de Victor (02/11/2026): «+1 torre», el preu per pis i una marca als pisos fets (17 = 12 + 5; 90.000 = 5.000 × 18)
+const ktFull = `Gasta tu para armar los 12 pisos de la torre:
+• Escoja un beneficio diferente cada vez que armes un piso
+• El siguiente piso es más caro (+5.000 por piso, $towervalue)
+• Puedes reiniciar tus torres y ser reembolsado con $destroy
+• La construcción puede ser infinita: si logras armar los 12 pisos, podrás armar una torre adicional con bonos menores (el costo seguirá incrementándose)
+
+Tu nivel actual es  (+ 1 torre)
+El siguiente nivel cuesta 90.000
+Tienes 29.511
+
+Arma un piso usando $build <numero del beneficio>
+
+Lista de beneficios con sus números correspondientes:
+
+[1] +2 espacios en la lista de deseos
+☑️ [2]  Posibilidad incrementada para la aparición de tu $starwish: +25%
+[3] Límite de $limroul reducidos 100 $wa, 100 $ha, 70 $wg, 70 $hg
+[4] +10% de posibilidades de ganar una segunda llave si el personaje está deseado
+[5] Devela 1 botón aleatorio para el comando $oh
+[6] +30 spheres con $dk
+☑️ [7]  Máximo poder base de kakera incrementado por un +5%
+:ballot_box_with_check: [8]  Botones de kakera cuestan -2% poder de kakera
+[9] Bono máximo en llaves doradas incrementado por +500 kakera/3hrs ($bku)
+☑️ [10]  Kakera de Luz otorga +1 kakera aleatorio
+☑️ [11]  +1 roll por hora
+[12] Comandos $colorll y $colorsl desbloqueados`;
+assert.deepEqual(readMudae(ktFull, 7000), { ktCost: 90000, tv: 5000, t: 1, f: [2, 7, 8, 10, 11], nf: 17, k: 29511 });  // el preu per pis del $kt mana
 
 const opp = `Mejora los beneficios del personaje seleccionado.
 Tienes 1.780
