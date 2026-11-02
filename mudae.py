@@ -819,7 +819,18 @@ document.querySelectorAll('.row[data-serie]').forEach(r => {
   r.onclick = () => show(r.dataset.serie);
   r.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); show(r.dataset.serie); } };
 });
-draw();
+// ordre de les barres (es recorda); amb empat, per nom. «Et falten menys»: les acabades, al final
+const sortSel = document.getElementById('collSort'), barsBox = document.querySelector('#coll .bars');
+const SORTS = { mine: (a, b) => b.m - a.m, pct: (a, b) => b.m / b.t - a.m / a.t, size: (a, b) => b.t - a.t, az: () => 0,
+                left: (a, b) => (a.t - a.m || Infinity) - (b.t - b.m || Infinity) };
+function sortBars() {
+  [...barsBox.querySelectorAll('.row[data-serie]')].map(r => ({ r, s: r.dataset.serie, m: +r.dataset.mine, t: +r.dataset.total }))
+    .sort((a, b) => SORTS[sortSel.value](a, b) || a.s.localeCompare(b.s)).forEach(x => barsBox.append(x.r));
+  draw();  // l'àlbum torna sota la seva barra
+}
+try { const v = localStorage.getItem('mudae-collSort'); if (v in SORTS) sortSel.value = v; } catch (e) {}
+sortSel.onchange = () => { try { localStorage.setItem('mudae-collSort', sortSel.value); } catch (e) {} sortBars(); };
+sortBars();
 """
 
 
@@ -2056,7 +2067,7 @@ def write_dashboard(d, hist):
         o = s["D'algú altre"] / s["total"] * 100
         tip = t("{serie}: {mine} teus · {other} d'algú altre · {free} lliures", serie=s["name"], mine=s["Meu"], other=s["D'algú altre"], free=s["Lliure"])
         bars.append(
-            f'<div class="row" data-serie="{e(s["name"])}" data-tip="{e(tip)}" role="button" tabindex="0">'
+            f'<div class="row" data-serie="{e(s["name"])}" data-mine="{s["Meu"]}" data-total="{s["total"]}" data-tip="{e(tip)}" role="button" tabindex="0">'
             f'<div class="lbl">{e(s["name"])}{esp_tag if s["name"] in spec else ""}</div>'
             f'<div class="track"><div class="seg mine" style="width:{p:.2f}%"></div>'
             f'<div class="seg other" style="width:{o:.2f}%"></div></div>'
@@ -2222,6 +2233,8 @@ def write_dashboard(d, hist):
 <div class="view" id="v-coll" role="tabpanel" hidden>
 <section class="panel" id="coll">
  <div class="panel-head"><h2>{T_("Col·leccions")}</h2>
+  <label class="give-row" style="margin:0">{T_("Ordena:")} <select id="collSort"><option value="mine">{T_("Més teus")}</option><option value="pct">{T_("% completat")}</option>
+   <option value="left">{T_("Et falten menys")}</option><option value="size">{T_("Més personatges")}</option><option value="az">{T_("Alfabètic")}</option></select></label>
   <div class="legend"><span><i style="background:var(--accent)"></i>{T_("Teus")}</span><span><i style="background:var(--warm)"></i>{T_("D'algú altre")}</span><span><i style="background:var(--sunk)"></i>{T_("Lliures")}</span></div></div>
  <div class="bars">{"".join(bars)}</div>
  <div class="album">
