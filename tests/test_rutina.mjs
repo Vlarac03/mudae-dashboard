@@ -123,4 +123,17 @@ assert.deepEqual(gs[0], ['Nova']);
 assert.deepEqual(gs.flat().sort(), ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'Nova']);
 for (const g of gs.slice(1)) assert.ok(g.length <= 8 && (g.length === 1 || g.reduce((t, s) => t + big[s], 0) <= 1000), g.join());
 assert.ok(!gs.some(g => g.includes('A') && g.includes('B')));  // les grans, en grups diferents
+// el $bonus d'un amic de Victor (02/11/2026) porta «claims = 30» i el $rt: no s'ha de prendre per un $tu
+const paste = py.match(/JS_PASTE = r"""([\s\S]*?)"""/)[1];
+const bonusLike = new Function('text', paste.match(/const bonusLike = [^\n]*/)[0] + '\nreturn bonusLike;');
+const bonusAmic = ` · Rolls por hora: +8 (6 $k + 0 $kl + 2 $kt)
+ · Espacios de lista de deseos: +8 (6 $k + 0 $kl + 2 $kt)
+ · Tiempo de espera para $rt: 20h (-30h $k -0h $kl)
+ · Poder máximo de Kakera: 115% ($kt)
+2. · Probabilidad de obtener una llave adicional en deseos: +10% ($kt)
+ · Fuentes adicionales de sphere: claims = 30 ($kt)`;
+assert.ok('claim' in readTu(bonusAmic) && 'rt' in readTu(bonusAmic));  // sense el control, semblava un $tu
+assert.equal(bonusLike(bonusAmic), true);  // fins i tot sense la capçalera «Bonos del Jugador»
+assert.equal(bonusLike('1. Bonos del Jugador\n · Rolls por hora: +8'), true);
+assert.equal(bonusLike(tuEs), false);  // el $tu es continua llegint
 console.log('rutina: totes les proves passen');

@@ -1881,7 +1881,9 @@ const goTo = (v, name) => `<button type="button" class="go" data-goto="${v}">${e
 function pasteAll(text, area = tuText, msg = tuMsg) {  // area i msg: la casella on has enganxat i on surt el missatge
   text = noEmoji(text);
   if (!text.trim()) return;
-  const tu = readTu(text), prev = txt.value;
+  // el $bonus parla del $rt i de «claims = 30»: que no es prengui per un $tu (capçalera, o moltes línies amb la font entre parèntesis: «($kt)»)
+  const bonusLike = /bonos del jugador|player bonus/i.test(text) || (text.match(/\([^)\n]*\$(?:kl?|kt|bk|bw|sw|op|shop)\b[^)\n]*\)/g) || []).length >= 3;
+  const tu = bonusLike ? {} : readTu(text), prev = txt.value;
   if (('claim' in tu || 'rolls' in tu) && Object.keys(tu).length > 2) {  // el $tu: marca les caselles (i la kakera i les esferes de Millores)
     window.millTu(text);
     const P = readPower(text);
