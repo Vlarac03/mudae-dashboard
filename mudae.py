@@ -833,6 +833,8 @@ function show(s) {  // clicar la sèrie oberta la tanca
   draw();
   if (!album.hidden) album.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
+// en canviar de pestanya, la col·lecció oberta es tanca (Victor, 02/11/2026): en tornar, totes plegades
+window.onVista = v => { if (v !== 'coll' && !album.hidden) { album.hidden = true; draw(); } };
 hide.onchange = () => { try { localStorage.setItem('mudae-hide', hide.checked ? '1' : '0'); } catch (e) {} draw(); };
 document.querySelectorAll('.row[data-serie]').forEach(r => {
   r.onclick = () => show(r.dataset.serie);
@@ -1842,10 +1844,12 @@ const RARE = [T('Comú'), T('Poc comú'), T('Rar'), T('Molt rar'), T('Llegendari
 const pdNum = t => +String(t).replace(/\D/g, '');
 // «5 (1/90)» per raresa i «100 / 1.025» al final: {rare: {raresa: [tens, total]}, have, total}, o null si no n'és un
 function pdSumrare(text) {
-  const ls = [...text.matchAll(/^\s*([1-6])[^\d(\n]{0,8}\(\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)\s*\)\s*$/gm)];  // «5🌟 (1/90)»: l'emoji pot ser-hi o no
+  // «5🌟 (1/90)» o «Paradox🌟 (1/20)»: l'emoji pot ser-hi o no, o com a codi («:sunny:»)
+  const ls = [...text.matchAll(/^\s*([1-6]|parad\w*)\s*(?:<a?:\w+:\d+>|:[\w~]+:)?[^\d(\n]{0,8}\(\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)\s*\)\s*$/gim)]
+    .map(m => [/^parad/i.test(m[1]) ? 'P' : m[1], m[2], m[3]]);
   const tot = text.match(/^\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)\s*$/m);
   if (ls.length < 2 || !tot || pdNum(tot[2]) < 1000) return null;  // el total és el de la Pokédex, no el d'una sèrie
-  const rare = {}; ls.forEach(m => { rare[m[1]] = [pdNum(m[2]), pdNum(m[3])]; });  // només les que diu Mudae (no posa les que no en tens cap)
+  const rare = {}; ls.forEach(([r, a, b]) => { rare[r] = [pdNum(a), pdNum(b)]; });  // només les que diu Mudae (no posa les que no en tens cap)
   return { rare, have: pdNum(tot[1]), total: pdNum(tot[2]) };
 }
 let PDS = null; try { PDS = JSON.parse(localStorage.getItem('mudae-pd-sumrare')); } catch (e) {}
@@ -1854,7 +1858,7 @@ function pdDraw() {
   document.getElementById('pdHead').textContent = PDS ? T('{a} de {b}', { a: fmtK(PDS.have), b: fmtK(PDS.total) }) : '$pd sumrare';
   document.getElementById('pdSum').innerHTML = !PDS ? '<p class="muted" style="margin:0;font-size:14px">' + esc(T('Encara no has enganxat el $pd sumrare.')) + '</p>'
     : Object.keys(PDS.rare).sort().map(r => { const [a, b] = PDS.rare[r];
-        return `<div class="pdrow"><span>${esc(RARE[r - 1] || r)}</span>${bar(a, b)}<span class="val">${fmtK(a)}/${fmtK(b)} · <b>${b ? Math.round(100 * a / b) : 0}%</b></span></div>`; }).join('');
+        return `<div class="pdrow"><span>${esc(r === 'P' ? T('Paradoxa') : RARE[r - 1] || r)}</span>${bar(a, b)}<span class="val">${fmtK(a)}/${fmtK(b)} · <b>${b ? Math.round(100 * a / b) : 0}%</b></span></div>`; }).join('');
 }
 function pdRead(text) {  // true si era un $pd sumrare
   const r = pdSumrare(text); if (!r) return false;
@@ -2267,7 +2271,7 @@ def write_dashboard(d, hist):
    <option value="left">{T_("Et falten menys")}</option><option value="size">{T_("Més personatges")}</option><option value="az">{T_("Alfabètic")}</option></select></label>
   <div class="legend"><span><i style="background:var(--accent)"></i>{T_("Teus")}</span><span><i style="background:var(--warm)"></i>{T_("D'algú altre")}</span><span><i style="background:var(--sunk)"></i>{T_("Lliures")}</span></div></div>
  <div class="bars">{"".join(bars)}</div>
- <div class="album">
+ <div class="album" hidden>
   <div class="album-head"><h3 id="albumTitle"></h3>
    <span class="give-row" style="margin:0"><label class="toggle"><input type="checkbox" id="hideMine"> {T_("Amaga els que ja tinc")}</label>
     <button type="button" class="tab" id="collDel">{T_("Deixar de fer-la")}</button></span></div>
@@ -2290,6 +2294,7 @@ def write_dashboard(d, hist):
 <details class="panel fold" id="pd" data-fold="pokedex">
  <summary><h2>{T_("Pokédex")}</h2><span class="muted" id="pdHead" style="font-size:13px">$pd sumrare</span></summary>
  <div class="fold-body">
+  <span class="give-row" style="margin:0">{T_("Ordre:")} <button class="cmd" data-copy="$pd sumrare">$pd sumrare</button></span>
   <textarea id="pdText" rows="2" spellcheck="false" aria-label="$pd sumrare" placeholder="{T_("Enganxa el $pd sumrare de Mudae: quants en tens de cada raresa, en un sol missatge…")}"></textarea>
   <span id="pdMsg" role="status"></span>
   <div id="pdSum"></div>
@@ -2476,6 +2481,7 @@ function go(v, focus) {{
     if (on && focus) b.focus();
   }});
   try {{ localStorage.setItem('mudae-vista', v); }} catch (err) {{}}
+  if (window.onVista) onVista(v);
 }}
 tabs.forEach((b, i) => {{
   b.onclick = () => go(b.dataset.go);

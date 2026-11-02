@@ -250,6 +250,9 @@ assert.deepEqual(pdSumrare('vlarac\n\n5 (1/90)\n\n4 (1/165)\n\n3 (8/337)\n\n2 (1
 // tal com surt copiat de Discord, amb l'emoji 🌟 i la línia «Imagen» (de Victor, 31/10/2026)
 assert.deepEqual(pdSumrare('Mudae\nAPP\n — 12:33\n\nvlarac\n\n5🌟 (1/90)\n\n4🌟 (1/165)\n\n3🌟 (8/337)\n\n2🌟 (15/225)\n\n1🌟 (75/177)\nImagen\n100 / 1.025'),
   { rare: { 1: [75, 177], 2: [15, 225], 3: [8, 337], 4: [1, 165], 5: [1, 90] }, have: 100, total: 1025 });
+// el d'un amic de Victor (02/11/2026): també «Paradox», i l'emoji pot venir com a codi
+assert.deepEqual(pdSumrare('ggezw\n\nParadox:sunny: (1/20)\n\n4:sunny: (11/165)\n\n3:sunny: (21/337)\n\n2☀️ (58/225)\n\n1<:pdstar:123456789> (150/177)\n241 / 1.025'),
+  { rare: { P: [1, 20], 4: [11, 165], 3: [21, 337], 2: [58, 225], 1: [150, 177] }, have: 241, total: 1025 });
 assert.equal(pdSumrare('vlarac\n Krabby x2\n100 / 1.025 - Page 1 / 10'), null);  // una pàgina del $pd no és el sumrare
 assert.equal(pdSumrare('Castle 5/8'), null);
 console.log('millores: totes les proves passen');
