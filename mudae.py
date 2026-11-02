@@ -123,6 +123,25 @@ def drop_header(text, check=True):
     return text
 
 
+def from_imaa(text, check=True):
+    """$imaa+os <sèrie> («Castle 3/8» i «Kate Beckett 💞 => pep - Castle»): torna el $imaso de sempre, sense el títol ni « - Castle».
+    Els de sota «Pers. sin serie principal…» porten una altra sèrie: fora. Si no és aquest format, torna el text tal qual.
+    """
+    rows = [re.sub(r"^\d+\.\s+", "", r.replace("⭐", "").strip()) for r in text.splitlines()]
+    title = next((r for r in rows[:6] if IMASO_TITLE.match(r)), None)
+    s = title and re.sub(r"\s+\d+\s*/\s*\d+$", "", title).strip().casefold()
+    tail = lambda r: r.rsplit(" - ", 1)[1].strip().casefold()
+    if not s or not any(" - " in r and tail(r) == s for r in rows):
+        return text
+    main = [r.rsplit(" - ", 1)[0].strip() for r in rows if " - " in r and tail(r) == s]
+    foot = sum(1 for r in rows if " - " in r and tail(r) != s)
+    total = int(re.search(r"(\d+)$", title).group(1))
+    if check and len(main) + foot < total:  # no sabem si el total de Mudae compta els de sota
+        raise ValueError(t("Mudae diu que la sèrie té {total} personatges i n'he llegit {n}. Copia el $imaso sencer, per privat i sense pàgines.",
+                           total=total, n=len(main)))
+    return "\n".join(main)
+
+
 def lines(path):
     """Línies útils d'un fitxer enganxat de Discord, amb la marca ⭐ si n'hi havia."""
     out = []
@@ -1379,8 +1398,10 @@ function groups() {
 function detect(text) {
   const ls = text.split(/\r?\n/).map(l => l.replace(/^\d+\.\s+/, '').trim()).filter(Boolean);
   if (ls.slice(0, 4).some(l => /wishlist/i.test(l))) return { kind: 'wishlist' };
-  if (ls.filter(l => / - /.test(l)).length > ls.length / 2) return { kind: ls.some(l => /=>.* - /.test(l)) ? 'totes' : 'harem' };
   const title = ls.slice(0, 6).map(l => l.match(/^(.*\S)\s+\d+\s*\/\s*\d+$/)).find(Boolean);
+  // el $imaa+os d'una sola sèrie: el títol («Castle 3/8») és la sèrie del final de les línies («Kevin Ryan - Castle»)
+  if (title && ls.some(l => / - /.test(l) && l.split(' - ').pop().trim().toLowerCase() === title[1].toLowerCase())) return { kind: 'serie', serie: title[1] };
+  if (ls.filter(l => / - /.test(l)).length > ls.length / 2) return { kind: ls.some(l => /=>.* - /.test(l)) ? 'totes' : 'harem' };
   return title ? { kind: 'serie', serie: title[1] } : {};
 }
 function syncUpd() {
@@ -1929,6 +1950,7 @@ const wlBox = document.getElementById('wlBuild');
 const bad = WL.wl.filter(w => !w.ok), keep = WL.wl.filter(w => w.ok);
 const free = MAX == null ? 0 : MAX - keep.length;
 if (MAX != null) document.getElementById('wlMax').textContent = '/' + MAX;
+if (MAX != null) document.getElementById('wlHead').textContent = T("{n} de {m} llocs (l'estrella també compta)", { n: WL.wl.length, m: MAX });
 if (MAX != null && MAX > WL.wl.length) {  // avís a Avui: llocs lliures
   const n = MAX - WL.wl.length, box = document.getElementById('alertsBox'), ul = document.getElementById('alertsList');
   ul.insertAdjacentHTML('beforeend', `<li><span class="tag accent">${esc(T('Wishlist'))}</span><span>${esc(T('Tens {n} llocs lliures. Mira «Per omplir» a la wishlist.', { n }))}</span><button type="button" class="go" data-goto="wl">${esc(T('Wishlist'))} →</button></li>`);
@@ -1948,23 +1970,25 @@ function drawWl() {
     html += `<div class="give"><div class="give-row"><b>${esc(T('1. Treu-ne {n}', { n: bad.length }))}</b><button class="copybtn" data-copy="$wishpurge">${esc(T('Copiar ordre'))}</button></div><code>$wishpurge</code>`
       + note(esc(T("Treu els que ja estan reclamats: {names}. Si en vols guardar algun, torna'l a posar amb $wishl (bloquejat) i el $wishpurge no el tocarà.", { names: bad.map(w => w.n).join(', ') }))) + '</div>';
   }
-  if (free > 0) {
+  if (free > 0 || MAX == null) {  // sense el $bonus no sabem quants llocs tens: els recomanats igualment, i tries tu quants
     const chosen = WL.cand.filter(c => pick.has(c.n)).map(c => c.n);
     const cmd = '$wish ' + chosen.join(' $ ');
-    html += `<div class="give"><div class="give-row"><b>${bad.length ? '2. ' : ''}${esc(T(free === 1 ? 'Omple {n} lloc' : 'Omple {n} llocs', { n: free }))}</b>`
-      + `<span class="muted">${esc(T("tria'n {n}: {c} de {n}", { n: free, c: chosen.length }))}</span>`
+    html += `<div class="give"><div class="give-row"><b>${bad.length ? '2. ' : ''}${esc(MAX == null ? T('Recomanats') : T(free === 1 ? 'Omple {n} lloc' : 'Omple {n} llocs', { n: free }))}</b>`
+      + (MAX == null ? '' : `<span class="muted">${esc(T("tria'n {n}: {c} de {n}", { n: free, c: chosen.length }))}</span>`)
       + (chosen.length ? `<button class="copybtn" data-copy="${esc(cmd)}">${esc(T('Copiar ordre'))}</button>` : '') + '</div>'
       + `<label class="muted" style="font-size:14px">${esc(T('Col·lecció que vols completar:'))} <select id="wlSer">`
       + `<option value="">${esc(T("Totes: la més a prop d'acabar"))}</option>`
       + SER.map(s => `<option value="${esc(s)}"${s === only ? ' selected' : ''}>${esc(s)}</option>`).join('') + '</select></label>'
-      + (WL.cand.length ? note(esc(T("Ja te n'he triat els recomanats; clica un nom per canviar-lo."))) : note(esc(T('No queda cap personatge lliure a les teves col·leccions.'))))
+      + (!WL.cand.length ? note(esc(T('No queda cap personatge lliure a les teves col·leccions.')))
+        : MAX == null ? note(esc(T('Per ordre de recomanació: clica els que vulguis posar, tants com llocs lliures tinguis.')))
+        : note(esc(T("Ja te n'he triat els recomanats; clica un nom per canviar-lo."))))
       + `<div class="chips">${cands().slice(0, 40).map(c => `<label class="ch ${pick.has(c.n) ? 'wish' : 'free'}" data-tip="${esc(c.s)}">`
         + `<input type="checkbox" data-wlc="${esc(c.n)}" ${pick.has(c.n) ? 'checked' : ''} hidden>${esc(c.n)}</label>`).join('')}</div>`
       + (chosen.length ? `<code>${esc(cmd)}</code>` : '')
-      + (chosen.length > free ? `<span class="tag bad">${esc(T("N'has triat {n} de més", { n: chosen.length - free }))}</span>` : '')
+      + (MAX != null && chosen.length > free ? `<span class="tag bad">${esc(T("N'has triat {n} de més", { n: chosen.length - free }))}</span>` : '')
       + '</div>';
   }
-  if (MAX == null) html += note(esc(T('Enganxa el $bonus a la casella d\'Avui per saber quants llocs tens a la wishlist i quins pots omplir.')));
+  if (MAX == null) html += note(esc(T('Enganxa el $bonus a la casella d\'Avui per saber quants llocs tens a la wishlist: llavors te\'n triaré els que hi caben.')));
   if (!WL.wl.some(w => w.star && w.ok))
     html += note(esc(T('No tens desig estrella: posa-hi el que vulguis més amb')) + ` <button class="cmd" data-copy="$sw ">$sw &lt;${esc(T('nom'))}&gt;</button>`);
   if (bad.length || MAX != null) html += note(esc(bad.length || free > 0 ? T('Quan ho hagis fet, enganxa el teu $wl a «Posar al dia».') : T('La wishlist està plena i tot està lliure: res a fer.')));
@@ -2266,7 +2290,7 @@ def write_dashboard(d, hist):
  </div></details>
 </div>
 <div class="view g2" id="v-wl" role="tabpanel" hidden>
- <section class="panel" id="wlp"><div class="panel-head"><h2>{T_("Wishlist")}</h2><span class="muted" style="font-size:13px">{T_("{n} de 15 llocs (l'estrella també compta)", n=len(d["wishlist"]))}</span></div>
+ <section class="panel" id="wlp"><div class="panel-head"><h2>{T_("Wishlist")}</h2><span class="muted" id="wlHead" style="font-size:13px">{T_("{n} a la llista (l'estrella també compta)", n=len(d["wishlist"]))}</span></div>
   <table>{wl}</table>
  </section>
  <section class="panel"><div class="panel-head"><h2>{T_("Què has de fer")}</h2></div><div id="wlBuild"></div></section>
@@ -2676,6 +2700,7 @@ def save_paste(kind, serie, text, new=()):
     elif kind == "serie":
         serie = serie.strip()
         path = series_path(serie)
+        text = from_imaa(text, check=serie not in specials())  # també el $imaa+os d'una sola sèrie
         if serie in specials():
             return update_special(serie, text)
     else:

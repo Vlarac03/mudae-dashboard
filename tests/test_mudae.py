@@ -184,6 +184,16 @@ class Desar(Base):
         self.assertIn("Code Lyoko", warn)
         self.assertIn("Kaito Kuroba", warn)
 
+    def test_una_serie_amb_imaa(self):  # Victor (02/11/2026): a «Una sèrie», també el $imaa+os <sèrie>
+        paste = ("Castle   2/4\n\nKate Beckett  💞 => vlarac - Castle\nKevin Ryan - Castle\nRichard Castle => pep - Castle\n\n"
+                 "Pers. sin serie principal en este paquete:\n\nMartha Rodgers - Castle (2009)\n")
+        mudae.save_paste("serie", "Castle", paste)
+        self.assertEqual([(r["name"], r["owner"]) for r in mudae.read_series()],
+                         [("Kate Beckett", "vlarac"), ("Kevin Ryan", ""), ("Richard Castle", "pep")])
+        with self.assertRaises(ValueError):  # en falten: no es desa
+            mudae.save_paste("serie", "Castle", "Castle 1/9\nKevin Ryan - Castle\n")
+        self.assertEqual(mudae.from_imaa("Harry Potter 49/94\nHedwig 💞 => pep\n"), "Harry Potter 49/94\nHedwig 💞 => pep\n")  # el $imaso, tal qual
+
     def test_harem_treu_els_que_ja_no_tens(self):
         self.write("harem.txt", "Hedwig\nDobby\n")
         self.write("series/HP.txt", "Hedwig 💞 => jo\nDobby 💞 => jo\nWinky 💞 => pep\n")
