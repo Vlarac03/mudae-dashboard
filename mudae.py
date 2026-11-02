@@ -764,8 +764,19 @@ function resetDraw() {
 }
 powerDraw(); resetDraw(); tick(); setInterval(tick, 30000);
 
-// mentre la pestanya és oberta, diu al servidor que continua aquí; si es tanca, el servidor plega sol
-if (location.protocol.startsWith('http')) setInterval(() => fetch('/ping', { cache: 'no-store' }).catch(() => {}), 20000);
+// mentre la pestanya és oberta, diu al servidor que continua aquí; si es tanca, el servidor plega sol.
+// El servidor també diu quan es va refer el tauler: si ha canviat (has desat des d'una altra pestanya), aquesta és vella i ho avisa.
+let built = null;
+function ping() {
+  fetch('/ping', { cache: 'no-store' }).then(r => r.json()).then(j => {
+    if (!j.d) return;  // un servidor d'abans d'aquest avís
+    if (built === null) built = j.d;
+    else if (j.d !== built && !document.getElementById('stale')) document.body.insertAdjacentHTML('beforeend',
+      '<div class="stale" id="stale" role="status">' + esc(T("Hi ha dades noves (desades des d'una altra pestanya)."))
+      + ' <button type="button" class="primary" onclick="location.reload()">' + esc(T('Recarregar')) + '</button></div>');
+  }).catch(() => {});
+}
+if (location.protocol.startsWith('http')) { ping(); setInterval(ping, 20000); document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); }); }
 """
 
 
@@ -932,6 +943,9 @@ button.pill:disabled { opacity:.45; cursor:default; }
 .more > summary { list-style:none; cursor:pointer; letter-spacing:2px; font-weight:700; }
 .more > summary::-webkit-details-marker { display:none; }
 .more > summary:hover, .more[open] > summary { color:var(--ink); border-color:rgba(255,255,255,.2); }
+.stale { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:20; display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+  max-width:calc(100vw - 32px); padding:10px 14px; border-radius:14px; font-size:14px; color:var(--ink);
+  background:rgba(28,28,32,.96); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); border:1px solid var(--accent); box-shadow:var(--sh); }
 .menu { position:absolute; right:0; top:calc(100% + 6px); z-index:10; display:grid; gap:2px; padding:6px; min-width:250px; border-radius:14px;
   background:rgba(28,28,32,.96); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); border:1px solid var(--glass-b); box-shadow:var(--sh); }
 .menu button { display:flex; align-items:center; gap:8px; text-align:left; padding:9px 12px; border:0; border-radius:9px; background:transparent;
@@ -3077,7 +3091,8 @@ def serve(port=PORT):
             last_seen[0] = time.monotonic()
             path = self.path.split("?")[0]
             if path == "/ping":  # el tauler obert (cada 20 s), o un servidor nou, pregunta si n'hi ha un
-                return self.reply({"ok": True, "v": VERSION}, cors=True)
+                tauler = DIR / "dashboard.html"  # d: quan es va refer el tauler, perquè una pestanya vella ho sàpiga
+                return self.reply({"ok": True, "v": VERSION, "d": str(tauler.stat().st_mtime_ns) if tauler.exists() else ""}, cors=True)
             if path not in PUBLIC:  # res de dades/, l'Excel ni el codi: només el tauler i l'ajudant
                 return self.send_error(404)
             super().do_GET()
