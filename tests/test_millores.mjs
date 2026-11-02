@@ -253,6 +253,12 @@ assert.deepEqual(pdSumrare('Mudae\nAPP\n — 12:33\n\nvlarac\n\n5🌟 (1/90)\n\n
 // el d'un amic de Victor (02/11/2026): també «Paradox», i l'emoji pot venir com a codi
 assert.deepEqual(pdSumrare('ggezw\n\nParadox:sunny: (1/20)\n\n4:sunny: (11/165)\n\n3:sunny: (21/337)\n\n2☀️ (58/225)\n\n1<:pdstar:123456789> (150/177)\n241 / 1.025'),
   { rare: { P: [1, 20], 4: [11, 165], 3: [21, 337], 2: [58, 225], 1: [150, 177] }, have: 241, total: 1025 });
+// una altra raresa amb nom (wiki: la fila 6 són les ultraentitats i les paradoxes), amb l'emoji darrere
+assert.deepEqual(pdSumrare('Ultra Beast:ub: (2/11)\nParadox (1/20)\n5 (3/90)\n300 / 1.025').rare, { U: [2, 11], P: [1, 20], 5: [3, 90] });
+assert.deepEqual(pdSumrare('UB (2/11)\nMítico (4/22)\n5 (3/90)\n300 / 1.025').rare, { U: [2, 11], 'Mítico': [4, 22], 5: [3, 90] });  // una altra amb nom: tal qual
+// torre sense marques, de la 76 en amunt: el preu va x10 (wiki «Kakera Tower/Prices»): pis 951 → 952 × 5.000 × 10
+assert.equal(readMudae('El siguiente nivel cuesta 47.600.000\nTienes 5\nArma un piso usando $build <n>', 5000).nf, 951);
+assert.equal(readMudae('El siguiente nivel cuesta 4.500.000\nTienes 5\nArma un piso usando $build <n>', 5000).nf, 899);  // torre 75: encara sense x10
 assert.equal(pdSumrare('vlarac\n Krabby x2\n100 / 1.025 - Page 1 / 10'), null);  // una pàgina del $pd no és el sumrare
 assert.equal(pdSumrare('Castle 5/8'), null);
 console.log('millores: totes les proves passen');

@@ -184,6 +184,10 @@ class Desar(Base):
         self.assertIn("Code Lyoko", warn)
         self.assertIn("Kaito Kuroba", warn)
 
+    def test_pagina_no_es_un_personatge(self):  # una llista paginada en castellà o català
+        self.write("wishlist.txt", "Hedwig\nPágina 1/2\nPàgina 2 / 2\nPage 1/2\n")
+        self.assertEqual([n for n, _ in mudae.lines(self.tmp / "wishlist.txt")], ["Hedwig"])
+
     def test_una_serie_amb_imaa(self):  # Victor (02/11/2026): a «Una sèrie», també el $imaa+os <sèrie>
         paste = ("Castle   2/4\n\nKate Beckett  💞 => vlarac - Castle\nKevin Ryan - Castle\nRichard Castle => pep - Castle\n\n"
                  "Pers. sin serie principal en este paquete:\n\nMartha Rodgers - Castle (2009)\n")

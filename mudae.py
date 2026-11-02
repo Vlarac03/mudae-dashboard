@@ -93,7 +93,7 @@ RUTINA = [
     ("temps", "Kakera estalviada", "$kt", "A la pestanya Millores et diu en què gastar-la: insígnies, torre o kakeraloots", None),
 ]
 
-SKIP = re.compile(r"Harem de|Wishlist|^Page\b|\bAPP\b|—\s*\d{1,2}:\d{2}|^\$|^Mudae$|^\d+\s*/\s*\d+$", re.I)
+SKIP = re.compile(r"Harem de|Wishlist|^Page\b|^P[aàá]gina\b|\bAPP\b|—\s*\d{1,2}:\d{2}|^\$|^Mudae$|^\d+\s*/\s*\d+$", re.I)
 HEART_ONLY = re.compile(r"^(.*?)\s*(?:💞|💖|💗|❤️|❤|♥️|♥)\s*$")  # «Nom 💞» del $imas (sense la «o»): reclamat, propietari desconegut
 CLAIM = re.compile(r"^(.*?)\s*(?:💞|💖|💗|❤️|❤|♥️|♥)?\s*=>\s*(\S+)\s*$")
 IMASO_TITLE = re.compile(r"^(?:\d+\.\s+)?\S.*\s\d+\s*/\s*\d+$")  # «1. Harry Potter 49/94»: el títol del $imaso
@@ -1527,7 +1527,10 @@ function readMudae(text, tv) {
     const done = [...text.matchAll(/^[ \t]*[^\s\[][^\[\n]*\[(\d{1,2})\]/gm)].map(m => +m[1]).filter(n => n >= 1 && n <= 12);
     if (step) out.tv = num(step[1]);
     if (done.length) { out.t = tw ? +tw[1] : 0; out.f = done; out.nf = out.t * 12 + done.length; }
-    else if (cost && (out.tv || tv)) out.nf = Math.max(0, Math.round(num(cost[1]) / (out.tv || tv)) - 1);  // sense marques: pel preu
+    else if (cost && (out.tv || tv)) {  // sense marques: pel preu. De la torre 76 a la 100 (pisos 901-1.200) costa x10 (wiki)
+      const raw = Math.round(num(cost[1]) / (out.tv || tv));
+      out.nf = Math.max(0, (raw > 1200 ? Math.round(raw / 10) : raw) - 1);
+    }
     if (have) out.k = num(have[1]);
   } else if (/\$bronze/i.test(text) && !/rewards/i.test(text)) {
     out.b = {};
@@ -1669,6 +1672,7 @@ function millDraw() {
   html = esc(html);
   if (M.nf != null && M.nf !== built) html += '<br><span class="tag bad">' + esc(T('Segons el $kt tens {n} pisos: marca quins són a la llista', { n: M.nf })) + '</span>';
   if (rec) html += `<br>${esc(T('Recomanat:'))} <button class="cmd" data-copy="$build ${rec}">$build ${rec}</button>`;
+  if (tw >= 100) html = esc(T('Tens les 100 torres: és el màxim de Mudae. La kakera, als kakeraloots ($kl).'));  // wiki «Kakera Tower/Prices»
   $id('towerNext').innerHTML = html;
   // esferes: els nivells del personatge que has enganxat
   $id('perkWho').textContent = M.opp ? T('Nivells de {name}', { name: M.opp.name || '?' }) : T('Enganxa un $opp <personatge> per veure-hi els nivells');
@@ -1844,9 +1848,9 @@ const RARE = [T('Comú'), T('Poc comú'), T('Rar'), T('Molt rar'), T('Llegendari
 const pdNum = t => +String(t).replace(/\D/g, '');
 // «5 (1/90)» per raresa i «100 / 1.025» al final: {rare: {raresa: [tens, total]}, have, total}, o null si no n'és un
 function pdSumrare(text) {
-  // «5🌟 (1/90)» o «Paradox🌟 (1/20)»: l'emoji pot ser-hi o no, o com a codi («:sunny:»)
-  const ls = [...text.matchAll(/^\s*([1-6]|parad\w*)\s*(?:<a?:\w+:\d+>|:[\w~]+:)?[^\d(\n]{0,8}\(\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)\s*\)\s*$/gim)]
-    .map(m => [/^parad/i.test(m[1]) ? 'P' : m[1], m[2], m[3]]);
+  // «5🌟 (1/90)», «Paradox🌟 (1/20)» o una altra raresa amb nom («Ultra Beast»): l'emoji pot ser-hi o no, o com a codi («:sunny:»)
+  const ls = [...text.matchAll(/^\s*([1-6]|[A-Za-zÀ-ÿ][\wÀ-ÿ'-]*(?: [A-Za-zÀ-ÿ][\wÀ-ÿ'-]*){0,2})\s*(?:<a?:\w+:\d+>|:[\w~]+:)?[^\d(\n\w]{0,8}\(\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)\s*\)\s*$/gm)]
+    .map(m => [/^parad/i.test(m[1]) ? 'P' : /^(?:ub|ultra)\b/i.test(m[1]) ? 'U' : m[1], m[2], m[3]]);  // fila 6 (wiki): ultraentitats i paradoxes
   const tot = text.match(/^\s*(\d[\d.,]*)\s*\/\s*(\d[\d.,]*)\s*$/m);
   if (ls.length < 2 || !tot || pdNum(tot[2]) < 1000) return null;  // el total és el de la Pokédex, no el d'una sèrie
   const rare = {}; ls.forEach(([r, a, b]) => { rare[r] = [pdNum(a), pdNum(b)]; });  // només les que diu Mudae (no posa les que no en tens cap)
@@ -1858,10 +1862,10 @@ function pdDraw() {
   document.getElementById('pdHead').textContent = PDS ? T('{a} de {b}', { a: fmtK(PDS.have), b: fmtK(PDS.total) }) : '$pd sumrare';
   document.getElementById('pdSum').innerHTML = !PDS ? '<p class="muted" style="margin:0;font-size:14px">' + esc(T('Encara no has enganxat el $pd sumrare.')) + '</p>'
     : Object.keys(PDS.rare).sort().map(r => { const [a, b] = PDS.rare[r];
-        return `<div class="pdrow"><span>${esc(r === 'P' ? T('Paradoxa') : RARE[r - 1] || r)}</span>${bar(a, b)}<span class="val">${fmtK(a)}/${fmtK(b)} · <b>${b ? Math.round(100 * a / b) : 0}%</b></span></div>`; }).join('');
+        return `<div class="pdrow"><span>${esc(r === 'P' ? T('Paradoxa') : r === 'U' ? T('Ultraentitat') : RARE[r - 1] || r)}</span>${bar(a, b)}<span class="val">${fmtK(a)}/${fmtK(b)} · <b>${b ? Math.round(100 * a / b) : 0}%</b></span></div>`; }).join('');
 }
 function pdRead(text) {  // true si era un $pd sumrare
-  const r = pdSumrare(text); if (!r) return false;
+  const r = pdSumrare(noEmoji(text)); if (!r) return false;  // la casella de la Pokédex no passa per pasteAll: també sense «:codi:» davant
   PDS = r; try { localStorage.setItem('mudae-pd-sumrare', JSON.stringify(PDS)); } catch (e) {}
   pdDraw(); return true;
 }
