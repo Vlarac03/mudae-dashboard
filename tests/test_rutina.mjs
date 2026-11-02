@@ -111,4 +111,16 @@ assert.deepEqual([5, Infinity, 1, Infinity, 3].map(back => ({ back })).sort(byBa
 // les tasques marcades abans de l'01/11/2026 (r0, r1…) passen al nom nou
 const OLD = new Function(js.match(/const OLD = [^\n]*/)[0] + 'return OLD;')();
 assert.equal(OLD.r5, 'rolls'); assert.equal(OLD.r8, 'claim'); assert.equal(OLD.r17, 'p');
+// «Totes les teves sèries» per grups: Mudae contesta 1.000 personatges com a molt (amic de Victor, 02/11/2026)
+const upd = py.match(/JS_UPD = r"""([\s\S]*?)"""/)[1];
+const groupsOf = (ALL, SIZES, nw) => new Function('ALL', 'SIZES', 'newSeries', upd.match(/function groups[\s\S]*?\n}\n/)[0] + 'return groups();')(ALL, SIZES, () => nw);
+assert.deepEqual(groupsOf(['Castle', 'Pingu'], { Castle: 12, Pingu: 7 }, []), [['Castle', 'Pingu']]);  // les de Victor: una sola ordre
+const nw = Array.from({ length: 19 }, (_, i) => 'S' + i);
+assert.deepEqual(groupsOf([], {}, nw).map(g => g.length), [8, 8, 3]);  // les noves, de 8 en 8 i en l'ordre escrit
+const big = { A: 600, B: 500, C: 450, D: 40, E: 30, F: 20, G: 1200 };
+const gs = groupsOf(Object.keys(big), big, ['Nova']);
+assert.deepEqual(gs[0], ['Nova']);
+assert.deepEqual(gs.flat().sort(), ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'Nova']);
+for (const g of gs.slice(1)) assert.ok(g.length <= 8 && (g.length === 1 || g.reduce((t, s) => t + big[s], 0) <= 1000), g.join());
+assert.ok(!gs.some(g => g.includes('A') && g.includes('B')));  // les grans, en grups diferents
 console.log('rutina: totes les proves passen');

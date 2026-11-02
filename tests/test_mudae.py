@@ -165,12 +165,24 @@ class Desar(Base):
         self.assertEqual(got[("ABBA", "Agnetha Fältskog")], "jo")  # amb el nom de Mudae, no «abba»
         self.assertIn(("The Big Bang Theory", "Sheldon Cooper"), got)
         self.assertIn("Gellert Grindelwald, Meemaw", warn)  # no sabem de quina sèrie són
-        self.assertIn("No hi surten: Pingu", warn)
+        self.assertNotIn("Pingu", warn)  # amb l'ordre per grups, no surt a cada resposta
         # la segona vegada, el Meemaw ja és a la teva sèrie (l'has posat amb el $imaso) i hi compta
         self.write("series/The Big Bang Theory.txt", "Sheldon Cooper\nMeemaw\n")
         mudae.save_paste("totes", "", paste)
         got = {(r["serie"], r["name"]): r["owner"] for r in mudae.read_series()}
         self.assertEqual(got[("The Big Bang Theory", "Meemaw")], "pep")
+
+    def test_totes_les_series_amb_un_altre_nom(self):  # amic de Victor (02/11/2026): «Código Lyoko», i Mudae diu «Code Lyoko»
+        paste = ("-----\nCode Lyoko + Detective Conan 3/9\n(bundle)\n\nAelita => pep - Code Lyoko\nAnthéa Hopper - Code Lyoko\n"
+                 "Conan Edogawa - Detective Conan\n\nPers. sin serie principal en este paquete:\n\nKaito Kuroba - Magic Kaito\n")
+        warn = mudae.save_paste("totes", "", paste, ["Código Lyoko", "Detective Conan"])
+        got = {(r["serie"], r["name"]): r["owner"] for r in mudae.read_series()}
+        self.assertEqual(got[("Code Lyoko", "Aelita")], "pep")
+        self.assertIn(("Code Lyoko", "Anthéa Hopper"), got)
+        self.assertIn(("Detective Conan", "Conan Edogawa"), got)
+        self.assertNotIn("Magic Kaito", {s for s, _ in got})  # el de sota de «sin serie principal» no crea cap sèrie
+        self.assertIn("Code Lyoko", warn)
+        self.assertIn("Kaito Kuroba", warn)
 
     def test_harem_treu_els_que_ja_no_tens(self):
         self.write("harem.txt", "Hedwig\nDobby\n")

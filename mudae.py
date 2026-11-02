@@ -1050,6 +1050,7 @@ textarea:focus, input[type=text]:focus, input[type=search]:focus, select:focus {
 .give-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13.5px; color:var(--ink-2); }
 .give input[type=text] { font:13px var(--mono); width:160px; }
 .give code { white-space:normal; overflow-wrap:anywhere; display:block; padding:8px 10px; background:rgba(0,0,0,.22); }
+#updMsg .cmd { white-space:normal; overflow-wrap:anywhere; text-align:left; }  /* el $ad de moltes sèries noves no estira la targeta */
 .serieslist { display:flex; flex-wrap:wrap; gap:6px; }
 .serieslist button { font-size:12.5px; padding:3px 11px; border-radius:20px; border:1px solid var(--glass-b); background:rgba(255,255,255,.04); color:var(--ink-2); cursor:pointer; }
 .serieslist button:hover { border-color:var(--accent); color:var(--accent-ink); }
@@ -1331,7 +1332,7 @@ render();
 
 JS_UPD = r"""
 // «Posar al dia»: enganxes el que diu Mudae i el servidor ho desa a dades/ i refà l'Excel i el tauler
-const META = __META__, SPECIALS = __SPECIALS__;
+const META = __META__, SPECIALS = __SPECIALS__, SIZES = __SIZES__;
 const kindSel = document.getElementById('updKind'), serieBox = document.getElementById('updSerieBox'), serieSel = document.getElementById('updSerie');
 const newIn = document.getElementById('updNew'), txt = document.getElementById('updText'), updBtn = document.getElementById('updBtn');
 const updMsg = document.getElementById('updMsg'), updCmd = document.getElementById('updCmd'), age = document.getElementById('updAge');
@@ -1349,6 +1350,20 @@ const ALL = [...serieSel.options].map(o => o.value).filter(v => v !== '__new__' 
 const allNew = document.getElementById('updAllNew');
 const newSeries = () => allNew.value.split('$').map(x => x.trim()).filter(x => x && !ALL.some(a => a.toLowerCase() === x.toLowerCase()));
 const allList = () => [...ALL, ...newSeries()];
+// Mudae contesta 1.000 personatges com a molt: l'ordre va per grups de 8 sèries i 1.000 personatges com a molt.
+// Primer les sèries noves (no en sabem la mida), com les has escrit; després les teves, les grans amb les petites.
+function groups() {
+  const n = s => SIZES[s] || 0, sum = g => g.reduce((t, s) => t + n(s), 0), nw = newSeries(), out = [];
+  for (let i = 0; i < nw.length; i += 8) out.push(nw.slice(i, i + 8));
+  const known = [...ALL].sort((a, b) => n(b) - n(a));
+  const gs = Array.from({ length: Math.max(Math.ceil(known.length / 8), Math.ceil(sum(known) / 1000)) }, () => []);
+  for (const s of known) {
+    let g = gs.filter(g => g.length < 8 && sum(g) + n(s) <= 1000).sort((a, b) => sum(a) - sum(b))[0];
+    if (!g) gs.push(g = []);  // no hi cap enlloc (una sèrie de més de 1.000 va sola)
+    g.push(s);
+  }
+  return out.concat(gs.filter(g => g.length));
+}
 // Què has enganxat, mirant el text: la wishlist, moltes sèries o el harem («Nom - Sèrie»), o una sèrie (títol «Sèrie 12/34»)
 function detect(text) {
   const ls = text.split(/\r?\n/).map(l => l.replace(/^\d+\.\s+/, '').trim()).filter(Boolean);
@@ -1362,13 +1377,18 @@ function syncUpd() {
   newIn.hidden = serieSel.value !== '__new__';
   const esp = kindSel.value === 'serie' && SPECIALS.includes(serieName());
   document.getElementById('updEsp').hidden = !esp;
-  const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : kindSel.value === 'totes' ? '$imaa+os ' + allList().join(' $ ')
+  const cmds = groups().map(g => '$imaa+os ' + g.join(' $ '));
+  const cmd = kindSel.value === 'harem' ? '$mma+s' : kindSel.value === 'wishlist' ? '$wl' : kindSel.value === 'totes' ? (cmds.length === 1 ? cmds[0] : '$imaa+os ')
     : esp ? '$imaso ' : '$imaso ' + (serieName() || '<' + T('sèrie') + '>');
   updCmd.textContent = kindSel.value === 'totes' ? '$imaa+os' : cmd; updCmd.dataset.copy = cmd;  // la sencera surt a sota: aquí, sencera, no hi cap
   const all = kindSel.value === 'totes', allCopy = document.getElementById('updAllCopy');  // l'ordre sencera ben a la vista, amb les sèries
   document.getElementById('updAll').hidden = !all;
-  document.getElementById('updAllCmd').textContent = allList().length ? cmd : T('Encara no tens cap sèrie: escriu-les a «Sèries noves».');
-  allCopy.dataset.copy = cmd; allCopy.hidden = !allList().length;
+  const code = c => '<code>' + esc(c) + '</code>';
+  document.getElementById('updAllCmd').innerHTML = !cmds.length ? code(T('Encara no tens cap sèrie: escriu-les a «Sèries noves».'))
+    : cmds.length === 1 ? code(cmds[0])
+    : '<span class="muted" style="font-size:13px">' + esc(T("Mudae contesta 1.000 personatges com a molt: envia els grups d'un en un i enganxa cada resposta abans d'enviar el següent. Les sèries noves van primer.")) + '</span>'
+      + cmds.map((c, i) => '<div class="give-row"><b>' + esc(T('Grup {n} de {t}', { n: i + 1, t: cmds.length })) + '</b><button class="copybtn" data-copy="' + esc(c) + '">' + esc(T('Copiar ordre')) + '</button></div>' + code(c)).join('');
+  allCopy.dataset.copy = cmds[0] || ''; allCopy.hidden = cmds.length !== 1;
   const ad = '$ad ' + allList().join(' $ '), adCopy = document.getElementById('updAdCopy');  // desbloqueja totes les teves sèries a les tirades
   document.getElementById('updAd').hidden = !all || !allList().length;
   document.getElementById('updAdCmd').textContent = adCopy.dataset.copy = ad;
@@ -1403,10 +1423,19 @@ txt.addEventListener('paste', () => setTimeout(() => {
   try { const v = localStorage.getItem('mudae-' + el.id); if ([...el.options].some(o => o.value === v)) el.value = v; } catch (e) {}
   el.addEventListener('change', () => { try { localStorage.setItem('mudae-' + el.id, el.value); } catch (e) {} });
 });
+// les sèries noves que encara no has desat es recorden (enganxes els grups d'un en un i la pàgina es recarrega)
+try { allNew.value = localStorage.getItem('mudae-updAllNew') || ''; allNew.value = newSeries().join(' $ '); } catch (e) {}
+allNew.addEventListener('input', () => { try { localStorage.setItem('mudae-updAllNew', allNew.value); } catch (e) {} });
+const todayAll = document.getElementById('todayAll');  // botó $imaa+os d'Avui: si no hi cap en una ordre, porta als grups
+if (todayAll && groups().length > 1) {
+  todayAll.removeAttribute('data-copy'); todayAll.dataset.goto = 'eines'; todayAll.dataset.tip = T('Són massa sèries per a una ordre: porta als grups');
+  todayAll.addEventListener('click', () => { kindSel.value = 'totes'; syncUpd(); });
+}
 if (location.protocol === 'file:') updMsg.innerHTML = OFF_MSG();
 try {  // el que no s'ha pogut posar al dia la vegada anterior (es desa abans de recarregar)
-  const w = sessionStorage.getItem('mudae-avis'), ad = sessionStorage.getItem('mudae-ad');  // ad: l'ordre per desbloquejar les sèries noves
-  sessionStorage.removeItem('mudae-avis'); sessionStorage.removeItem('mudae-ad');
+  const w = sessionStorage.getItem('mudae-avis'), pre = JSON.parse(sessionStorage.getItem('mudae-abans') || 'null');
+  const nous = pre ? ALL.filter(s => !pre.includes(s)) : [], ad = nous.length ? '$ad ' + nous.join(' $ ') : '';  // per desbloquejar les sèries noves, amb el nom de Mudae
+  sessionStorage.removeItem('mudae-avis'); sessionStorage.removeItem('mudae-abans');
   if (w || ad) updMsg.innerHTML = '<span class="tag good">' + esc(T('Desat')) + '</span>'
     + (w ? ' <span class="tag bad">' + esc(T('Atenció')) + '</span> ' + esc(w) : '')
     + (ad ? ' ' + esc(T('Sèrie nova: desbloqueja-la perquè et surti a les tirades:')) + ' <button class="cmd" data-copy="' + esc(ad) + '">' + esc(ad) + '</button>' : '');
@@ -1417,7 +1446,7 @@ updBtn.onclick = async () => {
     const noves = kindSel.value === 'totes' ? newSeries() : kindSel.value === 'serie' && serieSel.value === '__new__' ? [serieName()] : [];
     const j = await postJSON('/dades', { kind: kindSel.value, serie: serieName(), text: txt.value, noves: kindSel.value === 'totes' ? noves : [] });
     if (j.ok) {
-      try { if (j.warn) sessionStorage.setItem('mudae-avis', j.warn); if (noves.length) sessionStorage.setItem('mudae-ad', '$ad ' + noves.join(' $ ')); } catch (e) {}
+      try { if (j.warn) sessionStorage.setItem('mudae-avis', j.warn); if (noves.length) sessionStorage.setItem('mudae-abans', JSON.stringify(ALL)); } catch (e) {}
       location.reload();
     }
     else { updMsg.innerHTML = ERR_MSG(j.error); syncUpd(); }
@@ -2110,7 +2139,7 @@ def write_dashboard(d, hist):
     all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
     mill_cmds = " ".join(cmd_html(c) for c in ("$k", "$kt", "$opz", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$tu"))  # el que llegeix Millores
     paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$settings", "$p", "$k", "$kt", "$opz", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
-                  + (f' <button class="cmd" data-copy="{e(all_cmd)}" data-tip="{e(t("Totes les teves sèries"))}">$imaa+os</button>' if len(all_cmd) > 9 else "")
+                  + (f' <button class="cmd" id="todayAll" data-copy="{e(all_cmd)}" data-tip="{e(t("Totes les teves sèries"))}">$imaa+os</button>' if len(all_cmd) > 9 else "")
                   + " " + cmd_html("$pd sumrare"))
     roman = ["0", "I", "II", "III", "IV"]
     badge_rows = "".join(
@@ -2306,7 +2335,7 @@ def write_dashboard(d, hist):
   <input type="text" id="updNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de la sèrie, com surt a Mudae")}" placeholder="{T_("Nom de la sèrie, com surt a Mudae")}" hidden></span>
   <span>{T_("Ordre:")} <button class="cmd" id="updCmd" data-copy="$mma+s">$mma+s</button></span></div>
  <p class="muted" id="updEsp" style="margin:0;font-size:13px" hidden>{T_("Col·lecció especial: enganxa el $imaso de la sèrie d'on surten els personatges (totes les pàgines). Només se n'agafaran els d'aquesta col·lecció.")}</p>
- <div class="give" id="updAll" hidden><div class="give-row"><b>{T_("Ordre amb totes les teves sèries")}</b><button class="copybtn" id="updAllCopy" data-copy="">{T_("Copiar ordre")}</button></div><code id="updAllCmd"></code>
+ <div class="give" id="updAll" hidden><div class="give-row"><b>{T_("Ordre amb totes les teves sèries")}</b><button class="copybtn" id="updAllCopy" data-copy="">{T_("Copiar ordre")}</button></div><div id="updAllCmd"></div>
   <span class="muted" style="font-size:13px">{T_("1. Copia l'ordre: són les teves sèries separades amb $. 2. Envia-la a Mudae. 3. Enganxa a sota tot el que et contesti per privat (tots els missatges).")}</span>
   <label class="give-row">{T_("Sèries noves:")} <input type="text" id="updAllNew" spellcheck="false" autocomplete="off" style="flex:1;min-width:220px;width:auto" placeholder="{T_("Harry Potter $ Pingu $ ABBA")}"></label>
   <span class="muted" style="font-size:13px">{T_("Escriu les que vulguis afegir, separades amb $ i com surten a Mudae: entren a l'ordre i es creen soles quan enganxes la resposta.")}</span></div>
@@ -2426,7 +2455,7 @@ document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.op
 
 </script><script>{JS_TODAY}</script>
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
-<script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec))}</script>
+<script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec)).replace("__SIZES__", js({x["name"]: x["total"] for x in series}))}</script>
 <script>{JS_ESP}</script>
 <script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
 <script>{JS_CLS}</script>
@@ -2567,10 +2596,13 @@ def update_all(text, new=()):
     member = {n.casefold(): s for s in files if s not in spec for n in parse_owners(files[s].read_text(encoding="utf-8-sig"))}
     rows = text.splitlines()
     title = next((r for r in rows[:6] if IMASO_TITLE.match(r.strip())), None)
-    got, extra, real, lost = {}, [], {}, []
+    got, extra, real, lost, renamed = {}, [], {}, [], []
+    foot = False  # a partir de «Pers. sin serie principal en este paquete:», personatges d'altres sèries
     for raw in rows:
         line = re.sub(r"^\d+\.\s+", "", raw.replace("⭐", "").strip())
         low = line.casefold()
+        if (got or extra or lost) and " - " not in line and line.endswith(":") and not line.startswith(":"):
+            foot = True
         s = next((s for s in normal if low.endswith(" - " + s.casefold())), None)
         if s:
             if s in new:  # el nom com el diu Mudae, no com l'has escrit
@@ -2580,6 +2612,11 @@ def update_all(text, new=()):
             got.setdefault(member[name_of(body)], []).append(body)
         elif " - " in line and any(low.startswith(n + " ") for n in spec_names):
             extra.append(line.rsplit(" - ", 1)[0].strip())
+        elif " - " in line and new and not foot:  # sèrie nova que Mudae anomena d'una altra manera («Código Lyoko» → «Code Lyoko»)
+            body, s = (x.strip() for x in line.rsplit(" - ", 1))
+            if s not in got:
+                renamed.append(s)
+            got.setdefault(s, []).append(body)
         elif " - " in line:  # de la llista «sin serie principal» i encara no és a cap sèrie teva: no sabem de quina és
             lost.append(re.split(r"\s*(?:💞|=>)", line.rsplit(" - ", 1)[0])[0].strip())
     read = sum(map(len, got.values())) + len(extra)
@@ -2600,7 +2637,7 @@ def update_all(text, new=()):
                 pass
     if not done and not short:
         raise ValueError(t("No he trobat cap personatge de les teves sèries. Copia tots els missatges que t'ha enviat Mudae."))
-    missing = [s for s in normal if s not in got]
+    # sense «No hi surten»: amb l'ordre per grups, les sèries dels altres grups no hi surten mai
     warn = []
     total = int(re.search(r"(\d+)\s*$", title).group(1)) if title else read
     if read < total:
@@ -2609,8 +2646,8 @@ def update_all(text, new=()):
         warn.append(t("No sé de quina de les teves sèries són {names}: posa al dia aquella sèrie amb «Una sèrie ($imaso)».", names=", ".join(lost[:10])))
     if short:
         warn.append(t("No he tocat {series}: en falten. Copia tots els missatges de Mudae.", series=", ".join(short)))
-    if missing:
-        warn.append(t("No hi surten: {series}.", series=", ".join(sorted(missing))))
+    if renamed:
+        warn.append(t("Desades amb el nom de Mudae: {series}. Si a «Sèries noves» les havies escrit d'una altra manera, esborra-les d'allà.", series=", ".join(renamed)))
     return " ".join(warn)
 
 
