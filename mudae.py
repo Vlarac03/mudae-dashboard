@@ -1645,6 +1645,15 @@ function millLoad() { try { return Object.assign({ b: {}, f: [], tv: null }, JSO
 let M = millLoad();
 const millSave = () => { try { localStorage.setItem('mudae-millores', JSON.stringify(M)); } catch (e) {} };
 const $id = id => document.getElementById(id);
+// A dalt d'Avui, una línia per targeta de Millores on ja pots pagar la primera compra recomanada; el botó porta a la targeta
+function millAlert(ready) {
+  const ul = $id('alertsList');
+  ul.querySelectorAll('.mill-ready').forEach(x => x.remove());
+  ul.insertAdjacentHTML('afterbegin', ready.map(([id, card, what, cost]) => `<li class="mill-ready"><span class="tag good">${esc(card)}</span>`
+    + `<span>${esc(T('Ja pots pagar: {what} ({cost})', { what, cost: fmtK(cost) }))}</span>`
+    + `<button type="button" class="go" data-goto="mill" data-at="${id}">${esc(T('Millores'))} →</button></li>`).join(''));
+  $id('alertsN').textContent = ul.children.length; $id('alertsBox').hidden = !ul.children.length;
+}
 function millDraw() {
   const k = M.k ?? null;
   $id('millSum').textContent = [k !== null ? T('Kakera: {n}', { n: fmtK(k) }) : '', M.sp != null ? T('Esferes: {n}', { n: fmtK(M.sp) }) : '']
@@ -1672,12 +1681,13 @@ function millDraw() {
   document.querySelectorAll('select[data-badge]').forEach(s => { s.value = String(M.b[s.dataset.badge] || 0); });
   // els preus, només del $k: cada servidor té els seus ($badgevalue)
   const lvl = Object.fromEntries(BADGES.map(([n]) => [n, M.b[n] || 0])), price = n => (M.bp && M.bp[n]) || null;
-  const next = [];
+  const next = [], ready = [];  // ready: el que ja pots pagar, per a l'avís d'Avui
   let sum = 0;
   for (const [n, l] of PLAN) {
     if (lvl[n] >= l || l !== lvl[n] + 1 || next.length >= 3) continue;
     const cost = price(n) && Math.round(price(n) * l * (lvl.Ruby >= 4 ? 0.75 : 1));
     if (cost) sum += cost;
+    if (!next.length && cost && k !== null && k >= cost) ready.push(['badgeBox', T('Insígnies'), `${n} ${['I', 'II', 'III', 'IV'][l - 1]}`, cost]);
     lvl[n] = l;
     next.push(`<li><button class="cmd" data-copy="$${n.toLowerCase()}">$${n.toLowerCase()}</button> <b>${esc(n)} ${['I', 'II', 'III', 'IV'][l - 1]}</b>` + (cost ? ` · ${fmtK(cost)}` : '')
       + (cost && k !== null ? ` <span class="tag ${k >= sum ? 'good' : ''}">${esc(k >= sum ? T('La pots pagar') : T('Et falten {n}', { n: fmtK(sum - k) }))}</span>` : '') + '</li>');
@@ -1700,6 +1710,7 @@ function millDraw() {
   let html = cost == null ? T('Torre {t} · pisos {n}/12 · per saber què costa el següent, marca els pisos que tens i enganxa el $kt (o escriu el preu base)', { t: tw + 1, n: M.f.length })
     : T('Torre {t} · pisos {n}/12 · el següent costa {c}', { t: tw + 1, n: M.f.length, c: fmtK(cost) });
   if (cost != null && k !== null) html += ' · ' + (k >= cost ? T('el pots pagar') : T('et falten {n}', { n: fmtK(cost - k) }));
+  if (cost != null && k !== null && k >= cost && tw < 100) ready.push(['towerBox', T('Torre'), rec ? '$build ' + rec : T('el pis següent'), cost]);
   html = esc(html);
   if (M.nf != null && M.nf !== built) html += '<br><span class="tag bad">' + esc(T('Segons el $kt tens {n} pisos: marca quins són a la llista', { n: M.nf })) + '</span>';
   if (rec) html += `<br>${esc(T('Recomanat:'))} <button class="cmd" data-copy="$build ${rec}">$build ${rec}</button>`;
@@ -1739,11 +1750,16 @@ function millDraw() {
     perkHtml = `<li><button class="cmd" data-copy="${esc('$or ' + name)}">${esc('$or ' + name)}</button> <b>${esc(T('Reemborsa les esferes'))}</b> · `
       + esc(T("et torna {b} de les {t} que hi has posat (perds el 10 %), també les de la millora 10", { b: fmtK(R.back), t: fmtK(R.total) })) + '</li>'
       + put10([name, ...cands].slice(0, Math.max(1, Math.min(4, Math.floor(budget / 1000)))), budget);
+    if (budget >= 1000) ready.push(['perkBox', T('Esferes'), '$or ' + name + ' · ' + T('Millora {n}', { n: 10 }), 1000]);
   } else {
-    perkHtml = buyList(nextBuys(M.opp.levels, often ? PORD : [10], perkMax, perkCost), ('$opp ' + M.opp.name).trim(), PDESC);
-    if (!perkHtml && !often)  // aquest ja té la 10: la 10, a uns altres, o, si ja la tenen tots, la botiga
+    const buys = nextBuys(M.opp.levels, often ? PORD : [10], perkMax, perkCost);
+    perkHtml = buyList(buys, ('$opp ' + M.opp.name).trim(), PDESC);
+    if (buys.length && M.sp >= buys[0].cost) ready.push(['perkBox', T('Esferes'), `${M.opp.name} · ${T('Millora {n}', { n: buys[0].n })} · LVL ${buys[0].l}`, buys[0].cost]);
+    if (!perkHtml && !often) {  // aquest ja té la 10: la 10, a uns altres, o, si ja la tenen tots, la botiga
       perkHtml = done10 ? li(T('Para de gastar en personatges que no et surten sovint: ara, la botiga d\'esferes ($os).'))
         : put10(cands) || li(T('Posa la millora 10 a un altre personatge teu que no regalaràs: $opp <personatge>.'));
+      if (!done10 && cands.length && M.sp >= 1000) ready.push(['perkBox', T('Esferes'), `${cands[0]} · ${T('Millora {n}', { n: 10 })}`, 1000]);
+    }
     perkHtml ||= li(T('Aquest personatge ja el tens millorat del tot.'));
   }
   if (M.opp) {  // per què
@@ -1772,10 +1788,13 @@ function millDraw() {
   // la 1-9 reforça aquella millora dels personatges, així que només si algun personatge teu la té; la 10, si en tens algun de millorat del tot.
   const opsLv = Object.values(M.opps || {});
   const useful = n => n === 2 || (n === 10 ? opsLv.some(lv => lv.every((v, i) => v >= perkMax(i + 1))) : opsLv.some(lv => lv[n - 1] > 0));
+  const shopBuys = M.shop ? cheapestBuys(M.shop, SORD.filter(useful), shopMax, shopCost) : [];
   $id('shopNext').innerHTML = (done10 ? li(T('Ara sí: la botiga. Et recomano només les que reforcen millores que ja tens als teus personatges.'))
       : '<li class="muted">' + esc(T('Encara no: abans, la millora 10 als teus personatges (en tens {n} de {t}). Cada 1.000 esferes et donen +20 cada dia, i gairebé tota la botiga només reforça les millores 1-9, que funcionen quan et surt el personatge.', { n: n10, t: goal10 })) + '</li>')
     + (!M.shop ? li(T('Enganxa el $os per veure-hi els nivells'))
-    : buyList(cheapestBuys(M.shop, SORD.filter(useful), shopMax, shopCost), '$os', SDESC) || li(T('Ja tens al màxim les que et serveixen. Les altres reforcen millores que cap personatge teu no té.')));
+    : buyList(shopBuys, '$os', SDESC) || li(T('Ja tens al màxim les que et serveixen. Les altres reforcen millores que cap personatge teu no té.')));
+  if (done10 && shopBuys.length && M.sp >= shopBuys[0].cost) ready.push(['shopBox', T("Botiga d'esferes"), `${T('Millora {n}', { n: shopBuys[0].n })} · LVL ${shopBuys[0].l}`, shopBuys[0].cost]);
+  millAlert(ready);
   if (window.pendDraw) pendDraw();
 }
 const millText = $id('millText'), millMsg = $id('millMsg');  // en enganxar-hi, ho llegeix pasteAll (la casella d'Avui)
@@ -2388,7 +2407,7 @@ def write_dashboard(d, hist):
   <table>{badge_rows}</table>
   <p class="muted" style="margin:0;font-size:13px">{T_("Primer, gastar menys poder per reacció (Gold IV) i el Ruby IV, que abaixa un 25 % el preu de totes les que queden; després, més tirades (Sapphire).")}</p>
  </div></details>
- <section class="panel"><div class="panel-head"><h2>{T_("Torre")}</h2><span class="muted" style="font-size:13px">$kt</span></div>
+ <section class="panel" id="towerBox"><div class="panel-head"><h2>{T_("Torre")}</h2><span class="muted" style="font-size:13px">$kt</span></div>
   <p class="clock" id="towerNext" style="margin:0"></p>
   <p class="muted" id="kakeraNext" style="margin:0;font-size:13px" hidden></p>
   <ul class="steps">{tower_rows}</ul>
@@ -2536,7 +2555,9 @@ go(first);
 // els avisos i les xifres del resum porten a la pestanya on es fa la feina
 document.addEventListener('click', ev => {{
   const b = ev.target.closest('[data-goto]'); if (!b) return;
-  go(b.dataset.goto); scrollTo({{ top: 0 }});
+  go(b.dataset.goto);
+  const at = b.dataset.at && document.getElementById(b.dataset.at);  // p. ex. la targeta de Millores que toca
+  at ? at.scrollIntoView({{ block: 'start' }}) : scrollTo({{ top: 0 }});
 }});
 // menú «···» de la capçalera: es tanca clicant fora, amb Esc o en triar-ne una opció
 const more = document.getElementById('more');
