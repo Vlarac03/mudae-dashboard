@@ -2479,9 +2479,10 @@ refaBtn.onclick = async () => {{
   refaBtn.disabled = true; toolMsg.textContent = T('Actualitzant…');
   try {{
     const j = await postJSON('/novetats'); if (!j.ok) throw j.error;
-    if (j.warn && confirm(T('Hi ha una versió nova del tauler a GitHub. La poso ara? Les teves dades no es toquen.'))) {{
-      toolMsg.textContent = T('Posant la versió nova…');
-      const u = await postJSON('/actualitza'); if (!u.ok) throw u.error;
+    const u = j.warn && confirm(T('Hi ha una versió nova del tauler a GitHub. La poso ara? Les teves dades no es toquen.'))
+      ? (toolMsg.textContent = T('Posant la versió nova…'), await postJSON('/actualitza')) : j;
+    if (!u.ok) throw u.error;
+    if (u.restart) {{
       await wait(3000);  // el servidor nou substitueix el vell: esperem que respongui
       for (let k = 0; k < 15; k++) try {{ await fetch('/ping', {{ cache: 'no-store' }}); break; }} catch (e) {{ await wait(1000); }}
     }}
@@ -3122,9 +3123,11 @@ def serve(port=PORT):
                 res = {"ok": True, "warn": warn} if r.returncode == 0 else {"ok": False, "error": err}
             except Exception as ex:
                 res = {"ok": False, "error": str(ex)}
+            # aquest servidor és codi vell (versió nova o git pull): n'engega un de nou, que li demanarà que plegui (com fa Actualitza.bat)
+            res["restart"] = (res["ok"] and str((DIR / "mudae.py").stat().st_mtime_ns) != VERSION
+                              and (self.path == "/actualitza" or self.path == "/novetats" and not res["warn"]))
             self.reply(res)
-            if self.path == "/actualitza" and res["ok"] and str((DIR / "mudae.py").stat().st_mtime_ns) != VERSION:
-                # aquest servidor és codi vell: n'engega un de nou, que li demanarà que plegui (com fa Actualitza.bat)
+            if res["restart"]:
                 subprocess.Popen([sys.executable, str(DIR / "mudae.py"), "tauler"], env={**os.environ, "MUDAE_SENSE_NAVEGADOR": "1"},
                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
