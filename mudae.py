@@ -1013,6 +1013,9 @@ details.panel { display:block; }
 .pend { grid-column:1 / -1; padding:10px 14px; border-radius:12px; background:var(--accent-soft); border:1px solid rgba(var(--acc-rgb),.3); font-size:13.5px; }
 .pend > b { color:var(--accent-ink); }
 .pend ul { margin:6px 0 0; padding:0; list-style:none; display:grid; gap:4px; }
+.pend.avisos { background:rgba(255,255,255,.03); border-color:var(--line); }
+.pend.avisos > b { color:var(--ink); }
+.pend.avisos .alerts { margin-top:8px; max-height:260px; }
 .paste-cmds { flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:40px; padding:6px 12px; font-size:12.5px;
   background:rgba(0,0,0,.22); border:1px solid var(--glass-b); border-radius:10px; }
 #pdSum { display:grid; gap:8px; }
@@ -1268,7 +1271,7 @@ ORDRES = [  # (grup, [(ordre, què fa)]): requadre «Ordres d'ús habitual» del
                             ("$d <sèrie>", "Treu una sèrie de les teves tirades"), ("$dl", "Les sèries que has tret de les tirades"),
                             ("$ad <sèrie>", "Torna a les teves tirades una sèrie que havies tret"), ("$qs full", "Desa una còpia de la wishlist i de les llistes")]),
     ("Intercanvis", [("$give @persona", "Regala personatges (separa'ls amb $)"), ("$trade @persona", "Intercanvi amb confirmació dels dos")]),
-    ("Esferes", [("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"), ("$oq", "Joc d'esferes"), ("$ot", "Joc d'esferes"),
+    ("Esferes", [("$oh", "Esferes (4 al dia)"), ("$oc", "Troba la vermella: fes servir l'ajudant"), ("$oq", "Troba 3 porpres: fes servir l'ajudant"), ("$ot", "Joc d'esferes"),
                  ("$opp <personatge>", "Millora un personatge amb esferes"), ("$opz", "Els teus personatges que tenen esferes"),
                  ("$or <personatge>", "Et torna les esferes d'un personatge (perds el 10 %)"), ("$os", "Botiga d'esferes: millores per a tots"),
                  ("$shoprefund", "Et torna les esferes de la botiga (cada 15 dies)"), ("$ohu", "Quan tornen les esferes i les millores")]),
@@ -2212,7 +2215,7 @@ def write_dashboard(d, hist):
         f'<details class="og fold" data-fold="ord-{e(g)}"{" data-open" if i == 0 else ""}><summary><h3>{e(t(g))}</h3><span class="muted">{len(items)}</span></summary><div class="fold-body">'
         + "".join(f'<div class="oline">{cmd_html(c)}<span>{e(t(desc))}</span></div>' for c, desc in items) + "</div></details>"
         for i, (g, items) in enumerate(ORDRES))
-    oc = f"oc.html?lang={LANG}"
+    oc, oq = f"oc.html?lang={LANG}", f"oq.html?lang={LANG}"
     need = ([["$mma+s", t("el teu harem, amb la sèrie de cada personatge")]] if not (DADES / "harem.txt").exists() else [])         + ([["$wl", t("la teva wishlist")]] if not (DADES / "wishlist.txt").exists() else [])         + ([["$imaso ", t("una sèrie que col·leccionis (o, a «Posar al dia», «Totes les teves sèries»)")]] if not series else [])
     # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
     all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
@@ -2287,15 +2290,17 @@ def write_dashboard(d, hist):
   <span id="tuMsg" role="status"></span>
   <div class="paste-cmds"><span class="muted">{T_("Copia l'ordre:")}</span> {paste_cmds}</div></div>
  <div class="pend" id="pend" hidden><b>{T_("Pendent!")}</b> <span class="muted">{T_("El tauler encara no sap això del teu servidor ni de tu. Copia cada ordre, envia-la a Mudae i enganxa'n la resposta a dalt:")}</span><ul id="pendList"></ul></div>
+ <div class="pend avisos" id="alertsBox"{"" if alerts else " hidden"}><b>{T_("Avisos")}</b> <span class="muted" id="alertsN">{len(alerts)}</span><ul class="alerts" id="alertsList">{"".join(alerts)}</ul></div>
 </section>
 <section class="panel today">
  <div class="today-head"><h2>{T_("Què toca ara")}</h2></div>
  {checklist}
 </section>
 <div class="g2">
- <section class="panel" id="alertsBox"{"" if alerts else " hidden"}><div class="panel-head"><h2>{T_("Avisos")}</h2><span class="muted" id="alertsN" style="font-size:13px">{len(alerts)}</span></div><ul class="alerts" id="alertsList">{"".join(alerts)}</ul></section>
  <details class="panel fold ocbox" id="ocFold" data-fold="oc"><summary><h2>{T_("Ajudant del $oc")}</h2><span class="muted" style="font-size:13px">{T_("Troba la vermella: fes servir l'ajudant")}</span></summary>
   <div class="fold-body"><a href="{oc}" style="font-size:13px">{T_("Obrir a part")}</a><iframe src="{oc}" title="{T_("Ajudant del $oc")}"></iframe></div></details>
+ <details class="panel fold ocbox" id="oqFold" data-fold="oq"><summary><h2>{T_("Ajudant del $oq")}</h2><span class="muted" style="font-size:13px">{T_("Troba 3 porpres: fes servir l'ajudant")}</span></summary>
+  <div class="fold-body"><a href="{oq}" style="font-size:13px">{T_("Obrir a part")}</a><iframe src="{oq}" title="{T_("Ajudant del $oq")}"></iframe></div></details>
 </div>
 </div>
 <div class="view" id="v-coll" role="tabpanel" hidden>
@@ -2912,7 +2917,7 @@ def mark_free(name):
         raise ValueError(t("No trobo «{name}» a cap de les teves sèries.", name=name))
 
 
-PUBLIC = {"/dashboard.html", "/oc.html"}  # l'únic que el servidor deixa veure
+PUBLIC = {"/dashboard.html", "/oc.html", "/oq.html"}  # l'únic que el servidor deixa veure
 PORT = 8766  # (el 8765 l'ocupaven servidors vells que no es podien tancar sols)
 VERSION = str(Path(__file__).stat().st_mtime_ns)  # canvia cada vegada que es modifica aquest fitxer
 IDLE_SECONDS = 150  # el tauler avisa cada 20 s; amb la pestanya en segon pla el navegador pot espaiar-ho fins a 1 min

@@ -8,7 +8,7 @@
 
 ![La pestanya Avui: xifres de la col·lecció, el rellotge de tirades i reclam, la casella per enganxar amb el requadre Pendent!, i què toca ara](assets/tauler.png)
 
-Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes el que t'envia Mudae i et porta les col·leccions, la wishlist i els intercanvis, et diu què toca fer a cada hora, t'ajuda amb el joc d'esferes `$oc` i et manté al dia un Excel. En català, castellà i anglès.
+Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes el que t'envia Mudae i et porta les col·leccions, la wishlist i els intercanvis, et diu què toca fer a cada hora, t'ajuda amb els jocs d'esferes `$oc` i `$oq` i et manté al dia un Excel. En català, castellà i anglès.
 
 ## Què fa
 
@@ -17,6 +17,7 @@ Un tauler que funciona al teu ordinador per al bot de Discord Mudae. Hi enganxes
 - **Què toca ara**: enganxes el `$tu` i la llista es marca sola, Pokéslot (`$p`) inclòs. Funciona com una cua: a «Ara» només hi ha el que pots fer, primer el més important (el reclam a dalt quan pots reclamar, després les tirades i la kakera de cada hora, el que és un cop al dia i els comodins que guardes per quan calguin: `$rt`, `$dk`), el que ja has fet s'amaga fins que el pots tornar a fer, i un requadre «Estat» et diu sí o no del reclam, les tirades, la kakera (amb quantes reaccions et dona el poder), el Pokéslot, el `$rt` i el `$dk`, i quan torna cada cosa (`$daily` i `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a mitjanit UTC, tirades al minut del teu servidor…). El minut de les tirades i el pròxim reclam surten del `$tu`, cada quant hi ha reclam del `$settings` i les hores del `$rt` del `$bonus`.
 - **Notificacions**: mentre el tauler és obert, t'avisa quan tornes a tenir tirades (i et diu si pots reclamar i reaccionar a kakera), i quan tornes a tenir el reclam, el `$daily`, el `$vote`, el `$dk`, el `$rt` o el `$p`. Fan un so i es queden a la pantalla fins que les tanques. S'activen i es desactiven amb el botó **Notificacions** de dalt.
 - **Ajudant del `$oc`**: marques els colors que surten i et diu quina casella clicar per trobar la vermella. És plegat a la pestanya Avui: s'obre amb un clic.
+- **Ajudant del `$oq`**: marques els colors que surten (cadascun diu quantes porpres toca) i et mostra les possibilitats de porpra de cada casella amagada i quina clicar per trobar-ne 3. Plegat al costat de l'ajudant del `$oc`.
 - **Col·leccions**: un àlbum per sèrie amb els teus personatges, els lliures, els de la wishlist i els d'altres jugadors (i de qui són). Cliques els que aconsegueixes per marcar-los com a teus.
 - **Col·leccions especials**: un grup que tries tu, encara que no sigui una sèrie de Mudae (per exemple, els Eevee de la Pokédex). Escrius el nom i els personatges, i el `$imaso` de la sèrie d'on surten t'hi posa de qui és cada un.
 - **Pokédex**: enganxes el `$pd sumrare` (un sol missatge) i veus quants Pokémon tens de cada raresa. Si enganxes el missatge del temps que falta per al pròxim `$p`, es marca la tasca del Pokéslot.
@@ -87,6 +88,7 @@ El tauler no es connecta a Discord ni a Mudae i no demana cap compte. Només lle
 - `mudae.py`: tot el programa, amb la llibreria estàndard de Python i openpyxl. Llegeix `dades/`, escriu l'Excel i `dashboard.html`, i fa de servidor local.
 - `i18n.py`: els textos en castellà i anglès (el català fa de clau).
 - `oc.html`: l'ajudant del `$oc`, sense dependències.
+- `oq.html`: l'ajudant del `$oq`, sense dependències.
 - `lib/`: openpyxl i et_xmlfile, inclosos perquè funcioni sense `pip install`.
 - `Configura.bat` / `Actualitza.bat`: la primera configuració i l'accés directe.
 

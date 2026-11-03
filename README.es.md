@@ -8,7 +8,7 @@
 
 ![La pestaña Hoy: cifras de la colección, el reloj de tiradas y reclamo, la casilla para pegar con el recuadro ¡Pendiente!, y qué toca ahora](assets/tauler.png)
 
-Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que te envía Mudae y te lleva las colecciones, la wishlist y los intercambios, te dice qué toca hacer cada hora, te ayuda con el juego de esferas `$oc` y te mantiene al día un Excel. En español, catalán e inglés.
+Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que te envía Mudae y te lleva las colecciones, la wishlist y los intercambios, te dice qué toca hacer cada hora, te ayuda con los juegos de esferas `$oc` y `$oq` y te mantiene al día un Excel. En español, catalán e inglés.
 
 ## Qué hace
 
@@ -17,6 +17,7 @@ Un panel que funciona en tu ordenador para el bot de Discord Mudae. Pegas lo que
 - **Qué toca ahora**: pegas el `$tu` y la lista se marca sola, Pokéslot (`$p`) incluido. Funciona como una cola: en «Ahora» solo está lo que puedes hacer, primero lo más importante (el reclamo arriba cuando puedes reclamar, luego las tiradas y el kakera de cada hora, lo que es una vez al día y los comodines que guardas para cuando hagan falta: `$rt`, `$dk`), lo que ya has hecho se esconde hasta que lo puedes volver a hacer, y un recuadro «Estado» te dice sí o no del reclamo, las tiradas, el kakera (con cuántas reacciones te da el poder), el Pokéslot, el `$rt` y el `$dk`, y cuándo vuelve cada cosa (`$daily` y `$dk` cada 20 h, `$vote` cada 12 h, `$oh` a medianoche UTC, tiradas en el minuto de tu servidor…). El minuto de las tiradas y el próximo reclamo salen del `$tu`, cada cuánto hay reclamo del `$settings` y las horas del `$rt` del `$bonus`.
 - **Notificaciones**: mientras el panel está abierto, te avisa cuando vuelves a tener tiradas (y te dice si puedes reclamar y reaccionar a kakera), y cuando vuelves a tener el reclamo, el `$daily`, el `$vote`, el `$dk`, el `$rt` o el `$p`. Suenan y se quedan en pantalla hasta que las cierras. Se activan y se desactivan con el botón **Notificaciones** de arriba.
 - **Ayudante del `$oc`**: marcas los colores que salen y te dice en qué casilla hacer clic para encontrar la roja. Está plegado en la pestaña Hoy: se abre con un clic.
+- **Ayudante del `$oq`**: marcas los colores que salen (cada uno dice cuántas púrpuras toca) y te muestra las posibilidades de púrpura de cada casilla oculta y en cuál hacer clic para encontrar 3 púrpuras. Plegado al lado del ayudante del `$oc`.
 - **Colecciones**: un álbum por serie con tus personajes, los libres, los de la wishlist y los de otros jugadores (y de quién son). Haces clic en los que consigues para marcarlos como tuyos.
 - **Colecciones especiales**: un grupo que eliges tú, aunque no sea una serie de Mudae (por ejemplo, los Eevee de la Pokédex). Escribes el nombre y los personajes, y el `$imaso` de la serie de la que salen te pone de quién es cada uno.
 - **Pokédex**: pegas el `$pd sumrare` (un solo mensaje) y ves cuántos Pokémon tienes de cada rareza. Si pegas el mensaje del tiempo que falta para el próximo `$p`, se marca la tarea del Pokéslot.
@@ -87,6 +88,7 @@ El panel no se conecta a Discord ni a Mudae y no pide ninguna cuenta. Solo lee l
 - `mudae.py`: todo el programa, con la librería estándar de Python y openpyxl. Lee `dades/`, escribe el Excel y `dashboard.html`, y hace de servidor local.
 - `i18n.py`: los textos en español e inglés (el catalán hace de clave).
 - `oc.html`: el ayudante del `$oc`, sin dependencias.
+- `oq.html`: el ayudante del `$oq`, sin dependencias.
 - `lib/`: openpyxl y et_xmlfile, incluidos para que funcione sin `pip install`.
 - `Configura.bat` / `Actualitza.bat`: la primera configuración y el acceso directo.
 

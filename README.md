@@ -8,7 +8,7 @@
 
 ![The Today tab: collection stats, the roll and claim clock, the paste box with its To do! list, and what to do now](assets/tauler.png)
 
-A dashboard that runs on your own computer for the Mudae Discord bot. You paste what Mudae sends you and it tracks your collections, wishlist and trades, tells you what to do each hour, helps you with the `$oc` sphere game and keeps an Excel workbook up to date. Available in English, Catalan and Spanish.
+A dashboard that runs on your own computer for the Mudae Discord bot. You paste what Mudae sends you and it tracks your collections, wishlist and trades, tells you what to do each hour, helps you with the `$oc` and `$oq` sphere games and keeps an Excel workbook up to date. Available in English, Catalan and Spanish.
 
 ## Features
 
@@ -17,6 +17,7 @@ A dashboard that runs on your own computer for the Mudae Discord bot. You paste 
 - **What to do now**: paste your `$tu` and the checklist ticks itself, Pokéslot (`$p`) included. It works like a queue: «Now» shows only what you can do, most important first (the claim on top when you can claim, then the hourly rolls and kakera, then once-a-day tasks and the spares you keep for when you need them: `$rt`, `$dk`), what you've done hides until you can do it again, and a «Status» box says yes or no for claim, rolls, kakera (with how many reactions your power gives), Pokéslot, `$rt` and `$dk`, and when each comes back (`$daily` and `$dk` every 20 h, `$vote` every 12 h, `$oh` at midnight UTC, rolls at your server's minute…). The roll minute and the next claim come from your `$tu`, how often claims reset from `$settings`, and the `$rt` hours from `$bonus`.
 - **Notifications**: while the dashboard is open, it tells you when your rolls are back (and whether you can claim and react to kakera), and when your claim, `$daily`, `$vote`, `$dk`, `$rt` or `$p` are ready again. They beep and stay on screen until you close them. Turn them on and off with the **Notifications** button at the top.
 - **`$oc` helper**: mark the colors that appear and it tells you which square to click to find the red sphere. It's folded on the Today tab: open it with a click.
+- **`$oq` helper**: mark the colors that appear (each one says how many purple spheres it touches) and it shows the chance of purple on every hidden square and which one to click to find 3 purple ones. Folded next to the `$oc` helper.
 - **Collections**: one album per series with your characters, the free ones, the ones on your wishlist and the ones other players own (and who). Click the ones you get to mark them as yours.
 - **Custom collections**: a group you pick, even if it isn't a Mudae series (for example, the Eevees from the Pokédex). Type its name and characters, and the `$imaso` of the series they come from fills in who owns each one.
 - **Pokédex**: paste your `$pd sumrare` (one message) and see how many Pokémon you have of each rarity. Pasting the «time left before your next `$p`» message ticks the Pokéslot task.
@@ -87,6 +88,7 @@ The dashboard doesn't connect to Discord or Mudae and doesn't need an account. I
 - `mudae.py`: the whole program, using the Python standard library and openpyxl. Reads `dades/`, writes the Excel file and `dashboard.html`, and runs the local server.
 - `i18n.py`: Spanish and English texts (the Catalan text is the key).
 - `oc.html`: the `$oc` helper, with no dependencies.
+- `oq.html`: the `$oq` helper, with no dependencies.
 - `lib/`: openpyxl and et_xmlfile, bundled so it works without `pip install`.
 - `Configura.bat` / `Actualitza.bat`: first-time setup and the desktop shortcut.
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "dist" / "Mudae-dashboard.zip"
-FILES = ["mudae.py", "i18n.py", "oc.html", "Actualitza.bat", "Configura.bat", "README.md", "README.ca.md", "README.es.md", "LICENSE",
+FILES = ["mudae.py", "i18n.py", "oc.html", "oq.html", "Actualitza.bat", "Configura.bat", "README.md", "README.ca.md", "README.es.md", "LICENSE",
          "icones/tauler.ico", "assets/icona-256.png", "assets/tauler.png", "assets/col-leccions.png", "assets/cercador.png"]
 PERSONAL = (".xlsx", "dashboard.html", "harem.txt", "wishlist.txt", "config.json", "historial.csv", "actualitzat.json",
             "series-sobrants.json", "especials.json", "mudae.ico", "hypixel")
