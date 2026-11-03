@@ -10,7 +10,8 @@
 * { box-sizing:border-box; }
 body { margin:0; background:linear-gradient(160deg,#161a28 0%,#0f1017 45%,#0c0d12 100%) fixed; color:var(--ink); font:15px/1.5 var(--f-body); }
 main { max-width:520px; margin:0 auto; padding-block:24px 40px;
-  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:14px; }
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:14px;
+  grid-template-columns:minmax(0,1fr); }  /* sense això, les caselles quadrades fan la columna més ampla que la pàgina */
 h1 { font:700 24px var(--f-display); margin:0; }
 p { margin:0; color:var(--ink-2); }
 a { color:var(--accent-ink); }

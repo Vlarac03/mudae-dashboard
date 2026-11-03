@@ -10,7 +10,8 @@
 * { box-sizing:border-box; }
 body { margin:0; background:linear-gradient(160deg,#161a28 0%,#0f1017 45%,#0c0d12 100%) fixed; color:var(--ink); font:15px/1.5 var(--f-body); }
 main { max-width:520px; margin:0 auto; padding-block:24px 40px;
-  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:14px; }
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:14px;
+  grid-template-columns:minmax(0,1fr); }  /* sense això, les caselles quadrades fan la columna més ampla que la pàgina */
 h1 { font:700 24px var(--f-display); margin:0; }
 p { margin:0; color:var(--ink-2); }
 a { color:var(--accent-ink); }
@@ -37,7 +38,7 @@ button { touch-action:manipulation; }
 </style>
 <script>if (window.self !== window.top) document.documentElement.classList.add('framed');</script></head><body><main>
 <h1 data-i18n="title">Ajudant del $oq</h1>
-<p data-i18n="intro">Clica una casella a Mudae, tria aquí el color que ha sortit i clica la mateixa casella. Cada casella amagada diu les possibilitats que sigui porpra; la gruixuda és la que et recomano clicar.</p>
+<p data-i18n="intro">Clica una casella a Mudae i marca aquí el color que hi surt. Cada casella diu el % que sigui porpra; la gruixuda és la que et recomano clicar.</p>
 <div class="palette" id="pal"></div>
 <div class="grid" id="grid"></div>
 <div id="msg" role="status" aria-live="polite"></div>
@@ -81,7 +82,7 @@ if (typeof module !== 'undefined') module.exports = { solutions, best };
 // Textos: ?lang=ca, es o en (el tauler hi posa el de config.json); sense res, en anglès
 const L = {
   es: {
-    title: 'Ayudante del $oq', intro: 'Haz clic en una casilla en Mudae, elige aquí el color que ha salido y haz clic en la misma casilla. Cada casilla oculta dice las posibilidades de que sea púrpura; la del borde grueso es la que te recomiendo.',
+    title: 'Ayudante del $oq', intro: 'Haz clic en una casilla en Mudae y marca aquí su color. Cada casilla dice el % de que sea púrpura; la gruesa es la que te recomiendo.',
     reset: 'Nueva partida', back: 'Volver al panel', click: 'CLIC', row: 'f', col: 'c',
     rules: 'Reglas: hay 4 púrpuras. Cada color dice cuántas púrpuras toca (las 8 casillas de alrededor): azul 0, turquesa 1, verde 2, amarilla 3, naranja 4. Hacer clic en una púrpura no gasta clic. Con 3 púrpuras encontradas, la 4.ª se vuelve roja o mejor.',
     blue: 'Azul', teal: 'Turquesa', green: 'Verde', yellow: 'Amarilla', orange: 'Naranja', purple: 'Púrpura', clear: 'Borrar',
@@ -90,7 +91,7 @@ const L = {
     last: '¡Ya tienes 3! La 4.ª, ahora roja o mejor, está en <b>{c}</b>.', lastMaybe: '¡Ya tienes 3! La 4.ª puede estar en {n} casillas: prueba <b>{c}</b> ({p} %).',
     done: '¡Las has encontrado todas!', left: 'Te quedan {n} púrpuras por encontrar.' },
   en: {
-    title: '$oq helper', intro: 'Click a square in Mudae, pick the color that appeared here and click the same square. Each hidden square shows the chance that it is purple; the thick one is the square I recommend.',
+    title: '$oq helper', intro: 'Click a square in Mudae and mark its color here. Each square shows the chance that it is purple; the thick one is the square I recommend.',
     reset: 'New game', back: 'Back to the dashboard', click: 'CLICK', row: 'r', col: 'c',
     rules: 'Rules: there are 4 purple ones. Each color says how many purple ones it touches (the 8 squares around it): blue 0, teal 1, green 2, yellow 3, orange 4. Clicking a purple one does not use a click. Once you find 3, the 4th turns red or better.',
     blue: 'Blue', teal: 'Teal', green: 'Green', yellow: 'Yellow', orange: 'Orange', purple: 'Purple', clear: 'Clear',

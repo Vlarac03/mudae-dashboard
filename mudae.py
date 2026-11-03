@@ -2542,6 +2542,7 @@ function go(v, focus) {{
   }});
   try {{ localStorage.setItem('mudae-vista', v); }} catch (err) {{}}
   if (window.onVista) onVista(v);
+  if (v === 'avui') alignHelpers();
 }}
 tabs.forEach((b, i) => {{
   b.onclick = () => go(b.dataset.go);
@@ -2559,6 +2560,21 @@ document.addEventListener('click', ev => {{
   const at = b.dataset.at && document.getElementById(b.dataset.at);  // p. ex. la targeta de Millores que toca
   at ? at.scrollIntoView({{ block: 'start' }}) : scrollTo({{ top: 0 }});
 }});
+// Ajudants del $oc i del $oq de costat: les dues taules a la mateixa altura, encara que el text o els colors de dalt facin més línies en un
+function alignHelpers() {{
+  const fr = ['ocFold', 'oqFold'].map(id => document.querySelector('#' + id + ' iframe'));
+  let gs; try {{ gs = fr.map(f => f.contentDocument && f.contentDocument.getElementById('grid')); }} catch (err) {{ return; }}
+  if (gs.some(g => !g)) return;
+  gs.forEach(g => {{ g.style.marginTop = ''; }});
+  const r = fr.map(f => f.getBoundingClientRect());
+  if (r.some(x => !x.height) || Math.abs(r[0].top - r[1].top) > 2) return;  // un de plegat, o l'un sota l'altre
+  const top = gs.map((g, i) => r[i].top + g.getBoundingClientRect().top), d = top[0] - top[1];
+  if (Math.abs(d) > 1) gs[d > 0 ? 1 : 0].style.marginTop = Math.abs(d) + 'px';
+}}
+document.querySelectorAll('#ocFold iframe, #oqFold iframe').forEach(f => f.addEventListener('load', alignHelpers));
+document.querySelectorAll('#ocFold, #oqFold').forEach(x => x.addEventListener('toggle', alignHelpers));
+addEventListener('resize', alignHelpers);
+alignHelpers();
 // menú «···» de la capçalera: es tanca clicant fora, amb Esc o en triar-ne una opció
 const more = document.getElementById('more');
 document.addEventListener('click', ev => {{ if (more.open && (!more.contains(ev.target) || ev.target.closest('.menu button'))) more.open = false; }});
