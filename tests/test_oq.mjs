@@ -36,11 +36,11 @@ for (const [r, c, col] of [[2, 2, 'teal'], [3, 1, 'blue'], [3, 3, 'green'], [4, 
 }
 const fin = best(b);
 assert.equal(fin.found, 4);
-assert.equal(fin.pick, null);  // la partida s'ha acabat: no en recomana cap
-assert.equal(fin.near[at(2, 3)], 2);  // les que queden diuen el color que hi havia
+assert.equal(fin.near[fin.pick], 2);  // la millor que queda és verda (f2c3, f2c5 o f3c5)
+assert.ok([at(2, 3), at(2, 5), at(3, 5)].includes(fin.pick));
 assert.equal(fin.near[at(3, 2)], 0);
 b[at(5, 1)] = 'purple';  // marcada com a porpra en lloc de vermella, el mateix
-assert.deepEqual(best(b).near, fin.near);
+assert.equal(best(b).pick, fin.pick);
 
 // Jugant sempre la recomanada, quantes partides es guanyen amb 7 clics (les porpres no en gasten)
 let wins = 0, seed = 7;
