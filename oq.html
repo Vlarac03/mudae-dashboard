@@ -43,12 +43,13 @@ button { touch-action:manipulation; }
 <div class="grid" id="grid"></div>
 <div id="msg" role="status" aria-live="polite"></div>
 <div class="row"><button id="reset" data-i18n="reset">Nova partida</button><a class="back" href="dashboard.html" data-i18n="back">Tornar al tauler</a></div>
-<p class="legend" data-i18n="rules">Regles: hi ha 4 porpres. Cada color diu quantes porpres toca (les 8 caselles del voltant): blava 0, turquesa 1, verda 2, groga 3, taronja 4. Clicar una porpra no gasta clic. Amb 3 porpres trobades, la 4a es torna vermella o millor.</p>
+<p class="legend" data-i18n="rules">Regles: hi ha 4 porpres. Cada color diu quantes porpres toca (les 8 caselles del voltant): blava 0, turquesa 1, verda 2, groga 3, taronja 4. Clicar una porpra no gasta clic. Amb 3 porpres trobades, la 4a es torna vermella o millor: marca-la amb «Vermella» i et dic quina clicar amb els clics que et quedin.</p>
 <p class="legend back">Developed by <a href="https://github.com/Vlarac03">Vlarac</a></p>
 
 <script id="logic">
-// Pescamines 5x5 amb 4 porpres. Casella: null (amagada), 'purple' o un color que diu quantes porpres toca.
+// Pescamines 5x5 amb 4 porpres. Casella: null (amagada), 'purple', 'red' (la 4a porpra, quan ja en tens 3) o un color que diu quantes porpres toca.
 const N = 5, PURPLES = 4, COUNT = { blue: 0, teal: 1, green: 2, yellow: 3, orange: 4 };
+const isP = col => col === 'purple' || col === 'red';
 const NB = [...Array(N * N).keys()].map(i => [...Array(N * N).keys()].filter(j =>
   j !== i && Math.abs(Math.floor(i / N) - Math.floor(j / N)) <= 1 && Math.abs(i % N - j % N) <= 1));
 // Totes les maneres de posar les 4 porpres que encaixen amb el que has vist (12.650 en total: es poden mirar totes)
@@ -56,15 +57,22 @@ function solutions(board) {
   const out = [];
   for (let a = 0; a < 25; a++) for (let b = a + 1; b < 25; b++) for (let c = b + 1; c < 25; c++) for (let d = c + 1; d < 25; d++) {
     const s = new Set([a, b, c, d]);
-    if (board.every((col, i) => !col || (col === 'purple' ? s.has(i) : !s.has(i) && NB[i].filter(j => s.has(j)).length === COUNT[col]))) out.push(s);
+    if (board.every((col, i) => !col || (isP(col) ? s.has(i) : !s.has(i) && NB[i].filter(j => s.has(j)).length === COUNT[col]))) out.push(s);
   }
   return out;
 }
 // Possibilitat de porpra de cada casella amagada, i quina clicar: la més probable (una porpra no gasta clic);
 // a igualtat, la que més t'ensenya (deixa menys combinacions de mitjana, segons el color que hi surti)
 function best(board) {
-  const sols = solutions(board);
-  const prob = board.map((col, i) => col ? null : sols.length ? sols.filter(s => s.has(i)).length / sols.length : 0);
+  const sols = solutions(board), found = board.filter(isP).length;
+  // Totes trobades: cada casella amagada ja té el color segur (les porpres que toca); la que en toca més dona més esferes
+  if (found >= PURPLES && sols.length) {
+    const near = board.map((col, i) => col ? null : NB[i].filter(j => sols[0].has(j)).length);
+    let pick = null;
+    near.forEach((n, i) => { if (n != null && (pick == null || n > near[pick])) pick = i; });
+    return { sols: sols.length, prob: board.map(col => col ? null : 0), near, pick, found };
+  }
+  const prob =board.map((col, i) => col ? null : sols.length ? sols.filter(s => s.has(i)).length / sols.length : 0);
   let pick = null, top = -1, info = Infinity;
   board.forEach((col, i) => {
     if (col) return;
@@ -73,7 +81,7 @@ function best(board) {
     const e = Object.values(groups).reduce((a, n) => a + n * n, 0) / (sols.length || 1);
     if (prob[i] > top + 1e-9 || (Math.abs(prob[i] - top) <= 1e-9 && e < info)) { pick = i; top = prob[i]; info = e; }
   });
-  return { sols: sols.length, prob, pick, found: board.filter(c => c === 'purple').length };
+  return { sols: sols.length, prob, pick, found };
 }
 if (typeof module !== 'undefined') module.exports = { solutions, best };
 </script>
@@ -84,27 +92,27 @@ const L = {
   es: {
     title: 'Ayudante del $oq', intro: 'Haz clic en una casilla en Mudae y marca aquí su color. Cada casilla dice el % de que sea púrpura; la gruesa es la que te recomiendo.',
     reset: 'Nueva partida', back: 'Volver al panel', click: 'CLIC', row: 'f', col: 'c',
-    rules: 'Reglas: hay 4 púrpuras. Cada color dice cuántas púrpuras toca (las 8 casillas de alrededor): azul 0, turquesa 1, verde 2, amarilla 3, naranja 4. Hacer clic en una púrpura no gasta clic. Con 3 púrpuras encontradas, la 4.ª se vuelve roja o mejor.',
-    blue: 'Azul', teal: 'Turquesa', green: 'Verde', yellow: 'Amarilla', orange: 'Naranja', purple: 'Púrpura', clear: 'Borrar',
+    rules: 'Reglas: hay 4 púrpuras. Cada color dice cuántas púrpuras toca (las 8 casillas de alrededor): azul 0, turquesa 1, verde 2, amarilla 3, naranja 4. Hacer clic en una púrpura no gasta clic. Con 3 púrpuras encontradas, la 4.ª se vuelve roja o mejor: márcala con «Roja» y te digo cuál pulsar con los clics que te queden.',
+    blue: 'Azul', teal: 'Turquesa', green: 'Verde', yellow: 'Amarilla', orange: 'Naranja', purple: 'Púrpura', red: 'Roja', clear: 'Borrar',
     start: 'Haz clic en <b>{c}</b> en Mudae y marca aquí el color que salga.', none: 'Ninguna combinación encaja: revisa los colores que has marcado.',
     sure: 'Seguro que es púrpura: <b>{c}</b>. ¡Haz clic! (no gasta clic)', many: 'Haz clic en <b>{c}</b>: {p} % de que sea púrpura.',
     last: '¡Ya tienes 3! La 4.ª, ahora roja o mejor, está en <b>{c}</b>.', lastMaybe: '¡Ya tienes 3! La 4.ª puede estar en {n} casillas: prueba <b>{c}</b> ({p} %).',
-    done: '¡Las has encontrado todas!', left: 'Te quedan {n} púrpuras por encontrar.' },
+    done: '¡Las has encontrado todas!', after: '¡Ya las tienes todas! Cada casilla dice el color que saldrá: haz clic en <b>{c}</b> ({col}), la que da más.', left: 'Te quedan {n} púrpuras por encontrar.' },
   en: {
     title: '$oq helper', intro: 'Click a square in Mudae and mark its color here. Each square shows the chance that it is purple; the thick one is the square I recommend.',
     reset: 'New game', back: 'Back to the dashboard', click: 'CLICK', row: 'r', col: 'c',
-    rules: 'Rules: there are 4 purple ones. Each color says how many purple ones it touches (the 8 squares around it): blue 0, teal 1, green 2, yellow 3, orange 4. Clicking a purple one does not use a click. Once you find 3, the 4th turns red or better.',
-    blue: 'Blue', teal: 'Teal', green: 'Green', yellow: 'Yellow', orange: 'Orange', purple: 'Purple', clear: 'Clear',
+    rules: 'Rules: there are 4 purple ones. Each color says how many purple ones it touches (the 8 squares around it): blue 0, teal 1, green 2, yellow 3, orange 4. Clicking a purple one does not use a click. Once you find 3, the 4th turns red or better: mark it as “Red” and I will tell you which square to click with the clicks you have left.',
+    blue: 'Blue', teal: 'Teal', green: 'Green', yellow: 'Yellow', orange: 'Orange', purple: 'Purple', red: 'Red', clear: 'Clear',
     start: 'Click <b>{c}</b> in Mudae and mark the color that appears here.', none: 'No layout fits: check the colors you marked.',
     sure: 'Surely purple: <b>{c}</b>. Click it! (free click)', many: 'Click <b>{c}</b>: {p}% chance of purple.',
     last: 'You have 3! The 4th, now red or better, is at <b>{c}</b>.', lastMaybe: 'You have 3! The 4th can be in {n} squares: try <b>{c}</b> ({p}%).',
-    done: 'You found them all!', left: '{n} purple ones left to find.' },
+    done: 'You found them all!', after: 'You have them all! Each square shows the color it will be: click <b>{c}</b> ({col}), the one worth the most.', left: '{n} purple ones left to find.' },
   ca: {
-    click: 'CLICA', row: 'f', col: 'c', blue: 'Blava', teal: 'Turquesa', green: 'Verda', yellow: 'Groga', orange: 'Taronja', purple: 'Porpra', clear: 'Esborrar',
+    click: 'CLICA', row: 'f', col: 'c', blue: 'Blava', teal: 'Turquesa', green: 'Verda', yellow: 'Groga', orange: 'Taronja', purple: 'Porpra', red: 'Vermella', clear: 'Esborrar',
     start: 'Clica <b>{c}</b> a Mudae i marca aquí el color que hi surti.', none: 'Cap combinació encaixa: revisa els colors que has marcat.',
     sure: 'Segur que és porpra: <b>{c}</b>. Clica-la! (no gasta clic)', many: 'Clica <b>{c}</b>: {p} % que sigui porpra.',
     last: 'Ja en tens 3! La 4a, ara vermella o millor, és a <b>{c}</b>.', lastMaybe: 'Ja en tens 3! La 4a pot ser en {n} caselles: prova <b>{c}</b> ({p} %).',
-    done: 'Les has trobades totes!', left: 'Et queden {n} porpres per trobar.' },
+    done: 'Les has trobades totes!', after: 'Ja les tens totes! Cada casella diu el color que hi sortirà: clica <b>{c}</b> ({col}), la que dona més.', left: 'Et queden {n} porpres per trobar.' },
 };
 const LANG = typeof location !== 'undefined' && new URLSearchParams(location.search).get('lang') in L ? new URLSearchParams(location.search).get('lang') : 'en';
 const T = (k, v) => { let r = L[LANG][k] ?? L.ca[k] ?? k; for (const x in v || {}) r = r.split('{' + x + '}').join(v[x]); return r; };
@@ -112,7 +120,7 @@ if (typeof document !== 'undefined') {
   document.documentElement.lang = LANG;
   document.querySelectorAll('[data-i18n]').forEach(el => { if (L[LANG][el.dataset.i18n]) el.textContent = L[LANG][el.dataset.i18n]; });
   const COLORS = [['blue', T('blue') + ' 0', '#3a5fcd'], ['teal', T('teal') + ' 1', '#1baf9a'], ['green', T('green') + ' 2', '#2e9e3e'], ['yellow', T('yellow') + ' 3', '#e0b000'],
-                  ['orange', T('orange') + ' 4', '#eb6834'], ['purple', T('purple'), '#8e44c9'], [null, T('clear'), 'transparent']];
+                  ['orange', T('orange') + ' 4', '#eb6834'], ['purple', T('purple'), '#8e44c9'], ['red', T('red'), '#d0302b'], [null, T('clear'), 'transparent']];
   const name = i => `${T('row')}${Math.floor(i / 5) + 1} ${T('col')}${i % 5 + 1}`;
   const pc = x => Math.round(x * 100);
   let board = Array(25).fill(null), current = 'blue';
@@ -137,11 +145,13 @@ if (typeof document !== 'undefined') {
     [...grid.children].forEach((c, i) => {
       const col = COLORS.find(x => x[0] === board[i]);
       c.style.background = board[i] ? col[2] : '';
-      c.textContent = board[i] ? '' : seen ? pc(res.prob[i]) + '%' : name(i);
-      c.className = 'cell' + (!board[i] && seen && res.prob[i] > 0 ? ' cand' : '') + (i === res.pick && res.found < PURPLES && res.sols ? ' best' : '');
+      const will = res.near && res.near[i] != null ? COLORS[res.near[i]] : null;  // color segur quan ja les tens totes
+      c.style.borderColor = will ? will[2] : '';
+      c.textContent = board[i] ? '' : will ? T(will[0]) : seen ? pc(res.prob[i]) + '%' : name(i);
+      c.className = 'cell' + (!board[i] && !will && seen && res.prob[i] > 0 ? ' cand' : '') + (i === res.pick && res.sols ? ' best' : '');
     });
-    if (res.found >= PURPLES) msg.textContent = T('done');
-    else if (!res.sols) msg.textContent = T('none');
+    if (!res.sols) msg.textContent = T('none');
+    else if (res.found >= PURPLES) msg.innerHTML = res.pick == null ? T('done') : T('after', { c: name(res.pick), col: T(COLORS[res.near[res.pick]][0]) });
     else if (!seen) msg.innerHTML = T('start', { c: name(res.pick) });
     else if (res.found === PURPLES - 1) msg.innerHTML = p === 1 ? T('last', { c: name(res.pick) }) : T('lastMaybe', { n: live, c: name(res.pick), p: pc(p) });
     else msg.innerHTML = (p === 1 ? T('sure', { c: name(res.pick) }) : T('many', { c: name(res.pick), p: pc(p) }))

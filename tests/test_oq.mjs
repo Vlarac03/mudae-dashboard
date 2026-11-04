@@ -27,6 +27,21 @@ assert.ok(solutions(b).some(s => PUR.every(p => s.has(p))));
 assert.equal(res.prob[at(5, 4)], 1);  // amb això, la f5c4 era segur porpra
 assert.equal(res.prob[at(5, 4)], Math.max(...res.prob.filter(x => x != null)));
 
+// Partida de Victor (04/11/2026): 3 porpres i la vermella (la 4a, que compta com a porpra per als colors)
+const P2 = [at(1, 1), at(2, 4), at(3, 4), at(5, 1)];
+b = Array(25).fill(null);
+for (const [r, c, col] of [[2, 2, 'teal'], [3, 1, 'blue'], [3, 3, 'green'], [4, 2, 'teal'], [1, 1, 'purple'], [2, 4, 'purple'], [3, 4, 'purple'], [5, 1, 'red']]) {
+  assert.equal(color(at(r, c), P2).replace('purple', at(r, c) === at(5, 1) ? 'red' : 'purple'), col);
+  b[at(r, c)] = col;
+}
+const fin = best(b);
+assert.equal(fin.found, 4);
+assert.equal(fin.near[fin.pick], 2);  // la millor que queda és verda (f2c3, f2c5 o f3c5)
+assert.ok([at(2, 3), at(2, 5), at(3, 5)].includes(fin.pick));
+assert.equal(fin.near[at(3, 2)], 0);
+b[at(5, 1)] = 'purple';  // marcada com a porpra en lloc de vermella, el mateix
+assert.equal(best(b).pick, fin.pick);
+
 // Jugant sempre la recomanada, quantes partides es guanyen amb 7 clics (les porpres no en gasten)
 let wins = 0, seed = 7;
 const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
