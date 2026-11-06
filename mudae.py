@@ -1741,9 +1741,16 @@ function millDraw() {
   const mineColl = typeof COLL === 'undefined' ? [] : Object.values(COLL).flat().filter(c => c.st === 'Meu').map(c => c.n);
   // fins on la 10: a tots els personatges de les teves col·leccions, i com a molt a 100 (després en dona 8). Llavors, para i passa a la botiga.
   const keepers = new Set(mineColl).size, goal10 = Math.min(100, keepers || 100), done10 = n10 >= goal10;
-  const cands = [...new Set(mineColl)].filter(n => !has10.includes(n) && n !== (M.opp && M.opp.name)).sort((a, b) => (keyOf[b] || 0) - (keyOf[a] || 0)).slice(0, 3);
+  // per on començar (desplegable): una sèrie teva o, per defecte, els que tenen més claus; amb empat, sèrie per sèrie i per nom
+  const serOf = {};
+  if (typeof COLL !== 'undefined') for (const [s, list] of Object.entries(COLL)) for (const c of list) if (c.st === 'Meu') serOf[c.n] ||= s;
+  const ordSel = $id('perkOrd'), pick = ordSel.value, inPick = new Set(pick && COLL[pick] ? COLL[pick].map(c => c.n) : []);
+  const cands = Object.keys(serOf).filter(n => !has10.includes(n) && n !== (M.opp && M.opp.name) && (!pick || inPick.has(n)))
+    .sort((a, b) => (keyOf[b] || 0) - (keyOf[a] || 0) || serOf[a].localeCompare(serOf[b]) || a.localeCompare(b)).slice(0, 3);
+  const about = n => [serOf[n], M.keys ? (keyOf[n] === 1 ? T('1 clau') : T('{n} claus', { n: keyOf[n] || 0 })) : ''].filter(Boolean).join(' · ');
   // la millora 10 a uns quants personatges, amb el que costen sumades i si les pots pagar amb `budget` esferes
   const put10 = (names, budget) => names.map((n, i) => `<li><button class="cmd" data-copy="${esc('$opp ' + n)}">${esc('$opp ' + n)}</button> <b>${esc(T('Millora {n}', { n: 10 }))}</b> · ${fmtK(1000)}`
+    + (about(n) ? ` <span class="muted" style="font-size:13px">· ${esc(about(n))}</span>` : '')
     + pay(1000 * (i + 1), budget) + (i ? '' : `<br><span class="muted" style="font-size:13px">${esc(PDESC[10])}</span>`) + '</li>').join('');
   let perkHtml;
   const R = M.opp && !often && !done10 ? refundPlan(M.opp.levels) : null;
@@ -1760,7 +1767,8 @@ function millDraw() {
     if (buys.length && M.sp >= buys[0].cost) ready.push(['perkBox', T('Esferes'), `${M.opp.name} · ${T('Millora {n}', { n: buys[0].n })} · LVL ${buys[0].l}`, buys[0].cost]);
     if (!perkHtml && !often) {  // aquest ja té la 10: la 10, a uns altres, o, si ja la tenen tots, la botiga
       perkHtml = done10 ? li(T('Para de gastar en personatges que no et surten sovint: ara, la botiga d\'esferes ($os).'))
-        : put10(cands) || li(T('Posa la millora 10 a un altre personatge teu que no regalaràs: $opp <personatge>.'));
+        : put10(cands) || li(pick ? T('Els teus personatges de {s} ja la tenen tots (dels que has enganxat amb el $opp): tria una altra sèrie.', { s: pick })
+          : T('Posa la millora 10 a un altre personatge teu que no regalaràs: $opp <personatge>.'));
       if (!done10 && cands.length && M.sp >= 1000) ready.push(['perkBox', T('Esferes'), `${cands[0]} · ${T('Millora {n}', { n: 10 })}`, 1000]);
     }
     perkHtml ||= li(T('Aquest personatge ja el tens millorat del tot.'));
@@ -1826,6 +1834,13 @@ document.addEventListener('change', ev => {
   else return;
   millSave(); millDraw();
 });
+{ // el desplegable de la millora 10: les sèries on tens algun personatge, per ordre alfabètic (es recorda)
+  const sel = $id('perkOrd');
+  if (typeof COLL !== 'undefined') Object.keys(COLL).filter(s => COLL[s].some(c => c.st === 'Meu')).sort((a, b) => a.localeCompare(b))
+    .forEach(s => sel.add(new Option(s, s)));
+  try { const v = localStorage.getItem('mudae-perkOrd'); if (v && [...sel.options].some(o => o.value === v)) sel.value = v; } catch (e) {}
+  sel.onchange = () => { try { localStorage.setItem('mudae-perkOrd', sel.value); } catch (e) {} millDraw(); };
+}
 millDraw();
 // el $tu enganxat a «Què toca ara» també posa al dia la kakera i les esferes d'aquí
 window.millTu = text => { const got = readMudae(text, M.tv); if (got.k == null && got.sp == null) return; Object.assign(M, got); millSave(); millDraw(); };
@@ -2419,7 +2434,9 @@ def write_dashboard(d, hist):
  </section>
 </div>
 <section class="panel" id="perkBox"><div class="panel-head"><h2>{T_("Esferes")}</h2><span class="muted" id="perkWho" style="font-size:13px"></span></div>
- <h3 class="og-h">{T_("Les següents que et recomano")}</h3><ul class="steps" id="perkNext"></ul>
+ <h3 class="og-h">{T_("Les següents que et recomano")}</h3>
+ <label class="give-row" style="margin:0 0 8px">{T_("La millora 10, per on començo:")} <select id="perkOrd"><option value="">{T_("Els que tenen més claus")}</option></select></label>
+ <ul class="steps" id="perkNext"></ul>
  <div class="g2">
   <div><h3 class="og-h">{T_("Els que et surten més (claus, $mmy=)")}</h3><p id="perkKeys" style="margin:0;font-size:14px;line-height:1.9"></p></div>
   <div><h3 class="og-h">{T_("Personatges que has millorat")}</h3><p id="perkList" style="margin:0;font-size:14px;line-height:1.9"></p>
