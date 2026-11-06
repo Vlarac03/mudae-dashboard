@@ -172,7 +172,8 @@ def parse_owners(text):
             continue
         m, h = CLAIM.match(line), HEART_ONLY.match(line)
         name, owner = (m.group(1), m.group(2)) if m else (h.group(1), None) if h else (line, "")
-        out.setdefault(name.strip(), owner)
+        if out.get(name.strip(), "") == "":  # repetit: mana la línia que diu de qui és
+            out[name.strip()] = owner
     return out
 
 
@@ -182,7 +183,7 @@ def read_series():
     hp = DADES / "harem.txt"
     harem, ht = {n for n, _ in lines(hp)}, hp.stat().st_mtime if hp.exists() else 0
     for f in sorted((DADES / "series").glob("*.txt")):
-        seen, serie = set(), f.stem.translate(FROM_FILE)
+        seen, serie = {}, f.stem.translate(FROM_FILE)
         fresh = ht >= f.stat().st_mtime  # harem més nou que la sèrie: hi mana ell (has reclamat algú i no has tornat a fer el $imaso)
         for line, _ in lines(f):
             m = CLAIM.match(line)
@@ -193,8 +194,10 @@ def read_series():
             if name in harem and (serie in spec or fresh):  # a les especials, sempre (no hi ha cap $imaso que ho digui)
                 owner = ME
             if name not in seen:
-                seen.add(name)
+                seen[name] = len(rows)
                 rows.append({"serie": serie, "name": name, "owner": owner})
+            elif rows[seen[name]]["owner"] == "":  # repetit: mana la línia que diu de qui és
+                rows[seen[name]]["owner"] = owner
     return rows
 
 
@@ -2746,10 +2749,18 @@ def update_all(text, new=()):
             got.setdefault(s, []).append(body)
         elif " - " in line:  # de la llista «sin serie principal» i encara no és a cap sèrie teva: no sabem de quina és
             lost.append(re.split(r"\s*(?:💞|=>)", line.rsplit(" - ", 1)[0])[0].strip())
+    # un nom repetit (p. ex. el $mma+s enganxat amb la resposta: «Agnetha - ABBA»): un cop, i mana la línia amb propietari
+    for s, found in got.items():
+        best = {}
+        for body in found:
+            k = name_of(body)
+            if k not in best or (body.casefold() != k and best[k].casefold() == k):
+                best[k] = body
+        got[s] = list(best.values())
     read = sum(map(len, got.values())) + len(extra)
     done, short = 0, []
     for s, found in got.items():
-        old = len(lines(files[s])) if s in files else 0
+        old = len(parse_owners(files[s].read_text(encoding="utf-8-sig"))) if s in files else 0  # sense repetits
         if len(found) < old:
             short.append(t("{serie} ({n} de {old})", serie=s, n=len(found), old=old))
             continue

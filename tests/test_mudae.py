@@ -156,6 +156,13 @@ class Desar(Base):
         self.assertEqual(got[("Pingu", "Pinga")], "")  # Pingu: n'hi havia 3 i n'han sortit 2, no es toca
         self.assertIn("Pingu (2 de 3)", warn)
 
+    def test_totes_les_series_amb_el_harem_barrejat(self):  # Victor (06/11/2026): el $mma+s dins la resposta duplicava els teus
+        self.write("series/ABBA.txt", "Agnetha\nAgnetha 💞 => jo\nBenny\n")  # fitxer ja duplicat d'abans: compta 2, no 3
+        self.assertEqual([(r["name"], r["owner"]) for r in mudae.read_series()], [("Agnetha", "jo"), ("Benny", "")])
+        paste = "ABBA 1/2\n\nAgnetha - ABBA\nAgnetha  💞 => jo - ABBA\nBenny - ABBA\n"
+        self.assertEqual(mudae.save_paste("totes", "", paste), "")
+        self.assertEqual((self.tmp / "series/ABBA.txt").read_text(encoding="utf-8"), "Agnetha  💞 => jo\nBenny\n")
+
     def test_totes_les_series_de_zero(self):  # el $imaa+os de Victor (30/10/2026), retallat
         paste = ("-----\nThe Big Bang Theory + ABBA 3/6\n(bundle)\n\nAgnetha Fältskog => jo - ABBA\nBenny Andersson - ABBA\n"
                  "2. Sheldon Cooper - The Big Bang Theory\n\nPers. sin serie principal en este paquete:\n\n"
