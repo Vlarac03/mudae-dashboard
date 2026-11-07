@@ -1148,10 +1148,11 @@ textarea:focus, input[type=text]:focus, input[type=search]:focus, select:focus {
 #wlBuild { display:grid; gap:10px; }
 #wlBuild .ch { cursor:pointer; }
 .ogrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:10px 28px; align-items:start; }
-#ordres .og > summary { padding:6px 0; border-bottom:1px solid var(--line); }
-#ordres .og > summary h3 { margin:0; }
+#ordres .og > summary, #sob .fold > summary { padding:6px 0; border-bottom:1px solid var(--line); }
+#ordres .og > summary h3, #sob .fold > summary h3 { margin:0; }
 #ordres .og > summary .muted { font-size:12px; }
 #ordres .fold-body { gap:0; margin-top:6px; }
+#sob .fold-body { gap:0; margin:6px 0; font-size:13.5px; color:var(--ink-2); }
 #ordQ { width:280px; max-width:100%; }
 .oline { display:flex; gap:10px; align-items:baseline; padding:4px 0; font-size:13.5px; color:var(--ink-2); }
 .oline .cmd { flex:none; }
@@ -2283,9 +2284,13 @@ def write_dashboard(d, hist):
         for o, ts in sorted(by_owner.items(), key=lambda kv: -len(kv[1])))
 
     sizes = sorted(d["sob_size"].items(), key=lambda kv: (kv[0] == ALTRES, -kv[1], kv[0]))
-    sob = "".join(f"<tr><td>{e(t(s))}</td><td class='num'>{n}</td></tr>" for s, n in sizes[:12])
-    if len(sizes) > 12:
-        sob += f"<tr><td class='sub'>{e(t('i {n} sèries més, al full «Sobrants» de l’Excel', n=len(sizes) - 12))}</td><td></td></tr>"
+    by_sob = {}
+    for s in d["sobrants"]:
+        by_sob.setdefault(s["serie"], []).append(s["name"])
+    sob = [f'<details class="og fold"><summary><h3>{e(t(s))}</h3><span class="muted">{n}</span></summary>'  # clica la sèrie: quins tens
+           f'<div class="fold-body">{" · ".join(e(x) for x in by_sob[s])}</div></details>' for s, n in sizes]
+    sob = "".join(sob[:12]) + (f'<details class="fold"><summary><h3>{e(t("i {n} sèries més", n=len(sob) - 12))}</h3></summary>'
+                               f'<div class="fold-body">{"".join(sob[12:])}</div></details>' if len(sob) > 12 else "")
 
     # «Què toca ara», una cua: a «Ara», el que pots fer, per grups i per ordre d'importància; a «Fets» (plegat), el que has fet, per l'hora
     # que torna. Cada tasca marcada hi queda fins que es pot tornar a fer (data-torna); el JavaScript la mou (data-home: el seu grup).
@@ -2482,6 +2487,7 @@ def write_dashboard(d, hist):
  <div id="mineOut"></div>
 </section>
 <div class="g2">
+<section class="panel" id="sob"><h2>{T_("Sobrants per sèrie")}</h2><div>{sob}</div></section>
 <section class="panel" id="cls">
  <div class="panel-head"><h2>{T_("Sèrie dels teus personatges")}</h2><span class="muted" style="font-size:13px">{T_("dels que no col·lecciones")}</span></div>
  {cls_html}
@@ -2490,7 +2496,6 @@ def write_dashboard(d, hist):
   <button class="primary" id="clsBtn" disabled>{T_("Desar")}</button><span id="clsMsg" role="status"></span></div>
  {datalists}
 </section>
-<section class="panel"><h2>{T_("Sobrants per sèrie")}</h2><table>{sob}</table></section>
 </div>
 </div>
 <div class="view" id="v-mill" role="tabpanel" hidden>
