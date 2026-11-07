@@ -1385,6 +1385,52 @@ out.addEventListener('click', async ev => {
   const b = ev.target.closest('[data-add]'); if (!b) return;
   q.value = (q.value.trim() ? q.value.trim() + '\n' : '') + b.dataset.add; render(); q.focus();
 });
+// llistes d'amics: la llista que t'envia cadascun, desada al navegador amb el seu nom, per quan li hagis de passar personatges
+// com «Posar al dia»: tries l'amic (o «Amic nou…» i el nom) i el que hi enganxes es desa sol
+const fSel = document.getElementById('friendSel'), fNew = document.getElementById('friendNew'), fDel = document.getElementById('friendDel'), fMsg = document.getElementById('friendMsg');
+let friends = {}; try { friends = JSON.parse(localStorage.getItem('mudae-friends')) || {}; } catch (e) {}
+const isFriend = () => fSel.value && fSel.value !== '__new__';
+function fillFriends(pick) {
+  const nou = fSel.options[fSel.length - 1];
+  fSel.length = 1;
+  Object.keys(friends).sort((a, b) => a.localeCompare(b)).forEach(n => fSel.add(new Option(n, n)));
+  fSel.add(nou);
+  fSel.value = pick || ''; fNew.hidden = fSel.value !== '__new__'; fDel.hidden = !isFriend(); fDel.textContent = T('Esborrar');
+}
+function saveFriend(n) {
+  friends[n] = q.value.trim();
+  try { localStorage.setItem('mudae-friends', JSON.stringify(friends)); fMsg.textContent = T('Desada a la llista de {who}.', { who: n }); }
+  catch (e) { fMsg.textContent = T("No s'ha pogut desar en aquest navegador."); }
+}
+function useFriend(n) {  // el $give, per a ell
+  try { localStorage.setItem('mudae-give-to', n.startsWith('@') ? n : '@' + n); } catch (e) {}
+  render();
+}
+fSel.addEventListener('change', () => {
+  fMsg.textContent = '';
+  fillFriends(fSel.value);
+  if (fSel.value === '__new__') { fNew.value = ''; fNew.focus(); return; }
+  q.value = isFriend() ? friends[fSel.value] : '';
+  if (isFriend()) useFriend(fSel.value); else render();
+});
+fNew.addEventListener('change', () => {
+  const n = fNew.value.trim(); if (!n || n === '__new__') return;
+  if (n in friends) q.value = friends[n]; else saveFriend(n);  // si ja el tenies, la seva llista no es toca
+  fillFriends(n); useFriend(n);
+});
+q.addEventListener('input', () => { if (isFriend()) saveFriend(fSel.value); });
+let delArmed = 0;  // esborrar demana un segon clic, sense finestreta
+fDel.addEventListener('click', () => {
+  if (Date.now() - delArmed > 4000) {
+    delArmed = Date.now(); fDel.textContent = T('Segur? Torna a clicar');
+    setTimeout(() => { if (Date.now() - delArmed >= 4000) fDel.textContent = T('Esborrar'); }, 4000);
+    return;
+  }
+  const n = fSel.value; delete friends[n]; delArmed = 0;
+  try { localStorage.setItem('mudae-friends', JSON.stringify(friends)); } catch (e) {}
+  q.value = ''; fillFriends(); render(); fMsg.textContent = T('Llista de {who} esborrada.', { who: n });
+});
+fillFriends();
 render();
 """
 
@@ -2391,6 +2437,10 @@ def write_dashboard(d, hist):
 </section>
 <section class="panel" id="mine">
  <div class="panel-head"><h2>{T_("Buscar entre els meus")}</h2><span class="muted" style="font-size:13px">{T_("{n} personatges al teu harem", n=len(d["harem"]))}</span></div>
+ <div class="give-row" style="margin:0 0 6px">{T_("Llista d'un amic:")}
+  <select id="friendSel" aria-label="{T_("Llista d'un amic:")}"><option value="">{T_("Cap")}</option><option value="__new__">{T_("Amic nou…")}</option></select>
+  <input type="text" id="friendNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de l'amic")}" placeholder="{T_("Nom de l'amic")}" hidden>
+  <button class="tab" id="friendDel" hidden>{T_("Esborrar")}</button><span id="friendMsg" role="status" class="muted" style="font-size:13px"></span></div>
  <label for="mineQ" class="muted" style="font-size:14px">{T_("Enganxa sèries o noms, un per línia (com la llista que t'envia un amic). No cal escriure-les bé del tot.")}</label>
  <textarea id="mineQ" rows="3" spellcheck="false" placeholder="Naruto&#10;South Park&#10;full metal alchimist"></textarea>
  <div id="mineOut"></div>
