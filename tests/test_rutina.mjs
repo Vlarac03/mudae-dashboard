@@ -113,7 +113,10 @@ const OLD = new Function(js.match(/const OLD = [^\n]*/)[0] + 'return OLD;')();
 assert.equal(OLD.r5, 'rolls'); assert.equal(OLD.r8, 'claim'); assert.equal(OLD.r17, 'p');
 // «Totes les teves sèries» per grups: Mudae contesta 1.000 personatges com a molt (amic de Victor, 02/11/2026)
 const upd = py.match(/JS_UPD = r"""([\s\S]*?)"""/)[1];
-const groupsOf = (ALL, SIZES, nw) => new Function('ALL', 'SIZES', 'newSeries', upd.match(/function groups[\s\S]*?\n}\n/)[0] + 'return groups();')(ALL, SIZES, () => nw);
+const groupsOf = (ALL, SIZES, nw, SOURCES = {}) => new Function('ALL', 'SIZES', 'newSeries', 'SOURCES', upd.match(/function groups[\s\S]*?\n}\n/)[0] + 'return groups();')(ALL, SIZES, () => nw, SOURCES);
+// les especials, per la sèrie d'on surten (Victor, 07/11/2026): sense mida, al davant com les noves; amb mida, amb les teves
+assert.deepEqual(groupsOf(['Castle'], { Castle: 12 }, [], { "Howl's Moving Castle": [0, 'Studio Ghibli'], Ponyo: [30, 'Studio Ghibli'] }),
+  [["Howl's Moving Castle"], ['Ponyo', 'Castle']]);
 assert.deepEqual(groupsOf(['Castle', 'Pingu'], { Castle: 12, Pingu: 7 }, []), [['Castle', 'Pingu']]);  // les de Victor: una sola ordre
 const nw = Array.from({ length: 19 }, (_, i) => 'S' + i);
 assert.deepEqual(groupsOf([], {}, nw).map(g => g.length), [8, 8, 3]);  // les noves, de 8 en 8 i en l'ordre escrit

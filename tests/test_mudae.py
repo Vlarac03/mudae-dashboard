@@ -163,6 +163,23 @@ class Desar(Base):
         self.assertEqual(mudae.save_paste("totes", "", paste), "")
         self.assertEqual((self.tmp / "series/ABBA.txt").read_text(encoding="utf-8"), "Agnetha  💞 => jo\nBenny\n")
 
+    def test_especials_a_totes_les_series(self):  # Victor (07/11/2026): Studio Ghibli no hi entrava; Howl's Moving Castle, ni del harem
+        self.write("especials.json", '["Ghibli", "Eevee"]')
+        self.write("series/Ghibli.txt", "Ponyo\nCalcifer 💞 => algú\n")
+        self.write("series/Eevee.txt", "Eevee\n")  # tota teva: no hi va (Pokédex en té 1.025)
+        self.write("series/ABBA.txt", "Benny\n")
+        self.write("harem.txt", "Ponyo\nEevee\n")
+        self.write("series-sobrants.json", '{"Ponyo": ["Ponyo"], "Pokédex": ["Eevee"]}')
+        self.assertEqual(mudae.special_sources(), {"Ghibli": {"Ponyo": 0}})
+        mudae.save_paste("serie", "Ghibli", "Howl's Moving Castle 1/2\n\nCalcifer 💞 => pep\nHowl\n")  # se n'aprèn la sèrie
+        self.assertEqual(mudae.special_sources(), {"Ghibli": {"Ponyo": 0, "Howl's Moving Castle": 2}})
+        paste = ("ABBA + Ponyo + Howl's Moving Castle 4/5\n\nBenny => pep - ABBA\nPonyo 💞 => jo - Ponyo\nFujimoto - Ponyo\n"
+                 "Calcifer 💞 => pep - Howl's Moving Castle\nHowl - Howl's Moving Castle\n")
+        self.assertEqual(mudae.save_paste("totes", "", paste, ["Pingu"]), "")  # ni «no sé de quina sèrie», ni sèries noves
+        self.assertEqual(sorted(p.stem for p in (self.tmp / "series").glob("*.txt")), ["ABBA", "Eevee", "Ghibli"])
+        self.assertIn("Calcifer 💞 => pep", (self.tmp / "series/Ghibli.txt").read_text(encoding="utf-8"))
+        self.assertEqual(mudae.special_sources()["Ghibli"]["Ponyo"], 2)  # la mida, per fer els grups
+
     def test_totes_les_series_de_zero(self):  # el $imaa+os de Victor (30/10/2026), retallat
         paste = ("-----\nThe Big Bang Theory + ABBA 3/6\n(bundle)\n\nAgnetha Fältskog => jo - ABBA\nBenny Andersson - ABBA\n"
                  "2. Sheldon Cooper - The Big Bang Theory\n\nPers. sin serie principal en este paquete:\n\n"
