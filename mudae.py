@@ -1321,7 +1321,7 @@ const off = new Set();  // sèries desmarcades; les teves col·leccions comencen
 const isOff = s => COLLS.has(s) ? !off.has('+' + s) : off.has(s);
 let lastChosen = [], lastWho = '';
 function render() {
-  const terms = q.value.split(/[\/,;\n]+/).map(t => t.trim()).filter(Boolean);
+  const terms = q.value.split('\n').map(t => t.trim()).filter(Boolean);  // només per línies: hi ha noms amb / i comes
   if (!terms.length) {
     const counts = SERIES.map(s => [s, MINE.filter(c => c.s === s).length]).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     out.innerHTML = `<details class="fold" data-fold="mine-series"${foldOpen('mine-series') ? ' open' : ''}><summary><h3 class="og-h">`
@@ -1383,7 +1383,7 @@ out.addEventListener('click', async ev => {
     return;
   }
   const b = ev.target.closest('[data-add]'); if (!b) return;
-  q.value = (q.value.trim() ? q.value.trim() + ' / ' : '') + b.dataset.add; render(); q.focus();
+  q.value = (q.value.trim() ? q.value.trim() + '\n' : '') + b.dataset.add; render(); q.focus();
 });
 render();
 """
@@ -2391,8 +2391,8 @@ def write_dashboard(d, hist):
 </section>
 <section class="panel" id="mine">
  <div class="panel-head"><h2>{T_("Buscar entre els meus")}</h2><span class="muted" style="font-size:13px">{T_("{n} personatges al teu harem", n=len(d["harem"]))}</span></div>
- <label for="mineQ" class="muted" style="font-size:14px">{T_("Enganxa sèries o noms, separats per / , comes o línies (com la llista que t'envia un amic). No cal escriure-les bé del tot.")}</label>
- <textarea id="mineQ" rows="3" spellcheck="false" placeholder="Naruto / South Park / full metal alchimist / Rezero"></textarea>
+ <label for="mineQ" class="muted" style="font-size:14px">{T_("Enganxa sèries o noms, un per línia (com la llista que t'envia un amic). No cal escriure-les bé del tot.")}</label>
+ <textarea id="mineQ" rows="3" spellcheck="false" placeholder="Naruto&#10;South Park&#10;full metal alchimist"></textarea>
  <div id="mineOut"></div>
 </section>
 <div class="g2">
