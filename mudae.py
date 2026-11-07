@@ -163,6 +163,35 @@ def specials():
     return json.loads(f.read_text(encoding="utf-8")) if f.exists() else []
 
 
+def special_sources():
+    """Sèries d'on surten les especials, per a «Totes les teves sèries»: {especial: {sèrie: personatges (0: no ho sabem)}}.
+    Les diu el harem ($mma+s) i el $imaso que hi enganxes (dades/especials-fonts.json). Una especial tota teva no hi va
+    (els Eevee dels 1.025 Pokémon: el harem ja ho diu), ni una sèrie que ja col·lecciones."""
+    load = lambda p: json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    saved = load(DADES / "especials-fonts.json")
+    by_name = {n: s for s, ns in load(DADES / "series-sobrants.json").items() if s != ALTRES for n in ns}
+    harem = {n for n, _ in lines(DADES / "harem.txt")}
+    out = {}
+    for sp in specials():
+        p = series_path(sp)
+        names = list(parse_owners(p.read_text(encoding="utf-8-sig"))) if p.exists() else []
+        if all(n in harem for n in names):
+            continue
+        srcs = dict.fromkeys(by_name[n] for n in names if n in by_name)
+        srcs.update(saved.get(sp, {}))
+        out[sp] = {s: n or 0 for s, n in srcs.items() if not series_path(s).exists()}
+    return out
+
+
+def save_sources(learned):
+    """Desa d'on surt cada especial i quants personatges té la sèrie ({especial: {sèrie: personatges}})."""
+    f = DADES / "especials-fonts.json"
+    m = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+    for sp, d in learned.items():
+        m.setdefault(sp, {}).update(d)
+    f.write_text(json.dumps(m, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 def parse_owners(text):
     """Nom -> propietari d'un text de Mudae ($imaso, $imas o una llista): "" lliure, None «💞» sense saber de qui."""
     out = {}
@@ -1386,39 +1415,43 @@ out.addEventListener('click', async ev => {
   q.value = (q.value.trim() ? q.value.trim() + '\n' : '') + b.dataset.add; render(); q.focus();
 });
 // llistes d'amics: la llista que t'envia cadascun, desada al navegador amb el seu nom, per quan li hagis de passar personatges
-// com «Posar al dia»: tries l'amic (o «Amic nou…» i el nom) i el que hi enganxes es desa sol
-const fSel = document.getElementById('friendSel'), fNew = document.getElementById('friendNew'), fDel = document.getElementById('friendDel'), fMsg = document.getElementById('friendMsg');
+// com «Posar al dia»: tries l'amic (o «Amic nou…» i el nom), enganxes la seva llista i «Desar»
+const fSel = document.getElementById('friendSel'), fNew = document.getElementById('friendNew'), fSave = document.getElementById('friendSave'),
+  fDel = document.getElementById('friendDel'), fMsg = document.getElementById('friendMsg');
 let friends = {}; try { friends = JSON.parse(localStorage.getItem('mudae-friends')) || {}; } catch (e) {}
+let fPrev = '';  // el que hi havia triat abans de canviar
 const isFriend = () => fSel.value && fSel.value !== '__new__';
 function fillFriends(pick) {
   const nou = fSel.options[fSel.length - 1];
   fSel.length = 1;
   Object.keys(friends).sort((a, b) => a.localeCompare(b)).forEach(n => fSel.add(new Option(n, n)));
   fSel.add(nou);
-  fSel.value = pick || ''; fNew.hidden = fSel.value !== '__new__'; fDel.hidden = !isFriend(); fDel.textContent = T('Esborrar');
-}
-function saveFriend(n) {
-  friends[n] = q.value.trim();
-  try { localStorage.setItem('mudae-friends', JSON.stringify(friends)); fMsg.textContent = T('Desada a la llista de {who}.', { who: n }); }
-  catch (e) { fMsg.textContent = T("No s'ha pogut desar en aquest navegador."); }
+  fSel.value = pick || ''; fPrev = fSel.value;
+  fNew.hidden = fSel.value !== '__new__'; fSave.hidden = !fSel.value; fDel.hidden = !isFriend(); fDel.textContent = T('Esborrar');
 }
 function useFriend(n) {  // el $give, per a ell
   try { localStorage.setItem('mudae-give-to', n.startsWith('@') ? n : '@' + n); } catch (e) {}
   render();
 }
 fSel.addEventListener('change', () => {
-  fMsg.textContent = '';
+  const was = fPrev; fMsg.textContent = '';
   fillFriends(fSel.value);
-  if (fSel.value === '__new__') { fNew.value = ''; fNew.focus(); return; }
-  q.value = isFriend() ? friends[fSel.value] : '';
-  if (isFriend()) useFriend(fSel.value); else render();
+  if (isFriend()) { q.value = friends[fSel.value]; useFriend(fSel.value); return; }
+  if (was && was !== '__new__') q.value = '';  // fora la llista de l'amic d'abans (el que havies enganxat sense amic es queda)
+  if (fSel.value === '__new__') { fNew.value = ''; fNew.focus(); }
+  render();
 });
-fNew.addEventListener('change', () => {
-  const n = fNew.value.trim(); if (!n || n === '__new__') return;
-  if (n in friends) q.value = friends[n]; else saveFriend(n);  // si ja el tenies, la seva llista no es toca
+function saveFriend() {
+  const n = isFriend() ? fSel.value : fNew.value.trim();
+  if (!n || n === '__new__') { fMsg.textContent = T("Escriu el nom de l'amic."); fNew.focus(); return; }
+  if (!isFriend() && n in friends) { fMsg.textContent = T('Ja tens una llista de {who}: tria-la al desplegable.', { who: n }); return; }
+  friends[n] = q.value.trim();
+  try { localStorage.setItem('mudae-friends', JSON.stringify(friends)); fMsg.textContent = T('Desada a la llista de {who}.', { who: n }); }
+  catch (e) { fMsg.textContent = T("No s'ha pogut desar en aquest navegador."); }
   fillFriends(n); useFriend(n);
-});
-q.addEventListener('input', () => { if (isFriend()) saveFriend(fSel.value); });
+}
+fSave.addEventListener('click', saveFriend);
+fNew.addEventListener('keydown', ev => { if (ev.key === 'Enter') saveFriend(); });
 let delArmed = 0;  // esborrar demana un segon clic, sense finestreta
 fDel.addEventListener('click', () => {
   if (Date.now() - delArmed > 4000) {
@@ -1437,7 +1470,7 @@ render();
 
 JS_UPD = r"""
 // «Posar al dia»: enganxes el que diu Mudae i el servidor ho desa a dades/ i refà l'Excel i el tauler
-const META = __META__, SPECIALS = __SPECIALS__, SIZES = __SIZES__, HAREM_N = __HAREM_N__;
+const META = __META__, SPECIALS = __SPECIALS__, SIZES = __SIZES__, HAREM_N = __HAREM_N__, SOURCES = __SOURCES__;  // SOURCES: sèrie d'on surt una especial → [personatges, especial]
 const kindSel = document.getElementById('updKind'), serieBox = document.getElementById('updSerieBox'), serieSel = document.getElementById('updSerie');
 const newIn = document.getElementById('updNew'), txt = document.getElementById('updText'), updBtn = document.getElementById('updBtn');
 const updMsg = document.getElementById('updMsg'), updCmd = document.getElementById('updCmd'), age = document.getElementById('updAge');
@@ -1457,10 +1490,12 @@ const newSeries = () => allNew.value.split('$').map(x => x.trim()).filter(x => x
 const allList = () => [...ALL, ...newSeries()];
 // Mudae contesta 1.000 personatges com a molt: l'ordre va per grups de 8 sèries i 1.000 personatges com a molt.
 // Primer les sèries noves (no en sabem la mida), com les has escrit; després les teves, les grans amb les petites.
+// Les especials hi entren amb les sèries d'on surten (Studio Ghibli → Howl's Moving Castle…); sense mida, com les noves.
 function groups() {
-  const n = s => SIZES[s] || 0, sum = g => g.reduce((t, s) => t + n(s), 0), nw = newSeries(), out = [];
+  const n = s => SIZES[s] || (SOURCES[s] || [])[0] || 0, sum = g => g.reduce((t, s) => t + n(s), 0), out = [];
+  const src = Object.keys(SOURCES), nw = [...newSeries(), ...src.filter(s => !n(s))];
   for (let i = 0; i < nw.length; i += 8) out.push(nw.slice(i, i + 8));
-  const known = [...ALL].sort((a, b) => n(b) - n(a));
+  const known = [...ALL, ...src.filter(s => n(s))].sort((a, b) => n(b) - n(a));
   const gs = Array.from({ length: Math.max(Math.ceil(known.length / 8), Math.ceil(sum(known) / 1000)) }, () => []);
   for (const s of known) {
     let g = gs.filter(g => g.length < 8 && sum(g) + n(s) <= 1000).sort((a, b) => sum(a) - sum(b))[0];
@@ -1495,7 +1530,7 @@ function syncUpd() {
     : cmds.length === 1 ? code(cmds[0])
     : '<span class="muted" style="font-size:13px">' + esc(T("Mudae contesta 1.000 personatges com a molt: envia els grups d'un en un i enganxa cada resposta abans d'enviar el següent. Les sèries noves van primer.")) + '</span>'
       + cmds.map((c, i) => '<div class="give-row"><b>' + esc(T('Grup {n} de {t}', { n: i + 1, t: cmds.length })) + '</b>'
-        + (gs[i].every(s => (META.series || {})[s] === today) ? '<span class="tag good">' + esc(T('Posat al dia avui')) + '</span>' : '') + '<button class="copybtn" data-copy="' + esc(c) + '">' + esc(T('Copiar ordre')) + '</button></div>' + code(c)).join('');
+        + (gs[i].every(s => (META.series || {})[(SOURCES[s] || [])[1] || s] === today) ? '<span class="tag good">' + esc(T('Posat al dia avui')) + '</span>' : '') + '<button class="copybtn" data-copy="' + esc(c) + '">' + esc(T('Copiar ordre')) + '</button></div>' + code(c)).join('');
   allCopy.dataset.copy = cmds[0] || ''; allCopy.hidden = cmds.length !== 1;
   const ad = '$ad ' + allList().join(' $ '), adCopy = document.getElementById('updAdCopy');  // desbloqueja totes les teves sèries a les tirades
   document.getElementById('updAd').hidden = !all || !allList().length;
@@ -2301,7 +2336,8 @@ def write_dashboard(d, hist):
     oc, oq = f"oc.html?lang={LANG}", f"oq.html?lang={LANG}"
     need = ([["$mma+s", t("el teu harem, amb la sèrie de cada personatge")]] if not (DADES / "harem.txt").exists() else [])         + ([["$wl", t("la teva wishlist")]] if not (DADES / "wishlist.txt").exists() else [])         + ([["$imaso ", t("una sèrie que col·leccionis (o, a «Posar al dia», «Totes les teves sèries»)")]] if not series else [])
     # botons per copiar les ordres que entén la casella d'Avui; $imaa+os, amb totes les teves sèries (com a «Posar al dia»)
-    all_cmd = "$imaa+os " + " $ ".join(x["name"] for x in series if x["name"] not in spec)
+    sources = {s: [n, sp] for sp, ss in special_sources().items() for s, n in ss.items()}  # les especials, per la sèrie d'on surten
+    all_cmd = "$imaa+os " + " $ ".join([x["name"] for x in series if x["name"] not in spec] + list(sources))
     mill_cmds = " ".join(cmd_html(c) for c in ("$k", "$kt", "$opz", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$tu"))  # el que llegeix Millores
     paste_cmds = (" ".join(cmd_html(c) for c in ("$tu", "$settings", "$p", "$k", "$kt", "$opz", "$opp <personatge>", "$os", "$mmy=", "$bonus", "$mma+s", "$wl", "$imaso <sèrie>"))
                   + (f' <button class="cmd" id="todayAll" data-copy="{e(all_cmd)}" data-tip="{e(t("Totes les teves sèries"))}">$imaa+os</button>' if len(all_cmd) > 9 else "")
@@ -2440,7 +2476,7 @@ def write_dashboard(d, hist):
  <div class="give-row" style="margin:0 0 6px">{T_("Llista d'un amic:")}
   <select id="friendSel" aria-label="{T_("Llista d'un amic:")}"><option value="">{T_("Cap")}</option><option value="__new__">{T_("Amic nou…")}</option></select>
   <input type="text" id="friendNew" spellcheck="false" autocomplete="off" aria-label="{T_("Nom de l'amic")}" placeholder="{T_("Nom de l'amic")}" hidden>
-  <button class="tab" id="friendDel" hidden>{T_("Esborrar")}</button><span id="friendMsg" role="status" class="muted" style="font-size:13px"></span></div>
+  <button class="primary" id="friendSave" hidden>{T_("Desar")}</button><button class="tab" id="friendDel" hidden>{T_("Esborrar")}</button><span id="friendMsg" role="status" class="muted" style="font-size:13px"></span></div>
  <label for="mineQ" class="muted" style="font-size:14px">{T_("Enganxa sèries o noms, un per línia (com la llista que t'envia un amic). No cal escriure-les bé del tot.")}</label>
  <textarea id="mineQ" rows="3" spellcheck="false" placeholder="Naruto&#10;South Park&#10;full metal alchimist"></textarea>
  <div id="mineOut"></div>
@@ -2515,7 +2551,8 @@ def write_dashboard(d, hist):
  <div class="give" id="updAll" hidden><div class="give-row"><b>{T_("Ordre amb totes les teves sèries")}</b><button class="copybtn" id="updAllCopy" data-copy="">{T_("Copiar ordre")}</button></div><div id="updAllCmd"></div>
   <span class="muted" style="font-size:13px">{T_("1. Copia l'ordre: són les teves sèries separades amb $. 2. Envia-la a Mudae. 3. Enganxa a sota tot el que et contesti per privat (tots els missatges).")}</span>
   <label class="give-row">{T_("Sèries noves:")} <input type="text" id="updAllNew" spellcheck="false" autocomplete="off" style="flex:1;min-width:220px;width:auto" placeholder="{T_("Harry Potter $ Pingu $ ABBA")}"></label>
-  <span class="muted" style="font-size:13px">{T_("Escriu les que vulguis afegir, separades amb $ i com surten a Mudae: entren a l'ordre i es creen soles quan enganxes la resposta.")}</span></div>
+  <span class="muted" style="font-size:13px">{T_("Escriu les que vulguis afegir, separades amb $ i com surten a Mudae: entren a l'ordre i es creen soles quan enganxes la resposta.")}</span>
+  <span class="muted" style="font-size:13px">{T_("Les col·leccions especials hi entren amb la sèrie d'on surten (la del teu harem). Si en falta una, enganxa'n el $imaso a «Una sèrie» triant la col·lecció especial.")}</span></div>
  <div class="give" id="updAd" hidden><div class="give-row"><b>{T_("Desbloqueja-les a les teves tirades")}</b><button class="copybtn" id="updAdCopy" data-copy="">{T_("Copiar ordre")}</button></div><code id="updAdCmd"></code>
   <span class="muted" style="font-size:13px">{T_("Perquè et surtin tots els seus personatges, encara que hagis tret la sèrie ($d) o els amagui el $limroul. Al $adl tens els que ja has desbloquejat.")}</span></div>
  <textarea id="updText" rows="4" spellcheck="false" aria-label="{T_("Posar al dia")}" placeholder="{T_("Enganxa aquí el missatge sencer que t'ha enviat Mudae per privat")}"></textarea>
@@ -2652,7 +2689,7 @@ document.addEventListener('keydown', ev => {{ if (ev.key === 'Escape' && more.op
 
 </script><script>{JS_TODAY}</script>
 <script>{JS_COLL.replace("__DATA__", js(coll))}</script>
-<script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec)).replace("__SIZES__", js({x["name"]: x["total"] for x in series})).replace("__HAREM_N__", str(len(d["harem"])))}</script>
+<script>{JS_UPD.replace("__META__", js(read_meta())).replace("__SPECIALS__", js(spec)).replace("__SIZES__", js({x["name"]: x["total"] for x in series})).replace("__HAREM_N__", str(len(d["harem"]))).replace("__SOURCES__", js(sources))}</script>
 <script>{JS_ESP}</script>
 <script>{JS_MILL.replace("__BADGES__", js([[n, p] for n, p, _ in BADGES])).replace("__PLAN__", js(BADGE_PLAN)).replace("__TOWER__", js([n for n, _ in TOWER])).replace("__PORD__", js([n for _, ns in PERK_GROUPS for n in ns])).replace("__SORD__", js(SHOP_ORDER)).replace("__PDESC__", js({n: t(x) for n, x in PERKS.items()})).replace("__SDESC__", js({n: t(x) for n, x in SHOP.items()}))}</script>
 <script>{JS_CLS}</script>
@@ -2791,6 +2828,9 @@ def update_all(text, new=()):
     # «Pers. sin serie principal en este paquete»: Mudae hi posa una altra sèrie («Meemaw - Young Sheldon»), però ja és a la teva
     name_of = lambda body: re.split(r"\s*(?:💞|=>)", body)[0].strip().casefold()
     member = {n.casefold(): s for s in files if s not in spec for n in parse_owners(files[s].read_text(encoding="utf-8-sig"))}
+    srcs = special_sources()
+    src = {s.casefold(): s for d in srcs.values() for s in d}  # «Howl's Moving Castle»: només hi compten els de l'especial
+    count, other = {}, 0
     rows = text.splitlines()
     title = next((r for r in rows[:6] if IMASO_TITLE.match(r.strip())), None)
     got, extra, real, lost, renamed = {}, [], {}, [], []
@@ -2800,6 +2840,9 @@ def update_all(text, new=()):
         low = line.casefold()
         if (got or extra or lost) and " - " not in line and line.endswith(":") and not line.startswith(":"):
             foot = True
+        tail = low.rsplit(" - ", 1)[1].strip() if " - " in line else ""
+        if tail in src and not foot:
+            count[src[tail]] = count.get(src[tail], 0) + 1
         s = next((s for s in normal if low.endswith(" - " + s.casefold())), None)
         if s:
             if s in new:  # el nom com el diu Mudae, no com l'has escrit
@@ -2809,6 +2852,8 @@ def update_all(text, new=()):
             got.setdefault(member[name_of(body)], []).append(body)
         elif " - " in line and any(low.startswith(n + " ") for n in spec_names):
             extra.append(line.rsplit(" - ", 1)[0].strip())
+        elif tail in src:  # de la sèrie d'on surt una especial, però no és de l'especial
+            other += 1
         elif " - " in line and new and not foot:  # sèrie nova que Mudae anomena d'una altra manera («Código Lyoko» → «Code Lyoko»)
             body, s = (x.strip() for x in line.rsplit(" - ", 1))
             if s not in got:
@@ -2824,7 +2869,9 @@ def update_all(text, new=()):
             if k not in best or (body.casefold() != k and best[k].casefold() == k):
                 best[k] = body
         got[s] = list(best.values())
-    read = sum(map(len, got.values())) + len(extra)
+    read = sum(map(len, got.values())) + len(extra) + other
+    if count:  # la mida de cada sèrie d'on surten les especials, per fer els grups de 1.000
+        save_sources({sp: {s: count[s] for s in d if s in count} for sp, d in srcs.items()})
     done, short = 0, []
     for s, found in got.items():
         old = len(parse_owners(files[s].read_text(encoding="utf-8-sig"))) if s in files else 0  # sense repetits
@@ -2868,9 +2915,14 @@ def save_paste(kind, serie, text, new=()):
     elif kind == "serie":
         serie = serie.strip()
         path = series_path(serie)
+        title = next((r for r in text.splitlines()[:6] if IMASO_TITLE.match(r.strip())), None)
         text = from_imaa(text, check=serie not in specials())  # també el $imaa+os d'una sola sèrie
         if serie in specials():
-            return update_special(serie, text)
+            update_special(serie, text)
+            if title:  # «Howl's Moving Castle 3/40»: d'aquí surt l'especial, per a «Totes les teves sèries»
+                m = re.match(r"^(?:\d+\.\s+)?(.*?)\s+\d+\s*/\s*(\d+)$", title.replace("⭐", "").strip())
+                save_sources({serie: {m.group(1): int(m.group(2))}})
+            return
     else:
         raise ValueError(t("No sé què és «{kind}».", kind=kind))
     old = path.read_text(encoding="utf-8-sig") if path.exists() else None
